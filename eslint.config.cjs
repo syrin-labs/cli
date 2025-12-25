@@ -41,19 +41,9 @@ module.exports = tseslint.config(
       'no-restricted-syntax': [
         'error',
         {
-          selector: 'TSTypeAnnotation[typeAnnotation.name="unknown"]',
-          message:
-            'Use of "unknown" type is not allowed. Use proper types instead.',
-        },
-        {
           selector: 'TSAnyKeyword',
           message:
             'Use of "any" type is not allowed. Use proper types instead.',
-        },
-        {
-          selector: 'TSUnknownKeyword',
-          message:
-            'Use of "unknown" type is not allowed. Use proper types instead.',
         },
       ],
     },
