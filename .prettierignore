@@ -1,0 +1,9 @@
+node_modules
+dist
+*.min.js
+*.min.css
+package-lock.json
+.git
+.env
+.env.*
+

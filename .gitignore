@@ -1,0 +1,11 @@
+node_modules
+
+dist
+
+.env
+.env.*
+
+package-lock.json
+bun.lockb
+bun.lock
+
