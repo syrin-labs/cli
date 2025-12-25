@@ -5,6 +5,7 @@
 
 import { Command } from 'commander';
 import { executeInit } from '@/cli/commands/init';
+import { executeDoctor } from '@/cli/commands/doctor';
 import { logger } from '@/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -56,6 +57,26 @@ export function setupCLI(): void {
           return;
         }
         throw error;
+      }
+    });
+
+  // doctor command
+  program
+    .command('doctor')
+    .description('Validate Syrin project configuration and setup')
+    .option(
+      '--project-root <path>',
+      'Project root directory (defaults to current directory)'
+    )
+    .action((options: { projectRoot?: string }) => {
+      try {
+        executeDoctor(options.projectRoot);
+      } catch (error) {
+        // Error handling is done in executeDoctor
+        // This catch is just for safety
+        if (error instanceof Error) {
+          logger.error('Doctor command failed', error);
+        }
       }
     });
 

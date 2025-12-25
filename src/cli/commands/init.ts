@@ -39,7 +39,7 @@ export async function executeInit(
       '   Syrin is already initialized. Kindly go to .syrin/config.yaml to set up.'
     );
     console.log(
-      '   After the setup, you can call `syrin inspect` to verify the setup process.\n'
+      '   After the setup, you can call `syrin doctor` to verify the setup process.\n'
     );
     console.log('💡 Want to re-initialize?');
     console.log('   Delete the .syrin directory and run `syrin init` again.\n');
@@ -87,7 +87,7 @@ export async function executeInit(
     console.log('\n📝 Next steps:');
     console.log('   1. Review and edit .syrin/config.yaml if needed');
     console.log('   2. Set up your environment variables (API keys, etc.)');
-    console.log('   3. Run `syrin inspect` to verify your Syrin setup');
+    console.log('   3. Run `syrin doctor` to verify your Syrin setup');
     console.log('   4. Run `syrin dev` to start development mode\n');
   } catch (error) {
     const configError =

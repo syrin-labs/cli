@@ -51,7 +51,7 @@ export interface SyrinConfig {
   /** Command to start MCP server (required for stdio transport) */
   command?: Command;
   /** Script commands */
-  script: ScriptConfig;
+  scripts?: ScriptConfig;
   /** LLM provider configurations */
   llm: Record<string, LLMProviderConfig>;
 }

@@ -36,9 +36,9 @@ mcp_url: 'http://localhost:8000/mcp'
 # Scripts that Syrin can use to run your MCP server
 #   - dev:   Command used during development (e.g., "python3 server.py --dev")
 #   - start: Command used in production (e.g., "python3 server.py")
-script:
-  dev: 'python3 server.py'
-  start: 'python3 server.py'
+# script:
+#   dev: 'python3 server.py'
+#   start: 'python3 server.py'
 
 # LLM Provider Configuration
 # ---------------------------

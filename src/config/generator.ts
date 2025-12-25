@@ -41,7 +41,7 @@ function buildConfigContent(options: InitOptions): string {
     project_name: options.projectName,
     agent_name: options.agentName,
     transport: options.transport,
-    script: {
+    scripts: {
       dev: options.devScript,
       start: options.startScript,
     },
@@ -123,9 +123,15 @@ function buildConfigContent(options: InitOptions): string {
   lines.push(
     '#   - start: Command used in production (e.g., "python3 server.py")'
   );
-  lines.push('script:');
-  lines.push(`  dev: "${String(config.script.dev)}"`);
-  lines.push(`  start: "${String(config.script.start)}"`);
+  lines.push('scripts:');
+  if (config.scripts) {
+    lines.push(`  dev: "${String(config.scripts.dev)}"`);
+    lines.push(`  start: "${String(config.scripts.start)}"`);
+  } else {
+    lines.push('  # Script section is missing - uncomment and configure:');
+    lines.push('  # dev: "python3 server.py"');
+    lines.push('  # start: "python3 server.py"');
+  }
   lines.push('');
 
   lines.push('# LLM Provider Configuration');

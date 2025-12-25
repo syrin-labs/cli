@@ -77,7 +77,7 @@ export const ConfigSchema = z
     transport: z.enum(['stdio', 'http']),
     mcp_url: z.string().url().optional(),
     command: z.string().optional(),
-    script: ScriptSchema,
+    scripts: ScriptSchema.optional(),
     llm: z
       .record(z.string(), LLMProviderSchema)
       .refine(obj => Object.keys(obj).length > 0, {
@@ -150,10 +150,12 @@ export function validateConfig(config: unknown): SyrinConfig {
       transport: parsed.transport,
       mcp_url: parsed.mcp_url ? makeMCPURL(parsed.mcp_url) : undefined,
       command: parsed.command ? makeCommand(parsed.command) : undefined,
-      script: {
-        dev: makeScriptCommand(parsed.script.dev),
-        start: makeScriptCommand(parsed.script.start),
-      },
+      scripts: parsed.scripts
+        ? {
+            dev: makeScriptCommand(parsed.scripts.dev),
+            start: makeScriptCommand(parsed.scripts.start),
+          }
+        : undefined,
       llm: Object.fromEntries(
         Object.entries(parsed.llm).map(([key, provider]) => [
           key,
