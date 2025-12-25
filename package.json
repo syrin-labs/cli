@@ -7,13 +7,13 @@
     "doc": "docs"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc-alias -p tsconfig.json -f",
+    "syrin": "sh -c 'npm run build && node dist/index.js \"$@\"' --",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write \"**/*.{ts,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,json,md}\"",
     "type-check": "tsc --noEmit",
-    "dev": "tsx --tsconfig tsconfig.json src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -36,8 +36,17 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-prettier": "^5.5.4",
     "prettier": "^3.7.4",
+    "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.1"
+  },
+  "dependencies": {
+    "@types/inquirer": "^9.0.9",
+    "@types/js-yaml": "^4.0.9",
+    "commander": "^14.0.2",
+    "inquirer": "^13.1.0",
+    "js-yaml": "^4.1.1",
+    "zod": "^4.2.1"
   }
 }
