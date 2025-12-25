@@ -9,6 +9,7 @@ import { executeDoctor } from '@/cli/commands/doctor';
 import { logger } from '@/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Icons } from '@/constants';
 
 const program = new Command();
 
@@ -48,7 +49,7 @@ export function setupCLI(): void {
         // The executeInit function handles the "already initialized" case gracefully
         if (error instanceof Error && error.message !== 'ALREADY_INITIALIZED') {
           logger.error('Init command failed', error);
-          console.error(`\n❌ Error: ${error.message}\n`);
+          console.error(`\n${Icons.ERROR} Error: ${error.message}\n`);
           process.exit(1);
         }
         // If it's not the graceful exit case, re-throw for proper error handling

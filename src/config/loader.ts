@@ -9,6 +9,7 @@ import { load } from 'js-yaml';
 import { validateConfig } from './schema';
 import { ConfigurationError } from '@/utils/errors';
 import type { SyrinConfig } from './types';
+import { Paths, Messages, Commands } from '@/constants';
 
 /**
  * Load configuration from .syrin/config.yaml file.
@@ -17,12 +18,12 @@ import type { SyrinConfig } from './types';
  * @throws {ConfigurationError} If config file is missing or invalid
  */
 export function loadConfig(projectRoot: string = process.cwd()): SyrinConfig {
-  const configPath = path.join(projectRoot, '.syrin', 'config.yaml');
+  const configPath = path.join(projectRoot, Paths.SYRIN_DIR, Paths.CONFIG_FILE);
 
   // Check if config file exists
   if (!fs.existsSync(configPath)) {
     throw new ConfigurationError(
-      'Configuration file not found. Run `syrin init` to initialize the project.',
+      Messages.ERROR_CONFIG_NOT_FOUND(Commands.INIT),
       {
         context: { projectRoot, configPath },
       }
@@ -35,7 +36,7 @@ export function loadConfig(projectRoot: string = process.cwd()): SyrinConfig {
     const configData = load(configContent);
 
     if (!configData || typeof configData !== 'object') {
-      throw new ConfigurationError('Configuration file is empty or invalid', {
+      throw new ConfigurationError(Messages.ERROR_CONFIG_EMPTY_OR_INVALID, {
         context: { configPath },
       });
     }
@@ -50,7 +51,7 @@ export function loadConfig(projectRoot: string = process.cwd()): SyrinConfig {
     }
 
     throw new ConfigurationError(
-      `Failed to load configuration file: ${error instanceof Error ? error.message : String(error)}`,
+      `${Messages.ERROR_LOADING_CONFIG}: ${error instanceof Error ? error.message : String(error)}`,
       {
         cause: error instanceof Error ? error : new Error(String(error)),
         context: { configPath },
@@ -65,6 +66,6 @@ export function loadConfig(projectRoot: string = process.cwd()): SyrinConfig {
  * @returns true if config file exists
  */
 export function configExists(projectRoot: string = process.cwd()): boolean {
-  const configPath = path.join(projectRoot, '.syrin', 'config.yaml');
+  const configPath = path.join(projectRoot, Paths.SYRIN_DIR, Paths.CONFIG_FILE);
   return fs.existsSync(configPath);
 }

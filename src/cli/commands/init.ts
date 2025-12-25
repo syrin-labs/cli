@@ -12,6 +12,7 @@ import {
 import { ConfigurationError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 import type { InitOptions } from '@/config/types';
+import { Icons, Messages, Paths, Commands } from '@/constants';
 
 export interface InitCommandOptions {
   /** Skip interactive prompts, use defaults */
@@ -28,21 +29,21 @@ export async function executeInit(
   options: InitCommandOptions = {}
 ): Promise<void> {
   const projectRoot = options.projectRoot || process.cwd();
-  const configDir = path.join(projectRoot, '.syrin');
+  const configDir = path.join(projectRoot, Paths.SYRIN_DIR);
 
   // Check if project is already initialized
   if (isProjectInitialized(projectRoot)) {
-    console.log('\n⚠️  Syrin project is already initialized!\n');
-    console.log('📁 Configuration file: .syrin/config.yaml\n');
-    console.log('📝 Next steps:');
+    console.log(`\n${Icons.WARNING}  ${Messages.INIT_ALREADY_INITIALIZED}\n`);
     console.log(
-      '   Syrin is already initialized. Kindly go to .syrin/config.yaml to set up.'
+      `${Icons.FOLDER} ${Messages.INIT_CONFIG_FILE(Paths.CONFIG_PATH)}\n`
     );
+    console.log(`${Icons.DOCUMENT} ${Messages.INIT_NEXT_STEPS_HEADER}`);
+    console.log(`   ${Messages.INIT_ALREADY_INIT_MSG(Paths.CONFIG_PATH)}`);
+    console.log(`   ${Messages.INIT_VERIFY_SETUP(Commands.DOCTOR)}\n`);
+    console.log(`${Icons.TIP} ${Messages.INIT_REINITIALIZE_TIP}`);
     console.log(
-      '   After the setup, you can call `syrin doctor` to verify the setup process.\n'
+      `   ${Messages.INIT_REINITIALIZE_INSTRUCTION(Commands.INIT)}\n`
     );
-    console.log('💡 Want to re-initialize?');
-    console.log('   Delete the .syrin directory and run `syrin init` again.\n');
 
     // Exit gracefully without showing error stack
     return;
@@ -82,18 +83,18 @@ export async function executeInit(
     });
 
     // Display success message
-    console.log('\n✅ Syrin project initialized successfully!');
-    console.log(`\n📁 Configuration file: ${configPath}`);
-    console.log('\n📝 Next steps:');
-    console.log('   1. Review and edit .syrin/config.yaml if needed');
-    console.log('   2. Set up your environment variables (API keys, etc.)');
-    console.log('   3. Run `syrin doctor` to verify your Syrin setup');
-    console.log('   4. Run `syrin dev` to start development mode\n');
+    console.log(`\n${Icons.CHECK} ${Messages.INIT_SUCCESS}`);
+    console.log(`\n${Icons.FOLDER} Configuration file: ${configPath}`);
+    console.log(`\n${Icons.DOCUMENT} ${Messages.INIT_NEXT_STEPS_HEADER}`);
+    console.log(`   1. ${Messages.INIT_REVIEW_CONFIG(Paths.CONFIG_PATH)}`);
+    console.log(`   2. ${Messages.INIT_SETUP_ENV_VARS}`);
+    console.log(`   3. ${Messages.INIT_RUN_DOCTOR(Commands.DOCTOR)}`);
+    console.log(`   4. ${Messages.INIT_RUN_DEV(Commands.DEV)}\n`);
   } catch (error) {
     const configError =
       error instanceof ConfigurationError
         ? error
-        : new ConfigurationError('Failed to generate configuration file', {
+        : new ConfigurationError(Messages.ERROR_GENERATE_CONFIG, {
             cause: error instanceof Error ? error : new Error(String(error)),
             context: { projectRoot, configDir },
           });

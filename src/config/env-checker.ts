@@ -5,6 +5,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { Messages, Paths } from '@/constants';
 
 export interface EnvCheckResult {
   /** Whether the environment variable is set */
@@ -73,7 +74,7 @@ export function checkEnvVar(
   varName: string,
   projectRoot: string = process.cwd()
 ): EnvCheckResult {
-  const envFilePath = path.join(projectRoot, '.env');
+  const envFilePath = path.join(projectRoot, Paths.ENV_FILE);
   const envFileExists = fs.existsSync(envFilePath);
 
   // First check process.env (takes precedence)
@@ -93,7 +94,7 @@ export function checkEnvVar(
       isSet: false,
       envFileExists: false,
       keyExistsInEnvFile: false,
-      errorMessage: `.env file is not present in the project root`,
+      errorMessage: Messages.ENV_FILE_NOT_PRESENT(varName),
     };
   }
 
@@ -107,7 +108,7 @@ export function checkEnvVar(
       isSet: false,
       envFileExists: true,
       keyExistsInEnvFile: false,
-      errorMessage: `.env file is present but key "${varName}" not found`,
+      errorMessage: Messages.ENV_KEY_NOT_FOUND(varName),
     };
   }
 
@@ -117,7 +118,7 @@ export function checkEnvVar(
       value: envFileValue,
       envFileExists: true,
       keyExistsInEnvFile: true,
-      errorMessage: `Key "${varName}" found in .env file but the value is empty`,
+      errorMessage: Messages.ENV_KEY_EMPTY(varName),
     };
   }
 

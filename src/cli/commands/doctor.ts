@@ -12,6 +12,7 @@ import {
 import { ConfigurationError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 import type { SyrinConfig } from '@/config/types';
+import { Icons, Labels, Messages } from '@/constants';
 
 interface CheckResult {
   isValid: boolean;
@@ -44,7 +45,7 @@ function checkTransport(config: SyrinConfig): CheckResult {
       return {
         isValid: false,
         message: 'MCP URL is missing',
-        fix: 'Add `mcp_url` to your config.yaml file when using http transport',
+        fix: Messages.CONFIG_ADD_MCP_URL,
       };
     }
     return {
@@ -57,7 +58,7 @@ function checkTransport(config: SyrinConfig): CheckResult {
       return {
         isValid: false,
         message: 'Command is missing',
-        fix: 'Add `command` to your config.yaml file when using stdio transport',
+        fix: Messages.CONFIG_ADD_COMMAND,
       };
     }
     const commandName = extractCommandName(String(config.command));
@@ -148,15 +149,14 @@ function checkLLMProviders(
         fix: apiKeyCheck.isSet
           ? undefined
           : apiKeyCheck.errorMessage ||
-            `Set ${apiKeyVar} in your .env file or export it in your shell`,
+            Messages.ENV_SET_INSTRUCTIONS(apiKeyVar),
       },
       modelCheck: {
         isValid: modelCheck.isSet,
         message: modelVar, // Always show the env var name
         fix: modelCheck.isSet
           ? undefined
-          : modelCheck.errorMessage ||
-            `Set ${modelVar} in your .env file or export it in your shell`,
+          : modelCheck.errorMessage || Messages.ENV_SET_INSTRUCTIONS(modelVar),
       },
       isDefault: providerConfig.default === true,
     });
@@ -215,34 +215,42 @@ function displayReport(report: DoctorReport): void {
       report.scriptsCheck.every(s => s.isValid)) &&
     report.llmChecks.every(l => l.apiKeyCheck.isValid && l.modelCheck.isValid);
 
-  console.log('\nSyrin Doctor Report');
+  console.log(`\n${Labels.DOCTOR_REPORT_TITLE}`);
   console.log('===================\n');
 
   // Version (we'll get this from package.json or config)
-  console.log(`Syrin Version: v${String(config.version)}\n`);
+  console.log(`${Labels.SYRIN_VERSION} v${String(config.version)}\n`);
 
   // Project info
-  console.log(`MCP Project Name: ${String(config.project_name)}`);
-  console.log(`Agent Name: ${String(config.agent_name)}\n`);
+  console.log(`${Labels.MCP_PROJECT_NAME} ${String(config.project_name)}`);
+  console.log(`${Labels.AGENT_NAME} ${String(config.agent_name)}\n`);
 
   // Transport
-  console.log(`Transport Layer: ${config.transport}`);
+  console.log(`${Labels.TRANSPORT_LAYER} ${config.transport}`);
   if (config.transport === 'http') {
-    const urlStatus = report.transportCheck.isValid ? '✓' : '✗';
-    console.log(`MCP URL: ${String(config.mcp_url || 'Missing')} ${urlStatus}`);
+    const urlStatus = report.transportCheck.isValid
+      ? Icons.SUCCESS
+      : Icons.FAILURE;
+    console.log(
+      `${Labels.MCP_URL} ${String(config.mcp_url || Labels.STATUS_MISSING)} ${urlStatus}`
+    );
   } else {
-    const cmdStatus = report.transportCheck.isValid ? '✓' : '✗';
-    console.log(`Command: ${String(config.command || 'Missing')} ${cmdStatus}`);
+    const cmdStatus = report.transportCheck.isValid
+      ? Icons.SUCCESS
+      : Icons.FAILURE;
+    console.log(
+      `${Labels.COMMAND} ${String(config.command || Labels.STATUS_MISSING)} ${cmdStatus}`
+    );
   }
   if (!report.transportCheck.isValid && report.transportCheck.fix) {
-    console.log(`   ⚠️  ${report.transportCheck.fix}`);
+    console.log(`   ${Icons.WARNING}  ${report.transportCheck.fix}`);
   }
   console.log('');
 
   // Scripts (only show if scripts section exists)
   if (report.scriptsCheck.length > 0) {
-    console.log('Scripts:');
-    const scriptLabels = ['dev', 'start'] as const;
+    console.log(`${Labels.SCRIPTS}`);
+    const scriptLabels = [Labels.SCRIPT_DEV, Labels.SCRIPT_START] as const;
     report.scriptsCheck.forEach((check, index) => {
       const label = scriptLabels[index];
       if (!label) return; // Safety check
@@ -250,39 +258,43 @@ function displayReport(report: DoctorReport): void {
         ? index === 0
           ? config.scripts.dev
           : config.scripts.start
-        : 'N/A';
-      const status = check.isValid ? '✓' : '✗';
-      const scriptStr = config.scripts ? String(script) : 'N/A';
-      const message = check.isValid ? '(working)' : check.message;
+        : Labels.STATUS_NA;
+      const status = check.isValid ? Icons.SUCCESS : Icons.FAILURE;
+      const scriptStr = config.scripts ? String(script) : Labels.STATUS_NA;
+      const message = check.isValid ? Labels.STATUS_WORKING : check.message;
       console.log(
         `- ${label.padEnd(6)} [${scriptStr}] ${status.padEnd(10)} ${message}`
       );
       if (!check.isValid && check.fix) {
-        console.log(`   ⚠️  ${check.fix}`);
+        console.log(`   ${Icons.WARNING}  ${check.fix}`);
       }
     });
     console.log('');
   }
 
   // LLM Providers
-  console.log('LLMs:');
+  console.log(`${Labels.LLMS}`);
   report.llmChecks.forEach(llm => {
     const providerName =
       llm.provider.charAt(0).toUpperCase() + llm.provider.slice(1);
-    const defaultMark = llm.isDefault ? ' (default)' : '';
-    const apiKeyStatus = llm.apiKeyCheck.isValid ? '✓' : '✗';
-    const modelStatus = llm.modelCheck.isValid ? '✓' : '✗';
+    const defaultMark = llm.isDefault ? ` ${Labels.STATUS_DEFAULT}` : '';
+    const apiKeyStatus = llm.apiKeyCheck.isValid
+      ? Icons.SUCCESS
+      : Icons.FAILURE;
+    const modelStatus = llm.modelCheck.isValid ? Icons.SUCCESS : Icons.FAILURE;
 
     console.log(
       `- ${providerName} [${llm.apiKeyCheck.message}] ${apiKeyStatus}${defaultMark}`
     );
     if (!llm.apiKeyCheck.isValid && llm.apiKeyCheck.fix) {
-      console.log(`   ⚠️  ${llm.apiKeyCheck.fix}`);
+      console.log(`   ${Icons.WARNING}  ${llm.apiKeyCheck.fix}`);
     }
 
-    console.log(`  Model  [${llm.modelCheck.message}] ${modelStatus}`);
+    console.log(
+      `  ${Labels.MODEL}  [${llm.modelCheck.message}] ${modelStatus}`
+    );
     if (!llm.modelCheck.isValid && llm.modelCheck.fix) {
-      console.log(`   ⚠️  ${llm.modelCheck.fix}`);
+      console.log(`   ${Icons.WARNING}  ${llm.modelCheck.fix}`);
     }
     console.log('');
   });
@@ -290,7 +302,7 @@ function displayReport(report: DoctorReport): void {
   // Local LLM Providers
   if (report.localLlmChecks && report.localLlmChecks.length > 0) {
     report.localLlmChecks.forEach(llm => {
-      const status = llm.check.isValid ? '✅' : '❌';
+      const status = llm.check.isValid ? Icons.CHECK : Icons.ERROR;
       console.log(`- ${llm.provider} ${status} ${llm.check.message}`);
       console.log('');
     });
@@ -298,9 +310,9 @@ function displayReport(report: DoctorReport): void {
 
   // Summary
   if (allValid) {
-    console.log('Everything is set up well!\n');
+    console.log(`${Messages.DOCTOR_SETUP_SUCCESS}\n`);
   } else {
-    console.log('⚠️  Some issues found. Please fix them before proceeding.\n');
+    console.log(`${Icons.WARNING}  ${Messages.DOCTOR_ISSUES_FOUND}\n`);
   }
 }
 
@@ -333,13 +345,13 @@ export function executeDoctor(projectRoot: string = process.cwd()): void {
     }
   } catch (error) {
     if (error instanceof ConfigurationError) {
-      console.error(`\n❌ ${error.message}\n`);
+      console.error(`\n${Icons.ERROR} ${error.message}\n`);
       process.exit(1);
     }
 
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Doctor command failed', err);
-    console.error('\n❌ An unexpected error occurred\n');
+    console.error(`\n${Icons.ERROR} ${Messages.ERROR_UNEXPECTED}\n`);
     process.exit(1);
   }
 }

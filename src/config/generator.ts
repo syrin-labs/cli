@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { InitOptions, SyrinConfig } from '@/config/types';
 import { makeSyrinVersion } from '@/types/factories';
+import { Paths } from '@/constants';
 
 /**
  * Generate a production-ready config.yaml file with comprehensive documentation.
@@ -18,7 +19,7 @@ export function generateConfigFile(
   options: InitOptions,
   configDir: string
 ): string {
-  const configPath = path.join(configDir, 'config.yaml');
+  const configPath = path.join(configDir, Paths.CONFIG_FILE);
 
   // Ensure .syrin directory exists
   if (!fs.existsSync(configDir)) {
@@ -278,6 +279,6 @@ function buildLLMConfig(
  * @returns true if project is already initialized
  */
 export function isProjectInitialized(projectRoot: string): boolean {
-  const configPath = path.join(projectRoot, '.syrin', 'config.yaml');
+  const configPath = path.join(projectRoot, Paths.SYRIN_DIR, Paths.CONFIG_FILE);
   return fs.existsSync(configPath);
 }
