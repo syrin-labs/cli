@@ -14,4 +14,6 @@ export const Commands = {
   DEV: 'syrin dev',
   /** Test command */
   TEST: 'syrin test',
+  /** List command */
+  LIST: 'syrin list',
 } as const;

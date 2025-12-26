@@ -19,6 +19,61 @@ import { ConfigurationError } from '@/utils/errors';
 const exec = util.promisify(childProcess.exec);
 
 /**
+ * Get a connected MCP client that stays open for operations.
+ * Use this when you need to perform multiple operations with the same connection.
+ * Remember to call close() on the transport when done.
+ *
+ * @param mcpUrl - The MCP server URL to connect to
+ * @param timeout - Connection timeout in milliseconds (default: 5000)
+ * @returns Connected client and transport instances
+ */
+export async function getConnectedClient(
+  mcpUrl: string,
+  timeout: number = 10000
+): Promise<{
+  client: Client;
+  transport: StreamableHTTPClientTransport;
+}> {
+  // Parse URL
+  const parsedUrl = new URL(mcpUrl);
+
+  // Create MCP client
+  const client = new Client(
+    {
+      name: 'syrin',
+      version: '1.0.0',
+    },
+    {
+      capabilities: {},
+    }
+  );
+
+  // Create HTTP transport using StreamableHTTPClientTransport
+  // This properly handles SSE protocol and session requirements
+  const transport = new StreamableHTTPClientTransport(parsedUrl);
+
+  // Set up error handler
+  client.onerror = (): void => {
+    // Error handler - errors are logged but we'll catch them in try-catch
+  };
+
+  // Try to connect with timeout
+  const connectionPromise = client.connect(transport);
+
+  // Create a timeout promise
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Connection timeout after ${timeout}ms`));
+    }, timeout);
+  });
+
+  // Race between connection and timeout
+  await Promise.race([connectionPromise, timeoutPromise]);
+
+  return { client, transport };
+}
+
+/**
  * Connect to an MCP server via HTTP transport using the official MCP SDK.
  * This properly handles the SSE protocol and session requirements.
  *

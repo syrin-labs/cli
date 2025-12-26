@@ -25,4 +25,21 @@ export const Labels = {
   STATUS_DEFAULT: '(default)',
   STATUS_MISSING: 'Missing',
   STATUS_NA: 'N/A',
+
+  // List Command Labels
+  TOOLS: 'Tools',
+  RESOURCES: 'Resources',
+  PROMPTS: 'Prompts',
+  NAME: 'Name',
+  TITLE: 'Title',
+  DESCRIPTION: 'Description',
+  URI: 'URI',
+  ARGUMENTS: 'Arguments',
+  REQUIRED: 'Required',
+  INPUT_SCHEMA: 'Input Schema',
+  OUTPUT_SCHEMA: 'Output Schema',
+  NO_TOOLS: 'No tools available',
+  NO_RESOURCES: 'No resources available',
+  NO_PROMPTS: 'No prompts available',
+  TOTAL_COUNT: 'Total',
 } as const;

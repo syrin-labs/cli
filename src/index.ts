@@ -12,4 +12,3 @@ if (require.main === module) {
 
 export { run } from './cli';
 export * from './cli';
-

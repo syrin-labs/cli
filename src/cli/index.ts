@@ -7,6 +7,7 @@ import { Command } from 'commander';
 import { executeInit } from '@/cli/commands/init';
 import { executeDoctor } from '@/cli/commands/doctor';
 import { executeTest } from '@/cli/commands/test';
+import { executeList } from '@/cli/commands/list';
 import { logger } from '@/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -86,7 +87,10 @@ export function setupCLI(): void {
   program
     .command('test')
     .description('Test MCP connection and validate protocol compliance')
-    .argument('[url-or-command]', 'MCP URL (for http transport) or command (for stdio transport). If not provided, uses value from config.yaml')
+    .argument(
+      '[url-or-command]',
+      'MCP URL (for http transport) or command (for stdio transport). If not provided, uses value from config.yaml'
+    )
     .option(
       '--transport <type>',
       'Transport type (http or stdio). If not provided, uses transport from config.yaml'
@@ -103,39 +107,106 @@ export function setupCLI(): void {
       '--project-root <path>',
       'Project root directory (defaults to current directory)'
     )
-    .action(async (urlOrCommand: string | undefined, options: {
-      transport?: string;
-      url?: string;
-      command?: string;
-      projectRoot?: string;
-    }) => {
-      try {
-        // Determine if positional argument is URL or command based on transport
-        let finalUrl = options.url;
-        let finalCommand = options.command;
+    .action(
+      async (
+        urlOrCommand: string | undefined,
+        options: {
+          transport?: string;
+          url?: string;
+          command?: string;
+          projectRoot?: string;
+        }
+      ) => {
+        try {
+          // Determine if positional argument is URL or command based on transport
+          let finalUrl = options.url;
+          let finalCommand = options.command;
 
-        if (urlOrCommand) {
-          const transport = options.transport as 'http' | 'stdio' | undefined;
-          if (transport === 'http' || (!transport && urlOrCommand.startsWith('http'))) {
-            finalUrl = urlOrCommand;
-          } else {
-            finalCommand = urlOrCommand;
+          if (urlOrCommand) {
+            const transport = options.transport as 'http' | 'stdio' | undefined;
+            if (
+              transport === 'http' ||
+              (!transport && urlOrCommand.startsWith('http'))
+            ) {
+              finalUrl = urlOrCommand;
+            } else {
+              finalCommand = urlOrCommand;
+            }
+          }
+
+          await executeTest({
+            transport: options.transport as 'http' | 'stdio' | undefined,
+            url: finalUrl,
+            command: finalCommand,
+            projectRoot: options.projectRoot,
+          });
+        } catch (error) {
+          // Error handling is done in executeTest
+          if (error instanceof Error) {
+            logger.error('Test command failed', error);
           }
         }
+      }
+    );
 
-        await executeTest({
-          transport: options.transport as 'http' | 'stdio' | undefined,
-          url: finalUrl,
-          command: finalCommand,
-          projectRoot: options.projectRoot,
-        });
-      } catch (error) {
-        // Error handling is done in executeTest
-        if (error instanceof Error) {
-          logger.error('Test command failed', error);
+  // list command
+  program
+    .command('list')
+    .description('List tools, resources, or prompts from an MCP server')
+    .argument(
+      '[type]',
+      'Type to list: tools, resources, or prompts (default: tools)',
+      'tools'
+    )
+    .option(
+      '--transport <type>',
+      'Transport type (http or stdio). If not provided, uses transport from config.yaml'
+    )
+    .option(
+      '--url <url>',
+      'MCP URL (for http transport). If not provided, uses URL from config.yaml'
+    )
+    .option(
+      '--command <command>',
+      'Command (for stdio transport). If not provided, uses command from config.yaml'
+    )
+    .option(
+      '--project-root <path>',
+      'Project root directory (defaults to current directory)'
+    )
+    .action(
+      async (
+        type: string,
+        options: {
+          transport?: string;
+          url?: string;
+          command?: string;
+          projectRoot?: string;
+        }
+      ) => {
+        try {
+          const listType = type as 'tools' | 'resources' | 'prompts';
+          if (!['tools', 'resources', 'prompts'].includes(listType)) {
+            console.error(`\n${Icons.ERROR} Invalid list type: ${type}`);
+            console.error('Valid types are: tools, resources, prompts\n');
+            process.exit(1);
+          }
+
+          await executeList({
+            type: listType,
+            transport: options.transport as 'http' | 'stdio' | undefined,
+            url: options.url,
+            command: options.command,
+            projectRoot: options.projectRoot,
+          });
+        } catch (error) {
+          // Error handling is done in executeList
+          if (error instanceof Error) {
+            logger.error('List command failed', error);
+          }
         }
       }
-    });
+    );
 
   // Parse command line arguments
   program.parse();

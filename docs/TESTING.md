@@ -3,11 +3,13 @@
 ## Prerequisites
 
 Make sure you have built the project:
+
 ```bash
 npm run build
 ```
 
 Or use `tsx` directly (no build needed):
+
 ```bash
 npx tsx src/index.ts <command>
 ```
@@ -15,6 +17,7 @@ npx tsx src/index.ts <command>
 ## Test Commands
 
 ### 1. Test Help Command
+
 ```bash
 # Using tsx (recommended for development)
 npx tsx src/index.ts --help
@@ -92,6 +95,7 @@ cat .syrin/config.yaml
 ## Expected Results
 
 ### Successful Init Output
+
 ```
 ✅ Syrin project initialized successfully!
 
@@ -105,7 +109,9 @@ cat .syrin/config.yaml
 ```
 
 ### Generated Config File Structure
+
 The `.syrin/config.yaml` file should contain:
+
 - `version`: "1.0.0"
 - `project_name`: Based on directory name (or default)
 - `agent_name`: "Agent" (or user input)
@@ -165,6 +171,7 @@ echo "✅ All tests passed!"
 ```
 
 Run it with:
+
 ```bash
 chmod +x test-init.sh
 ./test-init.sh
@@ -181,4 +188,3 @@ For development, you can use `npm run dev` which uses `tsx` directly:
 # Then run:
 npm run dev init -y
 ```
-

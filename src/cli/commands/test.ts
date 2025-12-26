@@ -102,7 +102,9 @@ function displayTestResults(result: MCPConnectionResult): void {
       console.log(
         `    Note: MCP uses Server-Sent Events (SSE) transport. Messages are sent via HTTP POST`
       );
-      console.log(`    and responses are received via HTTP GET with text/event-stream.\n`);
+      console.log(
+        `    and responses are received via HTTP GET with text/event-stream.\n`
+      );
       console.log(`    Request:`);
       console.log(`      HTTP Method: ${details.initializeRequest.method}`);
       console.log(`      URL: ${details.initializeRequest.url}`);
@@ -126,9 +128,7 @@ function displayTestResults(result: MCPConnectionResult): void {
           console.log(`      JSON-RPC Method: ${body.method}`);
         }
         if (body.params?.protocolVersion) {
-          console.log(
-            `      Protocol Version: ${body.params.protocolVersion}`
-          );
+          console.log(`      Protocol Version: ${body.params.protocolVersion}`);
         }
         if (body.params?.clientInfo) {
           console.log(
@@ -190,9 +190,7 @@ function displayTestResults(result: MCPConnectionResult): void {
                   capabilityName,
                   prop
                 );
-                const explanationText = explanation
-                  ? ` (${explanation})`
-                  : '';
+                const explanationText = explanation ? ` (${explanation})` : '';
                 console.log(`        • ${prop}${explanationText}`);
               }
             } else {
