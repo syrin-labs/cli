@@ -74,37 +74,39 @@ export class InteractiveREPL {
   ): void {
     this.rl.prompt();
 
-    this.rl.on('line', async (line: string) => {
-      const trimmed = line.trim();
+    this.rl.on('line', (line: string) => {
+      void (async (): Promise<void> => {
+        const trimmed = line.trim();
 
-      // Handle empty input
-      if (!trimmed) {
+        // Handle empty input
+        if (!trimmed) {
+          this.rl.prompt();
+          return;
+        }
+
+        // Handle special commands
+        if (trimmed.startsWith('/')) {
+          await this.handleSpecialCommand(trimmed, onInput);
+          this.rl.prompt();
+          return;
+        }
+
+        // Add to history
+        this.addToHistory(trimmed);
+        this.historyIndex = -1;
+        this.currentInput = '';
+
+        // Process input
+        try {
+          await onInput(trimmed);
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          console.error(`\nError: ${errorMessage}\n`);
+        }
+
         this.rl.prompt();
-        return;
-      }
-
-      // Handle special commands
-      if (trimmed.startsWith('/')) {
-        await this.handleSpecialCommand(trimmed, onInput);
-        this.rl.prompt();
-        return;
-      }
-
-      // Add to history
-      this.addToHistory(trimmed);
-      this.historyIndex = -1;
-      this.currentInput = '';
-
-      // Process input
-      try {
-        await onInput(trimmed);
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        console.error(`\nError: ${errorMessage}\n`);
-      }
-
-      this.rl.prompt();
+      })();
     });
 
     this.rl.on('close', () => {

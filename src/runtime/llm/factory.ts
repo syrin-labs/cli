@@ -3,13 +3,12 @@
  * Creates LLM provider instances from configuration.
  */
 
-import type { SyrinConfig, LLMProviderConfig } from '@/config/types';
+import type { SyrinConfig } from '@/config/types';
 import { OpenAIProvider } from './openai';
 import { ClaudeProvider } from './claude';
 import { OllamaProvider } from './ollama';
 import type { LLMProvider } from './provider';
 import { ConfigurationError } from '@/utils/errors';
-import type { ProviderIdentifier } from '@/types/ids';
 
 /**
  * Create an LLM provider from configuration.

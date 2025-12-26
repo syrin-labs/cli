@@ -5,8 +5,6 @@
  * Uses the official MCP SDK for proper protocol handling.
  */
 
-import * as childProcess from 'child_process';
-import * as util from 'util';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -17,8 +15,6 @@ import type {
   MCPConnectionOptions,
 } from './types';
 import { ConfigurationError } from '@/utils/errors';
-
-const exec = util.promisify(childProcess.exec);
 
 /**
  * Get a connected MCP client that stays open for operations.
@@ -423,8 +419,8 @@ export async function connectStdio(
     }
 
     return {
-            success: true,
-            transport: 'stdio',
+      success: true,
+      transport: 'stdio',
       details,
     };
   } catch (error) {
@@ -453,12 +449,11 @@ export async function connectStdio(
         errorMessage.includes('EACCES') ||
         errorMessage.includes('permission denied')
       ) {
-        errorMessage =
-          'Permission denied. Check if the command is executable.';
+        errorMessage = 'Permission denied. Check if the command is executable.';
       } else if (errorMessage.includes('timeout')) {
         errorMessage = `Connection timeout. The MCP server may not be responding.`;
-          }
-        }
+      }
+    }
 
     return {
       success: false,

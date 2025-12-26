@@ -13,6 +13,7 @@ import { ConfigurationError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 import type { InitOptions } from '@/config/types';
 import { Icons, Messages, Paths, Commands } from '@/constants';
+import { ensureGitignorePattern } from '@/utils/gitignore';
 
 export interface InitCommandOptions {
   /** Skip interactive prompts, use defaults */
@@ -81,6 +82,22 @@ export async function executeInit(
       projectName: initOptions.projectName,
       transport: initOptions.transport,
     });
+
+    // Update .gitignore to exclude event files
+    try {
+      const patternAdded = await ensureGitignorePattern(
+        projectRoot,
+        '.syrin/events'
+      );
+      if (patternAdded) {
+        logger.info('Added .syrin/events to .gitignore');
+      }
+    } catch (error) {
+      // Log but don't fail initialization if .gitignore update fails
+      logger.warn('Failed to update .gitignore', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     // Display success message
     console.log(`\n${Icons.CHECK} ${Messages.INIT_SUCCESS}`);

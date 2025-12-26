@@ -139,7 +139,7 @@ export class DevFormatter {
       resultText.length > this.options.maxOutputLength!
     ) {
       resultText =
-        resultText.substring(0, this.options.maxOutputLength!) +
+        resultText.substring(0, this.options.maxOutputLength) +
         '\n... (truncated)';
     }
 

@@ -89,7 +89,10 @@ function describeEvent(event: EventEnvelope): string {
       return 'Session halted';
 
     case LLMProposalEventType.LLM_PROPOSED_TOOL_CALL: {
-      const p = payload as { tool_name?: string; arguments?: Record<string, unknown> };
+      const p = payload as {
+        tool_name?: string;
+        arguments?: Record<string, unknown>;
+      };
       const toolName = p.tool_name || 'unknown';
       return `LLM proposed tool call: ${toolName}`;
     }
@@ -145,7 +148,11 @@ function describeEvent(event: EventEnvelope): string {
     }
 
     case TransportEventType.TRANSPORT_INITIALIZED: {
-      const p = payload as { transport_type?: string; endpoint?: string; command?: string };
+      const p = payload as {
+        transport_type?: string;
+        endpoint?: string;
+        command?: string;
+      };
       const transport = p.transport_type || 'unknown';
       const endpoint = p.endpoint || p.command || 'unknown';
       return `Transport initialized: ${transport} (${endpoint})`;
@@ -185,7 +192,9 @@ function describeEvent(event: EventEnvelope): string {
 /**
  * Extract context from an event payload.
  */
-function extractContext(event: EventEnvelope): Record<string, unknown> | undefined {
+function extractContext(
+  event: EventEnvelope
+): Record<string, unknown> | undefined {
   const { event_type, payload } = event;
   const context: Record<string, unknown> = {};
 
@@ -291,12 +300,14 @@ export async function generateStackTrace(
 
   // Filter by event types if specified
   if (eventTypes && eventTypes.length > 0) {
-    filteredEvents = filteredEvents.filter((e) => eventTypes.includes(e.event_type));
+    filteredEvents = filteredEvents.filter(e =>
+      eventTypes.includes(e.event_type)
+    );
   }
 
   // Filter by execution ID if specified
   if (executionId) {
-    filteredEvents = filteredEvents.filter((e) => {
+    filteredEvents = filteredEvents.filter(e => {
       const payload = e.payload as { execution_id?: string };
       return payload.execution_id === executionId;
     });
@@ -304,7 +315,7 @@ export async function generateStackTrace(
 
   // Filter to critical/error events if not including all
   if (!includeAll) {
-    filteredEvents = filteredEvents.filter((e) => isCriticalEvent(e));
+    filteredEvents = filteredEvents.filter(e => isCriticalEvent(e));
   }
 
   // Sort by sequence number
@@ -316,7 +327,7 @@ export async function generateStackTrace(
   }
 
   // Convert to stack trace entries
-  const entries: StackTraceEntry[] = filteredEvents.map((event) => ({
+  const entries: StackTraceEntry[] = filteredEvents.map(event => ({
     eventId: event.event_id,
     eventType: event.event_type,
     timestamp: event.timestamp,
@@ -328,8 +339,8 @@ export async function generateStackTrace(
   }));
 
   // Count errors
-  const errorCount = entries.filter((e) => e.isError).length;
-  const firstError = entries.find((e) => e.isError);
+  const errorCount = entries.filter(e => e.isError).length;
+  const firstError = entries.find(e => e.isError);
 
   // Generate summary
   let summary = `Session ${sessionId}: ${totalEvents} total events`;
@@ -385,7 +396,7 @@ export function formatStackTrace(stackTrace: StackTrace): string {
   stackTrace.entries.forEach((entry, index) => {
     const prefix = entry.isError ? '❌' : entry.isCritical ? '🔍' : '  ';
     const seq = String(entry.sequence).padStart(4, '0');
-    
+
     // Parse timestamp safely
     let time = entry.timestamp;
     try {
@@ -407,7 +418,7 @@ export function formatStackTrace(stackTrace: StackTrace): string {
     if (entry.context && Object.keys(entry.context).length > 0) {
       const contextStr = JSON.stringify(entry.context, null, 2)
         .split('\n')
-        .map((line) => `    ${line}`)
+        .map(line => `    ${line}`)
         .join('\n');
       lines.push(contextStr);
     }
@@ -421,4 +432,3 @@ export function formatStackTrace(stackTrace: StackTrace): string {
 
   return lines.join('\n');
 }
-

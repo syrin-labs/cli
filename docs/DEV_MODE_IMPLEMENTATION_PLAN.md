@@ -6,7 +6,7 @@ The `syrin dev` command provides an interactive development environment where de
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    CLI Layer (dev.ts)                        │
 │  - Parse arguments (--exec, --llm)                          │
@@ -405,7 +405,7 @@ Options:
 
 **Format**:
 
-```
+```text
 [25/12/2025 10:10:10 > book_flight] Tool calling started!
 [25/12/2025 10:10:10 > book_flight] Arguments: {"date": "26/12/2025"}
 [25/12/2025 10:10:11 > book_flight] Tool calling ended!
@@ -462,7 +462,7 @@ Options:
 
 ## File Structure
 
-```
+```text
 src/
 ├── runtime/
 │   ├── llm/                    # LLM provider abstraction
@@ -614,7 +614,7 @@ When implementing Dev Mode, ensure events are emitted at:
 
 ### Event Flow Example
 
-```
+```text
 1. SESSION_STARTED
 2. TRANSPORT_INITIALIZED (MCP connection)
 3. LLM_CONTEXT_BUILT (with tools)

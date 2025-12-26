@@ -3,7 +3,7 @@
  */
 
 import type { LLMProvider } from './provider';
-import type { LLMRequest, LLMResponse, ToolCall } from './types';
+import type { LLMRequest, LLMResponse } from './types';
 import { ConfigurationError } from '@/utils/errors';
 
 /**

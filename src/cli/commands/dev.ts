@@ -82,7 +82,9 @@ export async function executeDev(
       eventStore = new FileEventStore(eventsDir);
       const eventFilePath = path.join(eventsDir, `${sessionId}.jsonl`);
       logger.info(`Events will be saved to: ${eventFilePath}`);
-      console.log(`\n${Icons.TIP} Events are being saved to: ${eventFilePath}\n`);
+      console.log(
+        `\n${Icons.TIP} Events are being saved to: ${eventFilePath}\n`
+      );
     } else {
       eventStore = new MemoryEventStore();
     }
@@ -222,21 +224,24 @@ export async function executeDev(
           logger.error('Error processing user input', err);
         }
       },
-      async () => {
+      (): void => {
         // Cleanup on close
-        try {
-          await session.complete();
-          await mcpClientManager.disconnect();
-          
-          // Close file event store if used
-          if (options.saveEvents && eventStore instanceof FileEventStore) {
-            await eventStore.close();
-            logger.info('Event store closed');
+        void (async (): Promise<void> => {
+          try {
+            await session.complete();
+            await mcpClientManager.disconnect();
+
+            // Close file event store if used
+            if (options.saveEvents && eventStore instanceof FileEventStore) {
+              await eventStore.close();
+              logger.info('Event store closed');
+            }
+          } catch (error) {
+            const err =
+              error instanceof Error ? error : new Error(String(error));
+            logger.error('Error during cleanup', err);
           }
-        } catch (error) {
-          const err = error instanceof Error ? error : new Error(String(error));
-          logger.error('Error during cleanup', err);
-        }
+        })();
       }
     );
   } catch (error) {

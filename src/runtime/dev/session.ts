@@ -5,7 +5,6 @@
 
 import type { DevSessionConfig, DevSessionState, ToolCallInfo } from './types';
 import type { LLMMessage, ToolCall, ToolDefinition } from '@/runtime/llm/types';
-import type { EventEmitter } from '@/events/emitter';
 import {
   SessionLifecycleEventType,
   LLMContextEventType,
@@ -101,7 +100,7 @@ export class DevSession {
    * Handles LLM calls and tool execution in a loop until final response.
    */
   private async processConversation(): Promise<void> {
-    let maxIterations = 10; // Prevent infinite loops
+    const maxIterations = 10; // Prevent infinite loops
     let iteration = 0;
 
     while (iteration < maxIterations) {
@@ -113,7 +112,7 @@ export class DevSession {
       this.currentPromptId = promptId;
 
       // Build LLM context with tools
-      const llmRequest = await this.buildLLMContext();
+      const llmRequest = this.buildLLMContext();
 
       // Emit LLM context built event
       await this.config.eventEmitter.emit<LLMContextBuiltPayload>(
@@ -158,7 +157,7 @@ export class DevSession {
         const toolResults = await this.processToolCalls(llmResponse.toolCalls);
 
         // Build post-tool prompt with tool results
-        const postToolPrompt = await this.buildPostToolPrompt(
+        const postToolPrompt = this.buildPostToolPrompt(
           llmResponse.toolCalls,
           toolResults
         );
@@ -211,11 +210,11 @@ export class DevSession {
   /**
    * Build LLM context from conversation history and available tools.
    */
-  private async buildLLMContext(): Promise<{
+  private buildLLMContext(): {
     messages: LLMMessage[];
     tools?: ToolDefinition[];
     systemPrompt?: string;
-  }> {
+  } {
     const messages = [...this.state.conversationHistory];
 
     // Build system prompt
@@ -410,15 +409,15 @@ After tool execution, you will receive the results and can provide a final respo
   /**
    * Build prompt after tool execution.
    */
-  private async buildPostToolPrompt(
-    toolCalls: ToolCall[],
-    toolResults: Array<{
+  private buildPostToolPrompt(
+    _toolCalls: ToolCall[],
+    _toolResults: Array<{
       tool_name: string;
       arguments: Record<string, unknown>;
       result: unknown;
       duration_ms: number;
     }>
-  ): Promise<{ messages: LLMMessage[] }> {
+  ): { messages: LLMMessage[] } {
     // The conversation history already includes tool results
     // Just return the current state
     return {
@@ -461,8 +460,6 @@ After tool execution, you will receive the results and can provide a final respo
    * Halt the session due to error.
    */
   async halt(reason: string, errorCode?: string): Promise<void> {
-    const duration = Date.now() - this.state.startTime.getTime();
-
     await this.config.eventEmitter.emit<SessionHaltedPayload>(
       SessionLifecycleEventType.SESSION_HALTED,
       {

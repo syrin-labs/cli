@@ -512,7 +512,7 @@ export class StdioMCPClientManager implements MCPClientManager {
 
     try {
       const response = await this.client.listTools();
-      return (response.tools || []).map((tool) => ({
+      return (response.tools || []).map(tool => ({
         name: tool.name,
         description: tool.description || '',
         inputSchema: (tool.inputSchema as Record<string, unknown>) || {},
@@ -583,7 +583,10 @@ export class StdioMCPClientManager implements MCPClientManager {
         {
           tool_name: toolName,
           arguments: toolArguments,
-          result: { preview: true, message: 'Tool call preview (not executed)' },
+          result: {
+            preview: true,
+            message: 'Tool call preview (not executed)',
+          },
           execution_id: executionId,
           duration_ms: duration,
         }
@@ -612,7 +615,8 @@ export class StdioMCPClientManager implements MCPClientManager {
       );
 
       // Extract result content
-      const resultContent = (result.content as Array<{ type: string; text?: string }>) || [];
+      const resultContent =
+        (result.content as Array<{ type: string; text?: string }>) || [];
       const textContent = resultContent
         .filter((item: { type: string; text?: string }) => item.type === 'text')
         .map((item: { type: string; text?: string }) => item.text || '')
@@ -708,5 +712,7 @@ export function createMCPClientManager(
     return new StdioMCPClientManager(command, eventEmitter);
   }
 
-  throw new ConfigurationError(`Unsupported transport type: ${transport}`);
+  throw new ConfigurationError(
+    `Unsupported transport type: ${String(transport)}`
+  );
 }
