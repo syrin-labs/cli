@@ -6,6 +6,7 @@
 import { Command } from 'commander';
 import { executeInit } from '@/cli/commands/init';
 import { executeDoctor } from '@/cli/commands/doctor';
+import { executeTest } from '@/cli/commands/test';
 import { logger } from '@/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -77,6 +78,61 @@ export function setupCLI(): void {
         // This catch is just for safety
         if (error instanceof Error) {
           logger.error('Doctor command failed', error);
+        }
+      }
+    });
+
+  // test command
+  program
+    .command('test')
+    .description('Test MCP connection and validate protocol compliance')
+    .argument('[url-or-command]', 'MCP URL (for http transport) or command (for stdio transport). If not provided, uses value from config.yaml')
+    .option(
+      '--transport <type>',
+      'Transport type (http or stdio). If not provided, uses transport from config.yaml'
+    )
+    .option(
+      '--url <url>',
+      'MCP URL to test (for http transport). If not provided, uses URL from config.yaml or positional argument'
+    )
+    .option(
+      '--command <command>',
+      'Command to test (for stdio transport). If not provided, uses command from config.yaml or positional argument'
+    )
+    .option(
+      '--project-root <path>',
+      'Project root directory (defaults to current directory)'
+    )
+    .action(async (urlOrCommand: string | undefined, options: {
+      transport?: string;
+      url?: string;
+      command?: string;
+      projectRoot?: string;
+    }) => {
+      try {
+        // Determine if positional argument is URL or command based on transport
+        let finalUrl = options.url;
+        let finalCommand = options.command;
+
+        if (urlOrCommand) {
+          const transport = options.transport as 'http' | 'stdio' | undefined;
+          if (transport === 'http' || (!transport && urlOrCommand.startsWith('http'))) {
+            finalUrl = urlOrCommand;
+          } else {
+            finalCommand = urlOrCommand;
+          }
+        }
+
+        await executeTest({
+          transport: options.transport as 'http' | 'stdio' | undefined,
+          url: finalUrl,
+          command: finalCommand,
+          projectRoot: options.projectRoot,
+        });
+      } catch (error) {
+        // Error handling is done in executeTest
+        if (error instanceof Error) {
+          logger.error('Test command failed', error);
         }
       }
     });

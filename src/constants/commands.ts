@@ -12,4 +12,6 @@ export const Commands = {
   DOCTOR: 'syrin doctor',
   /** Dev command */
   DEV: 'syrin dev',
+  /** Test command */
+  TEST: 'syrin test',
 } as const;

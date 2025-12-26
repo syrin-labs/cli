@@ -42,6 +42,7 @@
     "typescript-eslint": "^8.50.1"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.1",
     "@types/inquirer": "^9.0.9",
     "@types/js-yaml": "^4.0.9",
     "commander": "^14.0.2",
