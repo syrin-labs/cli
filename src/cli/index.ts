@@ -8,6 +8,7 @@ import { executeInit } from '@/cli/commands/init';
 import { executeDoctor } from '@/cli/commands/doctor';
 import { executeTest } from '@/cli/commands/test';
 import { executeList } from '@/cli/commands/list';
+import { executeDev } from '@/cli/commands/dev';
 import { logger } from '@/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -203,6 +204,52 @@ export function setupCLI(): void {
           // Error handling is done in executeList
           if (error instanceof Error) {
             logger.error('List command failed', error);
+          }
+        }
+      }
+    );
+
+  // dev command
+  program
+    .command('dev')
+    .description('Enter interactive development mode for testing MCP tools')
+    .option(
+      '--exec',
+      'Execute tool calls (default: preview mode, shows what would be executed)'
+    )
+    .option(
+      '--llm <provider>',
+      'Override default LLM provider (e.g., openai, claude, ollama)'
+    )
+    .option(
+      '--project-root <path>',
+      'Project root directory (defaults to current directory)'
+    )
+    .option('--save-events', 'Save events to file for debugging')
+    .option(
+      '--event-file <path>',
+      'Path to event file (default: .syrin/events.jsonl)'
+    )
+    .action(
+      async (options: {
+        exec?: boolean;
+        llm?: string;
+        projectRoot?: string;
+        saveEvents?: boolean;
+        eventFile?: string;
+      }) => {
+        try {
+          await executeDev({
+            exec: options.exec || false,
+            llm: options.llm,
+            projectRoot: options.projectRoot,
+            saveEvents: options.saveEvents || false,
+            eventFile: options.eventFile,
+          });
+        } catch (error) {
+          // Error handling is done in executeDev
+          if (error instanceof Error) {
+            logger.error('Dev command failed', error);
           }
         }
       }

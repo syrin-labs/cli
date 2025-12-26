@@ -47,8 +47,10 @@ export interface MCPResponseInfo {
  * Detailed information about an MCP connection.
  */
 export interface MCPConnectionDetails {
-  /** The MCP URL */
-  mcpUrl: string;
+  /** The MCP URL (for HTTP transport) */
+  mcpUrl?: string;
+  /** The command (for stdio transport) */
+  command?: string;
   /** Discovery URL (if applicable) */
   discoveryUrl?: string;
   /** Protocol version (if available) */

@@ -9,6 +9,8 @@ import * as childProcess from 'child_process';
 import * as util from 'util';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { v4 as uuidv4 } from 'uuid';
 import type {
   MCPConnectionResult,
   MCPConnectionDetails,
@@ -275,17 +277,83 @@ export async function connectHTTP(
 }
 
 /**
- * Connect to an MCP server via stdio transport.
- * Validates that the command can be executed and starts the MCP server process.
+ * Get a connected MCP client via stdio transport that stays open for operations.
+ * Use this when you need to perform multiple operations with the same connection.
+ * Remember to call close() on the transport when done.
  *
- * @param command - The command to execute
- * @param timeout - Execution timeout in milliseconds (default: 3000)
+ * @param command - The command to execute (e.g., "python3 server.py")
+ * @param timeout - Connection timeout in milliseconds (default: 10000)
+ * @returns Connected client and transport instances
+ */
+export async function getConnectedStdioClient(
+  command: string,
+  timeout: number = 10000
+): Promise<{
+  client: Client;
+  transport: StdioClientTransport;
+}> {
+  // Split command into executable and arguments
+  const parts = command.trim().split(/\s+/);
+  const executable = parts[0];
+  const args = parts.slice(1);
+
+  if (!executable) {
+    throw new Error('Command is empty');
+  }
+
+  // Create MCP client
+  const client = new Client(
+    {
+      name: 'syrin',
+      version: '1.0.0',
+    },
+    {
+      capabilities: {},
+    }
+  );
+
+  // Create stdio transport
+  const transport = new StdioClientTransport({
+    command: executable,
+    args,
+    env: process.env as Record<string, string>,
+  });
+
+  // Set up error handler
+  client.onerror = (): void => {
+    // Error handler - errors are logged but we'll catch them in try-catch
+  };
+
+  // Try to connect with timeout
+  const connectionPromise = client.connect(transport);
+
+  // Create a timeout promise
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Connection timeout after ${timeout}ms`));
+    }, timeout);
+  });
+
+  // Race between connection and timeout
+  await Promise.race([connectionPromise, timeoutPromise]);
+
+  return { client, transport };
+}
+
+/**
+ * Connect to an MCP server via stdio transport using the official MCP SDK.
+ * This properly handles the stdio protocol and initialization handshake.
+ *
+ * @param command - The command to execute (e.g., "python3 server.py")
+ * @param timeout - Connection timeout in milliseconds (default: 5000)
  * @returns Connection result
  */
 export async function connectStdio(
   command: string,
-  timeout: number = 3000
+  timeout: number = 5000
 ): Promise<MCPConnectionResult> {
+  let transport: StdioClientTransport | null = null;
+
   try {
     // Split command into executable and arguments
     const parts = command.trim().split(/\s+/);
@@ -300,96 +368,105 @@ export async function connectStdio(
       };
     }
 
-    // Check if executable exists (basic check)
+    // Create MCP client
+    const client = new Client(
+      {
+        name: 'syrin',
+        version: '1.0.0',
+      },
+      {
+        capabilities: {},
+      }
+    );
+
+    // Create stdio transport
+    transport = new StdioClientTransport({
+      command: executable,
+      args,
+      env: process.env as Record<string, string>,
+    });
+
+    // Set up error handler
+    client.onerror = (): void => {
+      // Error handler - errors are logged but we'll catch them in try-catch
+    };
+
+    // Try to connect with timeout
+    const connectionPromise = client.connect(transport);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Connection timeout after ${timeout}ms`));
+      }, timeout);
+    });
+
+    await Promise.race([connectionPromise, timeoutPromise]);
+
+    // Get server capabilities and session info
+    const serverCapabilities = client.getServerCapabilities() || {};
+    const protocolVersion = '2024-11-05'; // MCP protocol version
+    const sessionId = uuidv4();
+
+    const details: MCPConnectionDetails = {
+      command,
+      protocolVersion,
+      sessionId,
+      capabilities: serverCapabilities as Record<string, unknown>,
+      client: client,
+      transport: transport,
+    };
+
+    // Close the connection after gathering info (for testing)
     try {
-      // Use 'which' on Unix-like systems, 'where' on Windows
-      const checkCommand =
-        process.platform === 'win32'
-          ? `where ${executable}`
-          : `which ${executable}`;
-      await exec(checkCommand);
+      await transport.close();
     } catch {
-      return {
-        success: false,
-        transport: 'stdio',
-        error: `Command "${executable}" not found in PATH`,
-      };
+      // Ignore errors during cleanup
     }
 
-    // Try to start the process and immediately kill it to test if it can start
-    const childProc = childProcess.spawn(executable, args, {
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
-
-    return new Promise<MCPConnectionResult>(resolve => {
-      let resolved = false;
-
-      // Set timeout
-      const timeoutId = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          childProc.kill();
-          resolve({
+    return {
             success: true,
             transport: 'stdio',
-            details: {
-              mcpUrl: command,
-            },
-          });
-        }
-      }, timeout);
+      details,
+    };
+  } catch (error) {
+    // Clean up on error
+    try {
+      if (transport) {
+        await transport.close();
+      }
+    } catch {
+      // Ignore cleanup errors
+    }
 
-      // Check if process started successfully
-      childProc.on('spawn', () => {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timeoutId);
-          childProc.kill();
-          resolve({
-            success: true,
-            transport: 'stdio',
-            details: {
-              mcpUrl: command,
-            },
-          });
-        }
-      });
+    // Parse error message
+    let errorMessage = 'Unknown error';
 
-      childProc.on('error', (spawnError: Error) => {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timeoutId);
-          resolve({
-            success: false,
-            transport: 'stdio',
-            error: spawnError.message || 'Failed to start process',
-          });
-        }
-      });
+    if (error instanceof Error) {
+      errorMessage = error.message;
 
-      childProc.on(
-        'exit',
-        (code: number | null, _signal: NodeJS.Signals | null) => {
-          if (!resolved && code !== null && code !== 0) {
-            resolved = true;
-            clearTimeout(timeoutId);
-            resolve({
-              success: false,
-              transport: 'stdio',
-              error: `Process exited with code ${code}`,
-            });
+      // Check for common connection errors
+      if (
+        errorMessage.includes('ENOENT') ||
+        errorMessage.includes('not found')
+      ) {
+        errorMessage = `Command "${command.split(/\s+/)[0]}" not found in PATH. Is the command installed?`;
+      } else if (
+        errorMessage.includes('EACCES') ||
+        errorMessage.includes('permission denied')
+      ) {
+        errorMessage =
+          'Permission denied. Check if the command is executable.';
+      } else if (errorMessage.includes('timeout')) {
+        errorMessage = `Connection timeout. The MCP server may not be responding.`;
           }
         }
-      );
-    });
-  } catch (error) {
+
     return {
       success: false,
       transport: 'stdio',
-      error:
-        error instanceof Error
-          ? error.message
-          : `Unknown error: ${String(error)}`,
+      error: errorMessage,
+      details: {
+        command,
+      },
     };
   }
 }
