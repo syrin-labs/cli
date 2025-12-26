@@ -9,6 +9,7 @@ import { getLLMProvider } from '@/runtime/llm/factory';
 import { createMCPClientManager } from '@/runtime/mcp/client-manager';
 import { RuntimeEventEmitter } from '@/events/emitter';
 import { MemoryEventStore } from '@/events/store/memory-store';
+import { FileEventStore } from '@/events/store/file-store';
 import { DevSession } from '@/runtime/dev/session';
 import { InteractiveREPL } from '@/runtime/dev/repl';
 import { DevFormatter } from '@/runtime/dev/formatter';
@@ -60,8 +61,31 @@ export async function executeDev(
     const sessionId = makeSessionID(`dev-${uuidv4()}`);
 
     // Create event store
-    const eventStore = new MemoryEventStore();
-    // TODO: Support FileEventStore when --save-events is set
+    let eventStore: MemoryEventStore | FileEventStore;
+    if (options.saveEvents) {
+      // Determine events directory
+      // If eventFile is provided, treat it as a directory path
+      // If it looks like a file path (ends with .jsonl), use its directory
+      let eventsDir: string;
+      if (options.eventFile) {
+        if (options.eventFile.endsWith('.jsonl')) {
+          // User provided a file path, use its directory
+          eventsDir = path.dirname(options.eventFile);
+        } else {
+          // User provided a directory path
+          eventsDir = options.eventFile;
+        }
+      } else {
+        // Default to .syrin/events in project root
+        eventsDir = path.join(projectRoot, Paths.SYRIN_DIR, 'events');
+      }
+      eventStore = new FileEventStore(eventsDir);
+      const eventFilePath = path.join(eventsDir, `${sessionId}.jsonl`);
+      logger.info(`Events will be saved to: ${eventFilePath}`);
+      console.log(`\n${Icons.TIP} Events are being saved to: ${eventFilePath}\n`);
+    } else {
+      eventStore = new MemoryEventStore();
+    }
 
     // Create event emitter
     const eventEmitter = new RuntimeEventEmitter(
@@ -203,6 +227,12 @@ export async function executeDev(
         try {
           await session.complete();
           await mcpClientManager.disconnect();
+          
+          // Close file event store if used
+          if (options.saveEvents && eventStore instanceof FileEventStore) {
+            await eventStore.close();
+            logger.info('Event store closed');
+          }
         } catch (error) {
           const err = error instanceof Error ? error : new Error(String(error));
           logger.error('Error during cleanup', err);

@@ -228,7 +228,7 @@ export function setupCLI(): void {
     .option('--save-events', 'Save events to file for debugging')
     .option(
       '--event-file <path>',
-      'Path to event file (default: .syrin/events.jsonl)'
+      'Directory path for event files (default: .syrin/events). Events are saved as {sessionId}.jsonl'
     )
     .action(
       async (options: {

@@ -58,8 +58,11 @@ export class FileEventStore implements EventStore {
   async append(event: EventEnvelope): Promise<void> {
     const handle = await this.getWriteStream(event.session_id);
     const line = JSON.stringify(event) + '\n';
+    const buffer = Buffer.from(line, 'utf-8');
 
-    await handle.writeFile(line);
+    // Get file stats to determine write position (end of file)
+    const stats = await handle.stat();
+    await handle.write(buffer, 0, buffer.length, stats.size);
   }
 
   async load(sessionId: SessionID): Promise<EventEnvelope[]> {
