@@ -5,6 +5,7 @@
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import type { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import type { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 /**
  * List all tools available from the MCP server.
@@ -84,7 +85,7 @@ export async function listPrompts(client: Client): Promise<{
  * Close the MCP transport connection.
  */
 export async function closeConnection(
-  transport: StreamableHTTPClientTransport
+  transport: StreamableHTTPClientTransport | StdioClientTransport
 ): Promise<void> {
   try {
     await transport.close();

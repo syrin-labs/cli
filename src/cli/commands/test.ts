@@ -86,7 +86,11 @@ function displayTestResults(result: MCPConnectionResult): void {
 
     // Basic connection info
     console.log('Connection Details:');
-    console.log(`  ${Labels.MCP_URL} ${details.mcpUrl}${statusIcon}`);
+    if (result.transport === 'http') {
+      console.log(`  ${Labels.MCP_URL} ${details.mcpUrl || 'N/A'}${statusIcon}`);
+    } else if (result.transport === 'stdio') {
+      console.log(`  ${Labels.COMMAND} ${details.command || 'N/A'}${statusIcon}`);
+    }
 
     if (details.protocolVersion) {
       console.log(`  Protocol Version: ${details.protocolVersion}`);
@@ -96,8 +100,8 @@ function displayTestResults(result: MCPConnectionResult): void {
       console.log(`  Session ID: ${details.sessionId}`);
     }
 
-    // Show initialize request/response details
-    if (details.initializeRequest && result.success) {
+    // Show initialize request/response details (only for HTTP transport)
+    if (details.initializeRequest && result.success && result.transport === 'http') {
       console.log('\n  Initialize Handshake:');
       console.log(
         `    Note: MCP uses Server-Sent Events (SSE) transport. Messages are sent via HTTP POST`

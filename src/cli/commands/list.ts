@@ -6,6 +6,7 @@
 import { loadConfig } from '@/config/loader';
 import {
   getConnectedClient,
+  getConnectedStdioClient,
   listTools,
   listResources,
   listPrompts,
@@ -230,15 +231,20 @@ export async function executeList(options: ListCommandOptions): Promise<void> {
           'Command is required for stdio transport. Set it in config.yaml or use --command option.'
         );
       }
-      throw new ConfigurationError(
-        'Listing via stdio transport is not yet supported. Please use HTTP transport.'
-      );
     }
 
-    // Connect to MCP server
-    const { client, transport: mcpTransport } = await getConnectedClient(
-      mcpUrl!
-    );
+    // Connect to MCP server based on transport type
+    let client;
+    let mcpTransport;
+    if (finalTransport === 'http') {
+      const connection = await getConnectedClient(mcpUrl!);
+      client = connection.client;
+      mcpTransport = connection.transport;
+    } else {
+      const connection = await getConnectedStdioClient(mcpCommand!);
+      client = connection.client;
+      mcpTransport = connection.transport;
+    }
 
     try {
       // List based on type
