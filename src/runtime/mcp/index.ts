@@ -6,4 +6,4 @@
 export * from './types';
 export * from './connection';
 export * from './list';
-export * from './client-manager';
+export * from './client/manager';

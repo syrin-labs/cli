@@ -4,7 +4,7 @@
 
 import type { SyrinConfig } from '@/config/types';
 import type { LLMProvider } from '@/runtime/llm/provider';
-import type { MCPClientManager } from '@/runtime/mcp/client-manager';
+import type { MCPClientManager } from '@/runtime/mcp/client/manager';
 import type { EventEmitter } from '@/events/emitter';
 import type { LLMMessage } from '@/runtime/llm/types';
 

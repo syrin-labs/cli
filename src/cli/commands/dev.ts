@@ -6,7 +6,7 @@
 import * as path from 'path';
 import { loadConfig } from '@/config/loader';
 import { getLLMProvider } from '@/runtime/llm/factory';
-import { createMCPClientManager } from '@/runtime/mcp/client-manager';
+import { createMCPClientManager } from '@/runtime/mcp/client/manager';
 import { RuntimeEventEmitter } from '@/events/emitter';
 import { MemoryEventStore } from '@/events/store/memory-store';
 import { FileEventStore } from '@/events/store/file-store';
