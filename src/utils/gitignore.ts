@@ -50,11 +50,19 @@ export async function ensureGitignorePattern(
     content += '\n';
   }
 
-  // Add pattern with a comment if file is not empty
+  // Add pattern to .gitignore
   if (content) {
-    content += `\n# Syrin event files\n${pattern}\n`;
+    // Check if we already have a "Syrin" section
+    if (content.includes('# Syrin')) {
+      // Add to existing Syrin section
+      content += `${pattern}\n`;
+    } else {
+      // Create new section with generic comment
+      content += `\n# Syrin files\n${pattern}\n`;
+    }
   } else {
-    content = `# Syrin event files\n${pattern}\n`;
+    // Create new file with generic comment
+    content = `# Syrin files\n${pattern}\n`;
   }
 
   await fs.writeFile(gitignorePath, content, 'utf-8');

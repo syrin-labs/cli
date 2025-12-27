@@ -11,3 +11,4 @@ bun.lock
 
 # Syrin event files
 .syrin/events
+.syrin/.dev-history

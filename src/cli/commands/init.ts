@@ -83,14 +83,22 @@ export async function executeInit(
       transport: initOptions.transport,
     });
 
-    // Update .gitignore to exclude event files
+    // Update .gitignore to exclude event files and dev history
     try {
-      const patternAdded = await ensureGitignorePattern(
+      const eventsPatternAdded = await ensureGitignorePattern(
         projectRoot,
         '.syrin/events'
       );
-      if (patternAdded) {
+      if (eventsPatternAdded) {
         logger.info('Added .syrin/events to .gitignore');
+      }
+
+      const historyPatternAdded = await ensureGitignorePattern(
+        projectRoot,
+        '.syrin/.dev-history'
+      );
+      if (historyPatternAdded) {
+        logger.info('Added .syrin/.dev-history to .gitignore');
       }
     } catch (error) {
       // Log but don't fail initialization if .gitignore update fails
