@@ -99,12 +99,12 @@ export async function promptInitOptions(
         ? String(defaults.command)
         : 'python3 server.py',
       when: (answers: Partial<InitAnswers>): boolean =>
-        answers.transport === 'stdio',
+        answers?.transport === 'stdio',
       validate: (
         input: string,
-        answers: Partial<InitAnswers>
+        answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers.transport === 'stdio' && !input.trim()) {
+        if (answers?.transport === 'stdio' && !input.trim()) {
           return 'Command is required for stdio transport';
         }
         return true;
@@ -118,12 +118,12 @@ export async function promptInitOptions(
         ? String(defaults.mcpUrl)
         : 'http://localhost:8000/mcp',
       when: (answers: Partial<InitAnswers>): boolean =>
-        answers.transport === 'http',
+        answers?.transport === 'http',
       validate: (
         input: string,
-        answers: Partial<InitAnswers>
+        answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers.transport === 'http') {
+        if (answers?.transport === 'http') {
           if (!input.trim()) {
             return 'MCP server URL is required for http transport';
           }
@@ -197,9 +197,9 @@ export async function promptInitOptions(
         answers.llmProviders?.includes('openai') ?? false,
       validate: (
         input: string,
-        answers: Partial<InitAnswers>
+        answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers.llmProviders?.includes('openai') && !input.trim()) {
+        if (answers?.llmProviders?.includes('openai') && !input.trim()) {
           return 'OpenAI API key is required';
         }
         return true;
@@ -214,9 +214,9 @@ export async function promptInitOptions(
         answers.llmProviders?.includes('openai') ?? false,
       validate: (
         input: string,
-        answers: Partial<InitAnswers>
+        answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers.llmProviders?.includes('openai') && !input.trim()) {
+        if (answers?.llmProviders?.includes('openai') && !input.trim()) {
           return 'OpenAI model name is required';
         }
         return true;
@@ -231,9 +231,9 @@ export async function promptInitOptions(
         answers.llmProviders?.includes('claude') ?? false,
       validate: (
         input: string,
-        answers: Partial<InitAnswers>
+        answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers.llmProviders?.includes('claude') && !input.trim()) {
+        if (answers?.llmProviders?.includes('claude') && !input.trim()) {
           return 'Claude API key is required';
         }
         return true;
@@ -248,9 +248,9 @@ export async function promptInitOptions(
         answers.llmProviders?.includes('claude') ?? false,
       validate: (
         input: string,
-        answers: Partial<InitAnswers>
+        answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers.llmProviders?.includes('claude') && !input.trim()) {
+        if (answers?.llmProviders?.includes('claude') && !input.trim()) {
           return 'Claude model name is required';
         }
         return true;

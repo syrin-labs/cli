@@ -45,11 +45,38 @@ export class OpenAIProvider implements LLMProvider {
   async chat(request: LLMRequest): Promise<LLMResponse> {
     try {
       // Convert tools to OpenAI function format
-      const functions = request.tools?.map(tool => ({
+      const functions = request.tools?.map(tool => {
+        const schema = tool.inputSchema;
+        // Check if schema is empty (no properties or empty properties object)
+        let isEmpty = true;
+        let schemaObj: Record<string, unknown> | null = null;
+
+        if (schema && typeof schema === 'object' && schema !== null) {
+          schemaObj = schema;
+          isEmpty =
+            schemaObj.type === 'object' &&
+            (!schemaObj.properties ||
+              (typeof schemaObj.properties === 'object' &&
+                schemaObj.properties !== null &&
+                Object.keys(schemaObj.properties).length === 0));
+        }
+
+        // For OpenAI, omit parameters if schema is empty to avoid validation errors
+        const functionDef: {
+          name: string;
+          description: string;
+          parameters?: Record<string, unknown>;
+        } = {
         name: tool.name,
         description: tool.description,
-        parameters: tool.inputSchema,
-      }));
+        };
+
+        if (!isEmpty && schemaObj) {
+          functionDef.parameters = schemaObj;
+        }
+
+        return functionDef;
+      });
 
       const messages = request.messages.map(msg => ({
         role: msg.role as 'user' | 'assistant' | 'system',
