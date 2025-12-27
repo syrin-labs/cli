@@ -30,13 +30,6 @@ export interface LLMProviderConfig {
   command?: Command;
 }
 
-export interface ScriptConfig {
-  /** Command to run in development mode */
-  dev: ScriptCommand;
-  /** Command to run in production/start mode */
-  start: ScriptCommand;
-}
-
 export interface SyrinConfig {
   /** Configuration version */
   version: SyrinVersion;
@@ -48,10 +41,8 @@ export interface SyrinConfig {
   transport: TransportType;
   /** MCP server URL (required for http transport) */
   mcp_url?: MCPURL;
-  /** Command to start MCP server (required for stdio transport) */
-  command?: Command;
-  /** Script commands */
-  scripts?: ScriptConfig;
+  /** Script command to run the MCP server (required for stdio transport) */
+  script?: ScriptCommand;
   /** LLM provider configurations */
   llm: Record<string, LLMProviderConfig>;
 }
@@ -68,12 +59,8 @@ export interface InitOptions {
   transport: TransportType;
   /** MCP server URL (for http transport) */
   mcpUrl?: MCPURL;
-  /** Command to start MCP server (for stdio transport) */
-  command?: Command;
-  /** Development script command */
-  devScript: ScriptCommand;
-  /** Start script command */
-  startScript: ScriptCommand;
+  /** Script command to run the MCP server */
+  script: ScriptCommand;
   /** LLM providers to configure */
   llmProviders: {
     openai?: { apiKey: APIKey; modelName: ModelName; default?: boolean };

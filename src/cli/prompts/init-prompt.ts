@@ -23,10 +23,8 @@ interface InitAnswers {
   projectName: string;
   agentName: string;
   transport: TransportType;
-  command?: string;
   mcpUrl?: string;
-  devScript: string;
-  startScript: string;
+  script: string;
   llmProviders: string[];
   openaiApiKey?: string;
   openaiModel?: string;
@@ -93,25 +91,6 @@ export async function promptInitOptions(
     },
     {
       type: 'input',
-      name: 'command',
-      message: 'Command to start MCP server:',
-      default: defaults?.command
-        ? String(defaults.command)
-        : 'python3 server.py',
-      when: (answers: Partial<InitAnswers>): boolean =>
-        answers?.transport === 'stdio',
-      validate: (
-        input: string,
-        answers?: Partial<InitAnswers>
-      ): boolean | string => {
-        if (answers?.transport === 'stdio' && !input.trim()) {
-          return 'Command is required for stdio transport';
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
       name: 'mcpUrl',
       message: 'MCP server URL:',
       default: defaults?.mcpUrl
@@ -139,32 +118,12 @@ export async function promptInitOptions(
     },
     {
       type: 'input',
-      name: 'devScript',
-      message: 'Development script command:',
-      default: defaults?.devScript
-        ? String(defaults.devScript)
-        : defaults?.command
-          ? String(defaults.command)
-          : 'python3 server.py',
+      name: 'script',
+      message: 'Script command to run MCP server:',
+      default: defaults?.script ? String(defaults.script) : 'python3 server.py',
       validate: (input: string): boolean | string => {
         if (!input.trim()) {
-          return 'Development script is required';
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'startScript',
-      message: 'Start script command:',
-      default: defaults?.startScript
-        ? String(defaults.startScript)
-        : defaults?.command
-          ? String(defaults.command)
-          : 'python3 server.py',
-      validate: (input: string): boolean | string => {
-        if (!input.trim()) {
-          return 'Start script is required';
+          return 'Script command is required';
         }
         return true;
       },
@@ -318,10 +277,8 @@ export async function promptInitOptions(
     projectName: makeProjectName(answers.projectName),
     agentName: makeAgentName(answers.agentName),
     transport: answers.transport,
-    command: answers.command ? makeCommand(answers.command) : undefined,
     mcpUrl: answers.mcpUrl ? makeMCPURL(answers.mcpUrl) : undefined,
-    devScript: makeScriptCommand(answers.devScript),
-    startScript: makeScriptCommand(answers.startScript),
+    script: makeScriptCommand(answers.script),
     llmProviders,
     nonInteractive: false,
   };
@@ -342,9 +299,7 @@ export function getDefaultInitOptions(projectRoot: string): InitOptions {
     projectName: makeProjectName(defaultProjectNameStr),
     agentName: makeAgentName('Agent'),
     transport: 'stdio',
-    command: makeCommand('python3 server.py'),
-    devScript: makeScriptCommand('python3 server.py'),
-    startScript: makeScriptCommand('python3 server.py'),
+    script: makeScriptCommand('python3 server.py'),
     llmProviders: {
       openai: {
         apiKey: makeAPIKey('OPENAI_API_KEY'),

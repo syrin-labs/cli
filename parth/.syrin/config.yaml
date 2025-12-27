@@ -5,40 +5,34 @@
 
 # Configuration Version
 # The version of this configuration schema.
-version: "1.0.0"
+version: '1.0.0'
 
 # Project Configuration
 # ---------------------
 # Project name: A unique identifier for your MCP server project
-project_name: "stdio-go"
+project_name: 'parth'
 
 # Agent name: The name of your AI agent that will interact with the MCP server
-agent_name: "stdio-go-agent"
+agent_name: 'Parth'
 
 # Transport Configuration
 # -----------------------
 # Transport type: How Syrin communicates with your MCP server
 #   - "stdio": Communicate via standard input/output (spawns the MCP server process)
 #   - "http":  Communicate via HTTP (connects to a running MCP server)
-transport: "stdio"
+transport: 'http'
 
-# Command (required for stdio transport)
-# The command to start your MCP server process
-# Example: "python3 server.py" or "node server.js"
-command: "go run main.go"
-
-# MCP Server URL (not used for stdio transport)
-# Uncomment and configure if you switch to http transport
-# mcp_url: "http://localhost:8000/mcp"
+# MCP Server URL (required for http transport)
+# The HTTP endpoint where your MCP server is running
+# Example: "http://localhost:8000/mcp"
+mcp_url: 'http://localhost:8000/mcp'
 
 # Script Configuration
 # --------------------
-# Scripts that Syrin can use to run your MCP server
-#   - dev:   Command used during development (e.g., "python3 server.py --dev")
-#   - start: Command used in production (e.g., "python3 server.py")
-scripts:
-  dev: "go run main.go"
-  start: "go run main.go"
+# Command to run your MCP server
+# For stdio transport, this is required
+# Use --run-script flag in dev mode to spawn the server internally
+script: 'source venv/bin/activate && python3 server.py --mode=http'
 
 # LLM Provider Configuration
 # ---------------------------
@@ -54,12 +48,12 @@ llm:
     # API key: Set as environment variable name or direct value
     # Example: "OPENAI_API_KEY" (reads from process.env.OPENAI_API_KEY)
     # Or: "sk-..." (direct value, not recommended)
-    API_KEY: "OPENAI_API_KEY"
+    API_KEY: 'OPENAI_API_KEY'
 
     # Model name: Set as environment variable name or direct value
     # Example: "OPENAI_MODEL_NAME" (reads from process.env.OPENAI_MODEL_NAME)
     # Or: "gpt-4" (direct value)
-    MODEL_NAME: "OPENAI_MODEL_NAME"
+    MODEL_NAME: 'OPENAI_MODEL_NAME'
 
     # Set as default LLM provider
     default: true

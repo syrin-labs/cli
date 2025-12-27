@@ -42,18 +42,13 @@ function buildConfigContent(options: InitOptions): string {
     project_name: options.projectName,
     agent_name: options.agentName,
     transport: options.transport,
-    scripts: {
-      dev: options.devScript,
-      start: options.startScript,
-    },
+    script: options.script,
     llm: buildLLMConfig(options.llmProviders),
   };
 
   // Add transport-specific fields
   if (options.transport === 'http' && options.mcpUrl) {
     config.mcp_url = options.mcpUrl;
-  } else if (options.transport === 'stdio' && options.command) {
-    config.command = options.command;
   }
 
   // Build YAML content with comments
@@ -99,16 +94,7 @@ function buildConfigContent(options: InitOptions): string {
     lines.push('# Example: "http://localhost:8000/mcp"');
     lines.push(`mcp_url: "${String(config.mcp_url)}"`);
     lines.push('');
-    lines.push('# Command (not used for http transport)');
-    lines.push('# Uncomment and configure if you switch to stdio transport');
-    lines.push('# command: "python3 server.py"');
-    lines.push('');
   } else {
-    lines.push('# Command (required for stdio transport)');
-    lines.push('# The command to start your MCP server process');
-    lines.push('# Example: "python3 server.py" or "node server.js"');
-    lines.push(`command: "${String(config.command)}"`);
-    lines.push('');
     lines.push('# MCP Server URL (not used for stdio transport)');
     lines.push('# Uncomment and configure if you switch to http transport');
     lines.push('# mcp_url: "http://localhost:8000/mcp"');
@@ -117,21 +103,15 @@ function buildConfigContent(options: InitOptions): string {
 
   lines.push('# Script Configuration');
   lines.push('# --------------------');
-  lines.push('# Scripts that Syrin can use to run your MCP server');
+  lines.push('# Command to run your MCP server');
+  lines.push('# For stdio transport, this is required');
   lines.push(
-    '#   - dev:   Command used during development (e.g., "python3 server.py --dev")'
+    '# Use --run-script flag in dev mode to spawn the server internally'
   );
-  lines.push(
-    '#   - start: Command used in production (e.g., "python3 server.py")'
-  );
-  lines.push('scripts:');
-  if (config.scripts) {
-    lines.push(`  dev: "${String(config.scripts.dev)}"`);
-    lines.push(`  start: "${String(config.scripts.start)}"`);
+  if (config.script) {
+    lines.push(`script: "${String(config.script)}"`);
   } else {
-    lines.push('  # Script section is missing - uncomment and configure:');
-    lines.push('  # dev: "python3 server.py"');
-    lines.push('  # start: "python3 server.py"');
+    lines.push('# script: "python3 server.py"');
   }
   lines.push('');
 

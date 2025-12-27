@@ -14,7 +14,7 @@ import type { TransportType } from '@/config/types';
 interface TestCommandOptions {
   transport?: TransportType;
   url?: string;
-  command?: string;
+  script?: string;
   projectRoot?: string;
 }
 
@@ -87,9 +87,13 @@ function displayTestResults(result: MCPConnectionResult): void {
     // Basic connection info
     console.log('Connection Details:');
     if (result.transport === 'http') {
-      console.log(`  ${Labels.MCP_URL} ${details.mcpUrl || 'N/A'}${statusIcon}`);
+      console.log(
+        `  ${Labels.MCP_URL} ${details.mcpUrl || 'N/A'}${statusIcon}`
+      );
     } else if (result.transport === 'stdio') {
-      console.log(`  ${Labels.COMMAND} ${details.command || 'N/A'}${statusIcon}`);
+      console.log(
+        `  ${Labels.COMMAND} ${details.command || 'N/A'}${statusIcon}`
+      );
     }
 
     if (details.protocolVersion) {
@@ -101,7 +105,11 @@ function displayTestResults(result: MCPConnectionResult): void {
     }
 
     // Show initialize request/response details (only for HTTP transport)
-    if (details.initializeRequest && result.success && result.transport === 'http') {
+    if (
+      details.initializeRequest &&
+      result.success &&
+      result.transport === 'http'
+    ) {
       console.log('\n  Initialize Handshake:');
       console.log(
         `    Note: MCP uses Server-Sent Events (SSE) transport. Messages are sent via HTTP POST`
@@ -220,34 +228,23 @@ function displayTestResults(result: MCPConnectionResult): void {
  * @param options - Command options
  */
 export async function executeTest(options: TestCommandOptions): Promise<void> {
-  const { transport, url, command, projectRoot } = options;
+  const { transport, url, script, projectRoot } = options;
 
   try {
+    // Load config to get default values
+    const config = loadConfig(projectRoot);
+    
     // Determine transport type
-    let transportType: TransportType;
+    let transportType: TransportType = transport || config.transport;
     let mcpUrl: string | undefined;
     let mcpCommand: string | undefined;
 
-    // If transport is explicitly provided, use it
-    if (transport) {
-      transportType = transport;
-      if (transportType === 'http') {
-        mcpUrl = url;
-      } else {
-        mcpCommand = command;
-      }
+    if (transportType === 'http') {
+      // Use provided URL or fall back to config
+      mcpUrl = url || config.mcp_url;
     } else {
-      // Load config to get transport type
-      const config = loadConfig(projectRoot);
-      transportType = config.transport;
-
-      if (transportType === 'http') {
-        // Use provided URL or fall back to config
-        mcpUrl = url || config.mcp_url;
-      } else {
-        // Use provided command or fall back to config
-        mcpCommand = command || config.command;
-      }
+      // Use provided script or fall back to config.script
+      mcpCommand = script || (config.script ? String(config.script) : undefined);
     }
 
     // Validate that we have the required parameters
@@ -259,7 +256,7 @@ export async function executeTest(options: TestCommandOptions): Promise<void> {
 
     if (transportType === 'stdio' && !mcpCommand) {
       throw new ConfigurationError(
-        'Command is required. Provide it as an argument or ensure it is set in config.yaml'
+        'Script is required. Provide it as an argument (--script) or ensure script is set in config.yaml'
       );
     }
 

@@ -50,8 +50,6 @@ export const Messages = {
   // Config Fix Messages
   CONFIG_ADD_MCP_URL:
     'Add `mcp_url` to your config.yaml file when using http transport',
-  CONFIG_ADD_COMMAND:
-    'Add `command` to your config.yaml file when using stdio transport',
   CONFIG_ADD_SCRIPTS:
-    'Add `scripts` section to your config.yaml with `dev` and `start` commands',
+    'Add `scripts` section to your config.yaml with `dev` and `start` commands. For stdio transport, `scripts.dev` is required.',
 } as const;

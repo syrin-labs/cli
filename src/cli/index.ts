@@ -89,8 +89,8 @@ export function setupCLI(): void {
     .command('test')
     .description('Test MCP connection and validate protocol compliance')
     .argument(
-      '[url-or-command]',
-      'MCP URL (for http transport) or command (for stdio transport). If not provided, uses value from config.yaml'
+      '[url-or-script]',
+      'MCP URL (for http transport) or script (for stdio transport). If not provided, uses value from config.yaml'
     )
     .option(
       '--transport <type>',
@@ -101,8 +101,8 @@ export function setupCLI(): void {
       'MCP URL to test (for http transport). If not provided, uses URL from config.yaml or positional argument'
     )
     .option(
-      '--command <command>',
-      'Command to test (for stdio transport). If not provided, uses command from config.yaml or positional argument'
+      '--script <script>',
+      'Script to test (for stdio transport). If not provided, uses script from config.yaml or positional argument'
     )
     .option(
       '--project-root <path>',
@@ -110,35 +110,35 @@ export function setupCLI(): void {
     )
     .action(
       async (
-        urlOrCommand: string | undefined,
+        urlOrScript: string | undefined,
         options: {
           transport?: string;
           url?: string;
-          command?: string;
+          script?: string;
           projectRoot?: string;
         }
       ) => {
         try {
-          // Determine if positional argument is URL or command based on transport
+          // Determine if positional argument is URL or script based on transport
           let finalUrl = options.url;
-          let finalCommand = options.command;
+          let finalScript = options.script;
 
-          if (urlOrCommand) {
+          if (urlOrScript) {
             const transport = options.transport as 'http' | 'stdio' | undefined;
             if (
               transport === 'http' ||
-              (!transport && urlOrCommand.startsWith('http'))
+              (!transport && urlOrScript.startsWith('http'))
             ) {
-              finalUrl = urlOrCommand;
+              finalUrl = urlOrScript;
             } else {
-              finalCommand = urlOrCommand;
+              finalScript = urlOrScript;
             }
           }
 
           await executeTest({
             transport: options.transport as 'http' | 'stdio' | undefined,
             url: finalUrl,
-            command: finalCommand,
+            script: finalScript,
             projectRoot: options.projectRoot,
           });
         } catch (error) {
@@ -168,8 +168,8 @@ export function setupCLI(): void {
       'MCP URL (for http transport). If not provided, uses URL from config.yaml'
     )
     .option(
-      '--command <command>',
-      'Command (for stdio transport). If not provided, uses command from config.yaml'
+      '--script <script>',
+      'Script (for stdio transport). If not provided, uses script from config.yaml'
     )
     .option(
       '--project-root <path>',
@@ -181,7 +181,7 @@ export function setupCLI(): void {
         options: {
           transport?: string;
           url?: string;
-          command?: string;
+          script?: string;
           projectRoot?: string;
         }
       ) => {
@@ -197,7 +197,7 @@ export function setupCLI(): void {
             type: listType,
             transport: options.transport as 'http' | 'stdio' | undefined,
             url: options.url,
-            command: options.command,
+            script: options.script,
             projectRoot: options.projectRoot,
           });
         } catch (error) {
@@ -230,6 +230,10 @@ export function setupCLI(): void {
       '--event-file <path>',
       'Directory path for event files (default: .syrin/events). Events are saved as {sessionId}.jsonl'
     )
+    .option(
+      '--run-script',
+      'Run script to spawn server internally. If not provided, stdio uses script automatically, http connects to existing server'
+    )
     .action(
       async (options: {
         exec?: boolean;
@@ -237,6 +241,7 @@ export function setupCLI(): void {
         projectRoot?: string;
         saveEvents?: boolean;
         eventFile?: string;
+        runScript?: boolean;
       }) => {
         try {
           await executeDev({
@@ -245,6 +250,7 @@ export function setupCLI(): void {
             projectRoot: options.projectRoot,
             saveEvents: options.saveEvents || false,
             eventFile: options.eventFile,
+            runScript: options.runScript || false,
           });
         } catch (error) {
           // Error handling is done in executeDev

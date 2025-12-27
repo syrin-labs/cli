@@ -67,8 +67,8 @@ export class OpenAIProvider implements LLMProvider {
           description: string;
           parameters?: Record<string, unknown>;
         } = {
-        name: tool.name,
-        description: tool.description,
+          name: tool.name,
+          description: tool.description,
         };
 
         if (!isEmpty && schemaObj) {

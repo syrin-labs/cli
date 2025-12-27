@@ -23,7 +23,7 @@ interface CheckResult {
 interface DoctorReport {
   config: SyrinConfig;
   transportCheck: CheckResult;
-  scriptsCheck: CheckResult[];
+  scriptCheck: CheckResult | null;
   llmChecks: Array<{
     provider: string;
     apiKeyCheck: CheckResult;
@@ -54,14 +54,14 @@ function checkTransport(config: SyrinConfig): CheckResult {
     };
   } else {
     // stdio transport
-    if (!config.command) {
+    if (!config.script) {
       return {
         isValid: false,
-        message: 'Command is missing',
-        fix: Messages.CONFIG_ADD_COMMAND,
+        message: 'script is missing',
+        fix: 'Add script to your config.yaml file when using stdio transport',
       };
     }
-    const commandName = extractCommandName(String(config.command));
+    const commandName = extractCommandName(String(config.script));
     const commandExists = checkCommandExists(commandName);
     if (!commandExists) {
       return {
@@ -72,47 +72,29 @@ function checkTransport(config: SyrinConfig): CheckResult {
     }
     return {
       isValid: true,
-      message: `Command: ${String(config.command)}`,
+      message: `Script: ${String(config.script)}`,
     };
   }
 }
 
 /**
- * Check script commands.
+ * Check script command.
  */
-function checkScripts(config: SyrinConfig): CheckResult[] {
-  const results: CheckResult[] = [];
-
-  if (!config.scripts) {
-    // Scripts section is optional, return empty array
-    return results;
+function checkScript(config: SyrinConfig): CheckResult | null {
+  if (!config.script) {
+    // Script is optional for HTTP transport
+    return null;
   }
 
-  // Check dev script
-  const devCommand = extractCommandName(String(config.scripts.dev));
-  const devCommandExists = checkCommandExists(devCommand);
-  results.push({
-    isValid: devCommandExists,
-    message: devCommandExists ? 'working' : `Command "${devCommand}" not found`,
-    fix: devCommandExists
+  const commandName = extractCommandName(String(config.script));
+  const commandExists = checkCommandExists(commandName);
+  return {
+    isValid: commandExists,
+    message: commandExists ? 'working' : `Command "${commandName}" not found`,
+    fix: commandExists
       ? undefined
-      : `Make sure "${devCommand}" is installed and available in your PATH`,
-  });
-
-  // Check start script
-  const startCommand = extractCommandName(String(config.scripts.start));
-  const startCommandExists = checkCommandExists(startCommand);
-  results.push({
-    isValid: startCommandExists,
-    message: startCommandExists
-      ? 'working'
-      : `Command "${startCommand}" not found`,
-    fix: startCommandExists
-      ? undefined
-      : `Make sure "${startCommand}" is installed and available in your PATH`,
-  });
-
-  return results;
+      : `Make sure "${commandName}" is installed and available in your PATH`,
+  };
 }
 
 /**
@@ -198,7 +180,7 @@ function generateReport(
   return {
     config,
     transportCheck: checkTransport(config),
-    scriptsCheck: checkScripts(config),
+    scriptCheck: checkScript(config),
     llmChecks: checkLLMProviders(config, projectRoot),
     localLlmChecks: checkLocalLLMProviders(config),
   };
@@ -211,8 +193,7 @@ function displayReport(report: DoctorReport): void {
   const config = report.config;
   const allValid =
     report.transportCheck.isValid &&
-    (report.scriptsCheck.length === 0 ||
-      report.scriptsCheck.every(s => s.isValid)) &&
+    (report.scriptCheck === null || report.scriptCheck.isValid) &&
     report.llmChecks.every(l => l.apiKeyCheck.isValid && l.modelCheck.isValid);
 
   console.log(`\n${Labels.DOCTOR_REPORT_TITLE}`);
@@ -238,37 +219,28 @@ function displayReport(report: DoctorReport): void {
     const cmdStatus = report.transportCheck.isValid
       ? Icons.SUCCESS
       : Icons.FAILURE;
-    console.log(
-      `${Labels.COMMAND} ${String(config.command || Labels.STATUS_MISSING)} ${cmdStatus}`
-    );
+    const scriptDisplay = config.script
+      ? String(config.script)
+      : Labels.STATUS_MISSING;
+    console.log(`${Labels.COMMAND} ${scriptDisplay} ${cmdStatus}`);
   }
   if (!report.transportCheck.isValid && report.transportCheck.fix) {
     console.log(`   ${Icons.WARNING}  ${report.transportCheck.fix}`);
   }
   console.log('');
 
-  // Scripts (only show if scripts section exists)
-  if (report.scriptsCheck.length > 0) {
+  // Script (only show if script exists)
+  if (report.scriptCheck !== null) {
     console.log(`${Labels.SCRIPTS}`);
-    const scriptLabels = [Labels.SCRIPT_DEV, Labels.SCRIPT_START] as const;
-    report.scriptsCheck.forEach((check, index) => {
-      const label = scriptLabels[index];
-      if (!label) return; // Safety check
-      const script = config.scripts
-        ? index === 0
-          ? config.scripts.dev
-          : config.scripts.start
-        : Labels.STATUS_NA;
-      const status = check.isValid ? Icons.SUCCESS : Icons.FAILURE;
-      const scriptStr = config.scripts ? String(script) : Labels.STATUS_NA;
-      const message = check.isValid ? Labels.STATUS_WORKING : check.message;
-      console.log(
-        `- ${label.padEnd(6)} [${scriptStr}] ${status.padEnd(10)} ${message}`
-      );
-      if (!check.isValid && check.fix) {
-        console.log(`   ${Icons.WARNING}  ${check.fix}`);
-      }
-    });
+    const status = report.scriptCheck.isValid ? Icons.SUCCESS : Icons.FAILURE;
+    const scriptStr = config.script ? String(config.script) : Labels.STATUS_NA;
+    const message = report.scriptCheck.isValid
+      ? Labels.STATUS_WORKING
+      : report.scriptCheck.message;
+    console.log(`- Script [${scriptStr}] ${status.padEnd(10)} ${message}`);
+    if (!report.scriptCheck.isValid && report.scriptCheck.fix) {
+      console.log(`   ${Icons.WARNING}  ${report.scriptCheck.fix}`);
+    }
     console.log('');
   }
 
@@ -334,8 +306,7 @@ export function executeDoctor(projectRoot: string = process.cwd()): void {
     // Exit with appropriate code
     const allValid =
       report.transportCheck.isValid &&
-      (report.scriptsCheck.length === 0 ||
-        report.scriptsCheck.every(s => s.isValid)) &&
+      (report.scriptCheck === null || report.scriptCheck.isValid) &&
       report.llmChecks.every(
         l => l.apiKeyCheck.isValid && l.modelCheck.isValid
       );

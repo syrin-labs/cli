@@ -59,14 +59,6 @@ const LLMProviderSchema = z
   );
 
 /**
- * Schema for script configuration.
- */
-const ScriptSchema = z.object({
-  dev: z.string().min(1, 'Dev script is required'),
-  start: z.string().min(1, 'Start script is required'),
-});
-
-/**
  * Main configuration schema.
  */
 export const ConfigSchema = z
@@ -76,8 +68,7 @@ export const ConfigSchema = z
     agent_name: z.string().min(1, 'Agent name is required'),
     transport: z.enum(['stdio', 'http']),
     mcp_url: z.string().url().optional(),
-    command: z.string().optional(),
-    scripts: ScriptSchema.optional(),
+    script: z.string().optional(),
     llm: z
       .record(z.string(), LLMProviderSchema)
       .refine(obj => Object.keys(obj).length > 0, {
@@ -99,15 +90,17 @@ export const ConfigSchema = z
   )
   .refine(
     data => {
-      // If transport is stdio, command must be provided
-      if (data.transport === 'stdio' && !data.command) {
-        return false;
+      // If transport is stdio, script must be provided
+      if (data.transport === 'stdio') {
+        if (!data.script) {
+          return false;
+        }
       }
       return true;
     },
     {
-      message: 'command is required when transport is "stdio"',
-      path: ['command'],
+      message: 'script is required when transport is "stdio"',
+      path: ['script'],
     }
   )
   .refine(
@@ -149,13 +142,7 @@ export function validateConfig(config: unknown): SyrinConfig {
       agent_name: makeAgentName(parsed.agent_name),
       transport: parsed.transport,
       mcp_url: parsed.mcp_url ? makeMCPURL(parsed.mcp_url) : undefined,
-      command: parsed.command ? makeCommand(parsed.command) : undefined,
-      scripts: parsed.scripts
-        ? {
-            dev: makeScriptCommand(parsed.scripts.dev),
-            start: makeScriptCommand(parsed.scripts.start),
-          }
-        : undefined,
+      script: parsed.script ? makeScriptCommand(parsed.script) : undefined,
       llm: Object.fromEntries(
         Object.entries(parsed.llm).map(([key, provider]) => [
           key,

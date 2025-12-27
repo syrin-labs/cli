@@ -13,7 +13,6 @@ import {
   closeConnection,
 } from '@/runtime/mcp';
 import { ConfigurationError } from '@/utils/errors';
-import { logger } from '@/utils/logger';
 import { Icons, Labels } from '@/constants';
 import type { TransportType } from '@/config/types';
 
@@ -23,7 +22,7 @@ interface ListCommandOptions {
   type?: ListType;
   transport?: TransportType;
   url?: string;
-  command?: string;
+  script?: string;
   projectRoot?: string;
 }
 
@@ -185,37 +184,23 @@ function displayPrompts(
  */
 export async function executeList(options: ListCommandOptions): Promise<void> {
   try {
-    const { type = 'tools', transport, url, command, projectRoot } = options;
+    const { type = 'tools', transport, url, script, projectRoot } = options;
+
+    // Load config to get default values
+    const config = loadConfig(projectRoot);
 
     // Determine transport and connection details
-    let finalTransport: TransportType;
+    const finalTransport: TransportType = transport || config.transport;
     let mcpUrl: string | undefined;
     let mcpCommand: string | undefined;
 
-    if (transport || url || command) {
-      // User provided explicit options
-      // Infer transport from URL if not provided
-      if (!transport) {
-        if (url) {
-          finalTransport = 'http';
-        } else if (command) {
-          finalTransport = 'stdio';
-        } else {
-          throw new ConfigurationError(
-            'Either URL or command must be provided, or load from config.yaml'
-          );
-        }
-      } else {
-        finalTransport = transport;
-      }
-      mcpUrl = url;
-      mcpCommand = command;
+    if (finalTransport === 'http') {
+      // Use provided URL or fall back to config
+      mcpUrl = url || config.mcp_url;
     } else {
-      // Load from config
-      const config = loadConfig(projectRoot);
-      finalTransport = config.transport;
-      mcpUrl = config.mcp_url;
-      mcpCommand = config.command;
+      // Use provided script or fall back to config.script
+      mcpCommand =
+        script || (config.script ? String(config.script) : undefined);
     }
 
     // Validate required parameters
@@ -228,7 +213,7 @@ export async function executeList(options: ListCommandOptions): Promise<void> {
     } else if (finalTransport === 'stdio') {
       if (!mcpCommand) {
         throw new ConfigurationError(
-          'Command is required for stdio transport. Set it in config.yaml or use --command option.'
+          'Script is required for stdio transport. Set it in config.yaml or use --script option.'
         );
       }
     }
@@ -236,14 +221,71 @@ export async function executeList(options: ListCommandOptions): Promise<void> {
     // Connect to MCP server based on transport type
     let client;
     let mcpTransport;
-    if (finalTransport === 'http') {
-      const connection = await getConnectedClient(mcpUrl!);
-      client = connection.client;
-      mcpTransport = connection.transport;
-    } else {
-      const connection = await getConnectedStdioClient(mcpCommand!);
-      client = connection.client;
-      mcpTransport = connection.transport;
+    try {
+      if (finalTransport === 'http') {
+        const connection = await getConnectedClient(mcpUrl!);
+        client = connection.client;
+        mcpTransport = connection.transport;
+      } else {
+        const connection = await getConnectedStdioClient(mcpCommand!);
+        client = connection.client;
+        mcpTransport = connection.transport;
+      }
+    } catch (connectionError) {
+      // Provide helpful error messages for connection failures
+      const errorMessage =
+        connectionError instanceof Error
+          ? connectionError.message
+          : String(connectionError);
+
+      if (finalTransport === 'http') {
+        // Check for common HTTP connection errors
+        if (
+          errorMessage.includes('fetch failed') ||
+          errorMessage.includes('ECONNREFUSED') ||
+          errorMessage.includes('NetworkError') ||
+          errorMessage.includes('ENOTFOUND')
+        ) {
+          const config = loadConfig(projectRoot);
+          const configSource =
+            config.transport === 'http' && config.mcp_url === mcpUrl
+              ? ' (from config.yaml)'
+              : '';
+
+          throw new ConfigurationError(
+            `Cannot connect to MCP server at ${mcpUrl}${configSource}.\n` +
+              `\n` +
+              `The server appears to be not running or unreachable.\n` +
+              `\n` +
+              `To fix this:\n` +
+              `  1. Make sure the MCP server is running\n` +
+              `  2. Verify the URL is correct: ${mcpUrl}\n` +
+              `  3. Check if the server is listening on the expected port\n`
+          );
+        } else if (errorMessage.includes('timeout')) {
+          throw new ConfigurationError(
+            `Connection to MCP server at ${mcpUrl} timed out.\n` +
+              `The server may be slow to respond or not running.`
+          );
+        }
+      } else {
+        // stdio transport errors
+        if (errorMessage.includes('spawn') || errorMessage.includes('ENOENT')) {
+          throw new ConfigurationError(
+            `Failed to start MCP server process: ${mcpCommand}\n` +
+              `\n` +
+              `The script may be incorrect or the executable not found.\n` +
+              `Verify the script path in config.yaml or use --script option.`
+          );
+        } else if (errorMessage.includes('timeout')) {
+          throw new ConfigurationError(
+            `Connection to MCP server via stdio timed out.\n` +
+              `The server process may have failed to start or is not responding.`
+          );
+        }
+      }
+      // Re-throw if we don't have a specific handler
+      throw connectionError;
     }
 
     try {
@@ -264,15 +306,12 @@ export async function executeList(options: ListCommandOptions): Promise<void> {
     }
   } catch (error) {
     if (error instanceof ConfigurationError) {
-      logger.error('Configuration error', error);
       console.error(`\n${Icons.ERROR} ${error.message}\n`);
       process.exit(1);
     } else if (error instanceof Error) {
-      logger.error('List command failed', error);
       console.error(`\n${Icons.ERROR} ${error.message}\n`);
       process.exit(1);
     } else {
-      logger.error('List command failed', new Error(String(error)));
       console.error(
         `\n${Icons.ERROR} Failed to list ${options.type || 'items'}\n`
       );

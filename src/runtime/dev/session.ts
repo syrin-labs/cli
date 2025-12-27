@@ -29,6 +29,7 @@ import type {
 } from '@/events/payloads/validation';
 import { makePromptID } from '@/types/factories';
 import { v4 as uuidv4 } from 'uuid';
+import { logger } from '@/utils/logger';
 
 /**
  * Dev Mode Session implementation.
@@ -247,7 +248,53 @@ After tool execution, you will receive the results and can provide a final respo
       duration_ms: number;
     }> = [];
 
+    // Deduplicate tool calls to prevent executing the same tool call multiple times
+    // This can happen if the LLM returns duplicate tool calls in a single response
+    // We deduplicate by tool name + normalized arguments to avoid redundant executions
+    const seenKeys = new Set<string>();
+    const uniqueToolCalls: ToolCall[] = [];
+    const skippedDuplicates: Array<{ toolCall: ToolCall; reason: string }> = [];
+
     for (const toolCall of toolCalls) {
+      // Create a unique key from tool name + arguments (normalized JSON)
+      // This ensures we don't execute the same tool with the same arguments twice
+      const normalizedArgs = JSON.stringify(
+        toolCall.arguments,
+        Object.keys(toolCall.arguments).sort()
+      );
+      const key = `${toolCall.name}:${normalizedArgs}`;
+
+      if (seenKeys.has(key)) {
+        // Track skipped duplicates to inform the LLM
+        skippedDuplicates.push({
+          toolCall,
+          reason: `Duplicate tool call detected: ${toolCall.name} with identical arguments was already executed`,
+        });
+        // Use logger instead of console.warn for proper event tracking
+        logger.warn(
+          `Skipping duplicate tool call: ${toolCall.name} with arguments ${normalizedArgs}`
+        );
+        continue;
+      }
+
+      seenKeys.add(key);
+      uniqueToolCalls.push(toolCall);
+    }
+
+    // If we skipped duplicates, add them to conversation history so LLM knows
+    if (skippedDuplicates.length > 0) {
+      const skippedMessages = skippedDuplicates.map(
+        ({ toolCall, reason }) =>
+          `Tool call ${toolCall.name}(${JSON.stringify(toolCall.arguments)}) was skipped: ${reason}`
+      );
+      this.state.conversationHistory.push({
+        role: 'assistant',
+        content: `Note: ${skippedDuplicates.length} duplicate tool call(s) were skipped:\n${skippedMessages.join('\n')}`,
+      });
+    }
+
+    // Process only unique tool calls
+    for (const toolCall of uniqueToolCalls) {
       // Emit LLM proposed tool call event
       await this.config.eventEmitter.emit<LLMProposedToolCallPayload>(
         LLMProposalEventType.LLM_PROPOSED_TOOL_CALL,

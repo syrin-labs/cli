@@ -89,11 +89,14 @@ export interface MCPClientManager {
 export class HTTPMCPClientManager implements MCPClientManager {
   private client: Client | null = null;
   private transport: StreamableHTTPClientTransport | null = null;
+  private process: childProcess.ChildProcess | null = null;
   private connected: boolean = false;
 
   constructor(
     private readonly mcpUrl: string,
-    private readonly eventEmitter: EventEmitter
+    private readonly eventEmitter: EventEmitter,
+    private readonly shouldSpawn: boolean = false,
+    private readonly serverCommand?: string
   ) {}
 
   async connect(): Promise<void> {
@@ -102,12 +105,22 @@ export class HTTPMCPClientManager implements MCPClientManager {
     }
 
     try {
+      // Spawn server process if needed
+      if (this.shouldSpawn && this.serverCommand) {
+        this.spawnServer();
+        // Wait a bit for server to start
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
       // Emit transport initialization event
       await this.eventEmitter.emit<TransportInitializedPayload>(
         TransportEventType.TRANSPORT_INITIALIZED,
         {
           transport_type: 'http',
           endpoint: this.mcpUrl,
+          ...(this.shouldSpawn && this.serverCommand
+            ? { command: this.serverCommand }
+            : {}),
         }
       );
 
@@ -118,6 +131,12 @@ export class HTTPMCPClientManager implements MCPClientManager {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
+
+      // Clean up spawned process on error
+      if (this.process) {
+        this.process.kill();
+        this.process = null;
+      }
 
       // Emit transport error event
       await this.eventEmitter.emit<TransportErrorPayload>(
@@ -136,13 +155,93 @@ export class HTTPMCPClientManager implements MCPClientManager {
     }
   }
 
+  /**
+   * Spawn the HTTP server as a child process and capture logs.
+   */
+  private spawnServer(): void {
+    if (!this.serverCommand) {
+      throw new ConfigurationError('Server command is required for spawning');
+    }
+
+    // Split command into executable and arguments
+    const parts = this.serverCommand.trim().split(/\s+/);
+    const executable = parts[0];
+    const args = parts.slice(1);
+
+    if (!executable) {
+      throw new ConfigurationError('Server command is empty');
+    }
+
+    // Spawn the process
+    this.process = childProcess.spawn(executable, args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: process.env as Record<string, string>,
+      cwd: process.cwd(),
+    });
+
+    // Capture stdout logs
+    this.process.stdout?.on('data', (data: Buffer) => {
+      const message = data.toString().trim();
+      if (message) {
+        // Log server output directly
+        console.log(`[Server] ${message}`);
+      }
+    });
+
+    // Capture stderr logs
+    this.process.stderr?.on('data', (data: Buffer) => {
+      const message = data.toString().trim();
+      if (message) {
+        // Log server errors directly
+        console.error(`[Server Error] ${message}`);
+      }
+    });
+
+    // Handle process errors
+    this.process.on('error', (error: Error) => {
+      void this.eventEmitter.emit<TransportErrorPayload>(
+        TransportEventType.TRANSPORT_ERROR,
+        {
+          transport_type: 'http',
+          error_message: `Failed to spawn server process: ${error.message}`,
+          error_code: 'SPAWN_ERROR',
+          recoverable: false,
+        }
+      );
+    });
+
+    // Handle process exit
+    this.process.on('exit', (code: number | null, signal: string | null) => {
+      if (code !== null && code !== 0) {
+        void this.eventEmitter.emit<TransportErrorPayload>(
+          TransportEventType.TRANSPORT_ERROR,
+          {
+            transport_type: 'http',
+            error_message: `Server process exited with code ${code}${signal ? ` (signal: ${signal})` : ''}`,
+            error_code: 'SERVER_EXIT',
+            recoverable: false,
+          }
+        );
+      }
+    });
+  }
+
   async disconnect(): Promise<void> {
-    if (!this.connected || !this.transport) {
+    if (!this.connected) {
       return;
     }
 
     try {
-      await this.transport.close();
+      if (this.transport) {
+        await this.transport.close();
+      }
+
+      // Kill spawned process if it exists
+      if (this.process) {
+        this.process.kill();
+        this.process = null;
+      }
+
       this.connected = false;
       this.client = null;
       this.transport = null;
@@ -150,6 +249,11 @@ export class HTTPMCPClientManager implements MCPClientManager {
       // Log but don't throw - cleanup errors are non-critical
       const errorMessage =
         error instanceof Error ? error.message : String(error);
+
+      if (this.process) {
+        this.process.kill();
+        this.process = null;
+      }
 
       await this.eventEmitter.emit<TransportErrorPayload>(
         TransportEventType.TRANSPORT_ERROR,
@@ -402,6 +506,24 @@ export class StdioMCPClientManager implements MCPClientManager {
       this.process = childProcess.spawn(executable, args, {
         stdio: ['pipe', 'pipe', 'pipe'],
         env: process.env as Record<string, string>,
+      });
+
+      // Capture stdout logs
+      this.process.stdout?.on('data', (data: Buffer) => {
+        const message = data.toString().trim();
+        if (message) {
+          // Log server output directly
+          console.log(`[Server] ${message}`);
+        }
+      });
+
+      // Capture stderr logs
+      this.process.stderr?.on('data', (data: Buffer) => {
+        const message = data.toString().trim();
+        if (message) {
+          // Log server errors directly
+          console.error(`[Server Error] ${message}`);
+        }
       });
 
       // Create stdio transport
@@ -688,21 +810,23 @@ export class StdioMCPClientManager implements MCPClientManager {
  * Factory function to create an MCP client manager.
  * @param transport - Transport type
  * @param mcpUrl - MCP URL (for HTTP transport)
- * @param command - Command (for stdio transport)
+ * @param command - Command to spawn server (optional, only if shouldSpawn is true)
  * @param eventEmitter - Event emitter for emitting events
+ * @param shouldSpawn - Whether to spawn the server as a child process
  * @returns MCP client manager instance
  */
 export function createMCPClientManager(
   transport: TransportType,
   mcpUrl: MCPURL | string | undefined,
   command: Command | string | undefined,
-  eventEmitter: EventEmitter
+  eventEmitter: EventEmitter,
+  shouldSpawn: boolean = false
 ): MCPClientManager {
   if (transport === 'http') {
     if (!mcpUrl) {
       throw new ConfigurationError('MCP URL is required for HTTP transport');
     }
-    return new HTTPMCPClientManager(mcpUrl, eventEmitter);
+    return new HTTPMCPClientManager(mcpUrl, eventEmitter, shouldSpawn, command);
   }
 
   if (transport === 'stdio') {

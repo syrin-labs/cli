@@ -216,6 +216,15 @@ export class DevFormatter {
   }
 
   /**
+   * Format and display server log message.
+   */
+  displayServerLog(type: 'stdout' | 'stderr', message: string): void {
+    const prefix = type === 'stderr' ? Icons.ERROR : Icons.TIP;
+    const label = type === 'stderr' ? '[Server Error]' : '[Server]';
+    console.log(`${prefix} ${label} ${message}`);
+  }
+
+  /**
    * Format and display error message.
    */
   displayError(message: string): void {

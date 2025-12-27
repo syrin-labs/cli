@@ -18,6 +18,40 @@ import { logger } from '@/utils/logger';
 import { Icons, Paths } from '@/constants';
 import { makeSessionID } from '@/types/factories';
 import { v4 as uuidv4 } from 'uuid';
+import type { SyrinConfig } from '@/config/types';
+
+/**
+ * Resolve the server command to use based on config and run-script flag.
+ * @param config - Syrin configuration
+ * @param runScript - Whether to run the script (spawn server)
+ * @returns Resolved command and whether to spawn the server
+ */
+function resolveServerCommand(
+  config: SyrinConfig,
+  runScript: boolean
+): { command: string | undefined; shouldSpawn: boolean } {
+  // If run-script flag is provided, spawn using config.script
+  if (runScript) {
+    if (!config.script) {
+      throw new ConfigurationError(
+        'script is required when using --run-script flag'
+      );
+    }
+    return { command: config.script, shouldSpawn: true };
+  }
+
+  // No run-script flag provided
+  if (config.transport === 'stdio') {
+    // For stdio, always spawn using script
+    if (!config.script) {
+      throw new ConfigurationError('script is required for stdio transport');
+    }
+    return { command: config.script, shouldSpawn: true };
+  }
+
+  // For HTTP without run-script flag, don't spawn (connect to existing server)
+  return { command: undefined, shouldSpawn: false };
+}
 
 export interface DevCommandOptions {
   /** Execute tool calls (default: preview mode) */
@@ -30,6 +64,8 @@ export interface DevCommandOptions {
   saveEvents?: boolean;
   /** Event file path */
   eventFile?: string;
+  /** Run script to spawn server internally */
+  runScript?: boolean;
 }
 
 /**
@@ -47,14 +83,19 @@ export async function executeDev(
     // Validate transport configuration
     if (config.transport === 'http' && !config.mcp_url) {
       throw new ConfigurationError(
-        'MCP URL is required for HTTP transport. Set it in config.yaml or use --url option.'
+        'MCP URL is required for HTTP transport. Set it in config.yaml.'
       );
     }
 
-    if (config.transport === 'stdio' && !config.command) {
-      throw new ConfigurationError(
-        'Command is required for stdio transport. Set it in config.yaml or use --command option.'
-      );
+    // Resolve server command based on transport and run-script flag
+    const { command: serverCommand, shouldSpawn } = resolveServerCommand(
+      config,
+      options.runScript || false
+    );
+
+    // For stdio, server command is always required
+    if (config.transport === 'stdio' && !serverCommand) {
+      throw new ConfigurationError('script is required for stdio transport');
     }
 
     // Create session ID
@@ -104,8 +145,9 @@ export async function executeDev(
     const mcpClientManager = createMCPClientManager(
       config.transport,
       config.mcp_url,
-      config.command,
-      eventEmitter
+      serverCommand,
+      eventEmitter,
+      shouldSpawn
     );
 
     // Connect to MCP server
@@ -118,11 +160,13 @@ export async function executeDev(
     const formatter = new DevFormatter();
 
     // Display header
+    const displayCommand =
+      shouldSpawn && serverCommand ? serverCommand : undefined;
     formatter.displayHeader(
       config.version,
       config.transport,
       config.mcp_url,
-      config.command,
+      displayCommand,
       llmProvider.getName(),
       availableTools.length
     );
@@ -142,11 +186,12 @@ export async function executeDev(
     // Display welcome message
     formatter.displayWelcomeMessage();
 
-    // Create REPL
+    // Create REPL with agent name from config
     const historyFile = path.join(projectRoot, Paths.SYRIN_DIR, '.dev-history');
+    const replPrompt = `Hey, ${config.agent_name}! > `;
     const repl = new InteractiveREPL(
       {
-        prompt: 'User > ',
+        prompt: replPrompt,
         saveHistory: true,
         historyFile,
       },
@@ -163,9 +208,7 @@ export async function executeDev(
           return;
         }
 
-        // Display user input
-        formatter.displayUserInput(input);
-
+        // Note: User input is already displayed by readline, so we don't need to display it again
         // Process user input through session
         try {
           // Track state before processing
@@ -246,15 +289,12 @@ export async function executeDev(
     );
   } catch (error) {
     if (error instanceof ConfigurationError) {
-      logger.error('Configuration error', error);
       console.error(`\n${Icons.ERROR} ${error.message}\n`);
       process.exit(1);
     } else if (error instanceof Error) {
-      logger.error('Dev command failed', error);
       console.error(`\n${Icons.ERROR} ${error.message}\n`);
       process.exit(1);
     } else {
-      logger.error('Dev command failed', new Error(String(error)));
       console.error(`\n${Icons.ERROR} Failed to start dev mode\n`);
       process.exit(1);
     }
