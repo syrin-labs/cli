@@ -11,8 +11,7 @@ import { RuntimeEventEmitter } from '@/events/emitter';
 import { MemoryEventStore } from '@/events/store/memory-store';
 import { FileEventStore } from '@/events/store/file-store';
 import { DevSession } from '@/runtime/dev/session';
-import { InteractiveREPL } from '@/runtime/dev/repl';
-import { DevFormatter } from '@/runtime/dev/formatter';
+import { ChatUI } from '@/runtime/dev/chat-ui';
 import { ConfigurationError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 import { Icons, Paths } from '@/constants';
@@ -169,29 +168,7 @@ export async function executeDev(
       }
     };
 
-    // Handle SIGINT (Ctrl+C) - ensure cleanup happens
-    // Stop the REPL first, then cleanup
-    let isExiting = false;
-    process.once('SIGINT', () => {
-      if (isExiting) {
-        return; // Already handling exit
-      }
-      isExiting = true;
-      console.log('\n\nCleaning up and exiting...');
-      // Stop REPL to prevent further input
-      repl.stop();
-      void (async (): Promise<void> => {
-        try {
-          await cleanup();
-          // Give a small delay to ensure process is killed
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (error) {
-          const err = error instanceof Error ? error : new Error(String(error));
-          logger.error('Error during SIGINT cleanup', err);
-        }
-        process.exit(0);
-      })();
-    });
+    // Note: SIGINT handling is now done in the ChatUI section below
 
     // Handle SIGTERM
     process.on('SIGTERM', () => {
@@ -228,21 +205,6 @@ export async function executeDev(
     // Get available tools
     const availableTools = await mcpClientManager.getAvailableTools();
 
-    // Create formatter
-    const formatter = new DevFormatter();
-
-    // Display header
-    const displayCommand =
-      shouldSpawn && serverCommand ? serverCommand : undefined;
-    formatter.displayHeader(
-      config.version,
-      config.transport,
-      config.mcp_url,
-      displayCommand,
-      llmProvider.getName(),
-      availableTools.length
-    );
-
     // Create dev session
     const session = new DevSession({
       config,
@@ -255,32 +217,65 @@ export async function executeDev(
     // Initialize session
     await session.initialize();
 
-    // Display welcome message
-    formatter.displayWelcomeMessage();
-
-    // Create REPL with agent name from config
-    const historyFile = path.join(projectRoot, Paths.SYRIN_DIR, '.dev-history');
-    const replPrompt = `Hey, ${config.agent_name}! > `;
-    const repl = new InteractiveREPL(
+    // Build initial info messages for chat UI (will scroll away when user starts typing)
+    const displayCommand =
+      shouldSpawn && serverCommand ? serverCommand : undefined;
+    const initialMessages: Array<{ role: 'system'; content: string }> = [
       {
-        prompt: replPrompt,
-        saveHistory: true,
-        historyFile,
+        role: 'system',
+        content: `Welcome to Syrin Dev Mode!`,
       },
-      eventEmitter
-    );
+      {
+        role: 'system',
+        content: `Version: ${config.version} | LLM: ${llmProvider.getName()} | Tools: ${availableTools.length}`,
+      },
+    ];
 
-    // Start REPL
-    repl.start(
-      async (input: string) => {
-        // Handle special REPL commands
+    if (config.transport === 'http' && config.mcp_url) {
+      initialMessages.push({
+        role: 'system',
+        content: `Transport: ${config.transport} | MCP URL: ${config.mcp_url} ✅`,
+      });
+    } else if (config.transport === 'stdio' && displayCommand) {
+      initialMessages.push({
+        role: 'system',
+        content: `Transport: ${config.transport} | Command: ${displayCommand} ✅`,
+      });
+    }
+
+    initialMessages.push({
+      role: 'system',
+      content: `Type your message below or /help for commands.`,
+    });
+
+    // Create Chat UI
+    const historyFile = path.join(projectRoot, Paths.SYRIN_DIR, '.dev-history');
+    const chatUI = new ChatUI({
+      agentName: config.agent_name,
+      showTimestamps: false,
+      initialMessages,
+      historyFile,
+      maxHistorySize: 1000,
+      onMessage: async (input: string): Promise<void> => {
+        // Handle special commands
         if (input === '/tools') {
           const tools = session.getAvailableTools();
-          formatter.displayToolsList(tools);
+          let toolsList = 'Available Tools:\n';
+          if (tools.length === 0) {
+            toolsList += '  No tools available';
+          } else {
+            for (const tool of tools) {
+              toolsList += `  • ${tool.name}`;
+              if (tool.description) {
+                toolsList += `: ${tool.description}`;
+              }
+              toolsList += '\n';
+            }
+          }
+          chatUI.addMessage('system', toolsList.trim());
           return;
         }
 
-        // Note: User input is already displayed by readline, so we don't need to display it again
         // Process user input through session
         try {
           // Track state before processing
@@ -295,27 +290,18 @@ export async function executeDev(
           // Display any new tool calls that were executed
           const newToolCalls = stateAfter.toolCalls.slice(toolCallsBefore);
           for (const toolCall of newToolCalls) {
-            // Display tool detection
-            formatter.displayToolDetection([
-              {
-                id: toolCall.id,
-                name: toolCall.name,
-                arguments: toolCall.arguments,
-              },
-            ]);
-
-            // Display tool execution
-            formatter.displayToolExecutionStart(toolCall.name);
-            if (toolCall.duration) {
-              formatter.displayToolExecutionEnd(
-                toolCall.name,
-                toolCall.duration
-              );
-            }
+            // Display tool call info
+            const toolInfo = `🔧 Calling tool: ${toolCall.name}\nArguments: ${JSON.stringify(toolCall.arguments, null, 2)}`;
+            chatUI.addMessage('system', toolInfo);
 
             // Display tool result
             if (toolCall.result !== undefined) {
-              formatter.displayToolResult(toolCall.name, toolCall.result);
+              const resultText =
+                typeof toolCall.result === 'string'
+                  ? toolCall.result
+                  : JSON.stringify(toolCall.result, null, 2);
+              const resultInfo = `✅ Tool ${toolCall.name} completed${toolCall.duration ? ` (${toolCall.duration}ms)` : ''}\nResult: ${resultText}`;
+              chatUI.addMessage('system', resultInfo);
             }
           }
 
@@ -326,39 +312,64 @@ export async function executeDev(
             ];
 
           if (lastMessage && lastMessage.role === 'assistant') {
-            formatter.displayLLMResponse(
-              llmProvider.getName(),
-              lastMessage.content
-            );
+            chatUI.addMessage('assistant', lastMessage.content);
           }
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
-          formatter.displayError(`Error processing input: ${errorMessage}`);
+          chatUI.addMessage('system', `❌ Error: ${errorMessage}`);
           const err = error instanceof Error ? error : new Error(String(error));
           logger.error('Error processing user input', err);
         }
       },
-      (): void => {
-        // Cleanup on close
-        void (async (): Promise<void> => {
-          try {
-            await session.complete();
-            await mcpClientManager.disconnect();
+      onExit: async (): Promise<void> => {
+        // Cleanup on exit
+        try {
+          await session.complete();
+          await mcpClientManager.disconnect();
 
-            // Close file event store if used
-            if (options.saveEvents && eventStore instanceof FileEventStore) {
-              await eventStore.close();
-              logger.info('Event store closed');
-            }
-          } catch (error) {
-            const err =
-              error instanceof Error ? error : new Error(String(error));
-            logger.error('Error during cleanup', err);
+          // Close file event store if used
+          if (options.saveEvents && eventStore instanceof FileEventStore) {
+            await eventStore.close();
+            logger.info('Event store closed');
           }
-        })();
+        } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error));
+          logger.error('Error during cleanup', err);
+        }
+      },
+    });
+
+    // Handle SIGINT (Ctrl+C) - ensure cleanup happens
+    let isExiting = false;
+    process.once('SIGINT', () => {
+      if (isExiting) {
+        return; // Already handling exit
       }
-    );
+      isExiting = true;
+      console.log('\n\nGoodbye! 👋');
+      chatUI.stop();
+      void (async (): Promise<void> => {
+        try {
+          await session.complete();
+          await mcpClientManager.disconnect();
+
+          // Close file event store if used
+          if (options.saveEvents && eventStore instanceof FileEventStore) {
+            await eventStore.close();
+          }
+          // Give a small delay to ensure process is killed
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error));
+          logger.error('Error during SIGINT cleanup', err);
+        }
+        process.exit(0);
+      })();
+    });
+
+    // Start Chat UI (header message is already set in options)
+    await chatUI.start();
   } catch (error) {
     if (error instanceof ConfigurationError) {
       console.error(`\n${Icons.ERROR} ${error.message}\n`);
