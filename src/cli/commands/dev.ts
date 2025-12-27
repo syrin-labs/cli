@@ -150,6 +150,78 @@ export async function executeDev(
       shouldSpawn
     );
 
+    // Set up cleanup handlers for all exit scenarios
+    // This ensures child processes are always killed, even on unexpected exits
+    const cleanup = async (): Promise<void> => {
+      try {
+        // Always disconnect (this kills the child process)
+        await mcpClientManager.disconnect();
+
+        // Close event store if used
+        if (options.saveEvents && eventStore instanceof FileEventStore) {
+          await eventStore.close();
+        }
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        logger.error('Error during cleanup', err);
+        // Even if disconnect fails, try to kill the process directly
+        // This is a safety net to ensure cleanup happens
+      }
+    };
+
+    // Handle SIGINT (Ctrl+C) - ensure cleanup happens
+    // Stop the REPL first, then cleanup
+    let isExiting = false;
+    process.once('SIGINT', () => {
+      if (isExiting) {
+        return; // Already handling exit
+      }
+      isExiting = true;
+      console.log('\n\nCleaning up and exiting...');
+      // Stop REPL to prevent further input
+      repl.stop();
+      void (async (): Promise<void> => {
+        try {
+          await cleanup();
+          // Give a small delay to ensure process is killed
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } catch (error) {
+          const err = error instanceof Error ? error : new Error(String(error));
+          logger.error('Error during SIGINT cleanup', err);
+        }
+        process.exit(0);
+      })();
+    });
+
+    // Handle SIGTERM
+    process.on('SIGTERM', () => {
+      void (async (): Promise<void> => {
+        await cleanup();
+        process.exit(0);
+      })();
+    });
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error: Error) => {
+      void (async (): Promise<void> => {
+        logger.error('Uncaught exception', error);
+        await cleanup();
+        process.exit(1);
+      })();
+    });
+
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason: unknown) => {
+      void (async (): Promise<void> => {
+        logger.error(
+          'Unhandled rejection',
+          reason instanceof Error ? reason : new Error(String(reason))
+        );
+        await cleanup();
+        process.exit(1);
+      })();
+    });
+
     // Connect to MCP server
     await mcpClientManager.connect();
 

@@ -66,11 +66,11 @@ export class InteractiveREPL {
   /**
    * Start the REPL.
    * @param onInput - Callback for user input
-   * @param onClose - Callback for REPL close
+   * @param onClose - Callback for REPL close (can be async)
    */
   start(
     onInput: (input: string) => Promise<void> | void,
-    onClose?: () => void
+    onClose?: () => void | Promise<void>
   ): void {
     this.rl.prompt();
 
@@ -111,18 +111,18 @@ export class InteractiveREPL {
 
     this.rl.on('close', () => {
       this.saveHistory();
-      if (onClose) {
-        onClose();
-      }
-      console.log('\nGoodbye!');
-      process.exit(0);
+      // Wait for cleanup before exiting
+      void (async (): Promise<void> => {
+        if (onClose) {
+          await onClose();
+        }
+        console.log('\nGoodbye!');
+        process.exit(0);
+      })();
     });
 
-    // Handle Ctrl+C gracefully
-    process.on('SIGINT', () => {
-      console.log('\n\nUse /exit or /quit to exit dev mode.');
-      this.rl.prompt();
-    });
+    // Note: SIGINT handling is done by the parent (dev.ts)
+    // We don't handle it here to allow proper cleanup
 
     // Load history into readline (for arrow key navigation)
     this.loadHistoryIntoReadline();

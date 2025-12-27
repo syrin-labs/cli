@@ -233,9 +233,9 @@ export async function executeTest(options: TestCommandOptions): Promise<void> {
   try {
     // Load config to get default values
     const config = loadConfig(projectRoot);
-    
+
     // Determine transport type
-    let transportType: TransportType = transport || config.transport;
+    const transportType: TransportType = transport || config.transport;
     let mcpUrl: string | undefined;
     let mcpCommand: string | undefined;
 
@@ -244,7 +244,8 @@ export async function executeTest(options: TestCommandOptions): Promise<void> {
       mcpUrl = url || config.mcp_url;
     } else {
       // Use provided script or fall back to config.script
-      mcpCommand = script || (config.script ? String(config.script) : undefined);
+      mcpCommand =
+        script || (config.script ? String(config.script) : undefined);
     }
 
     // Validate that we have the required parameters

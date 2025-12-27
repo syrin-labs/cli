@@ -25,9 +25,28 @@ import type {
 } from '@/events/payloads/tool';
 import { getConnectedClient } from './connection';
 import { ConfigurationError } from '@/utils/errors';
+import { logger } from '@/utils/logger';
 import type { TransportType } from '@/config/types';
 import type { MCPURL, Command } from '@/types/ids';
 import { v4 as uuidv4 } from 'uuid';
+
+/**
+ * Check if a command contains shell operators that require shell execution.
+ * We only detect patterns that absolutely require a shell, avoiding false positives.
+ * Essential operators: &&, ||, |, ;, $, $(, `
+ */
+function requiresShellExecution(command: string): boolean {
+  return (
+    /\s+&&\s+/.test(command) || // Logical AND (e.g., "cmd1 && cmd2")
+    /\s+\|\|\s+/.test(command) || // Logical OR (e.g., "cmd1 || cmd2")
+    /\s+\|\s+/.test(command) || // Pipe (e.g., "cmd1 | cmd2")
+    /\s+;\s+/.test(command) || // Command separator (e.g., "cmd1; cmd2")
+    /\$\{/.test(command) || // Variable expansion ${VAR}
+    /\$\(/.test(command) || // Command substitution $(command)
+    /\$\w+/.test(command) || // Variable reference $VAR
+    /`[^`]*`/.test(command) // Command substitution with backticks
+  );
+}
 
 /**
  * MCP client manager interface.
@@ -163,13 +182,27 @@ export class HTTPMCPClientManager implements MCPClientManager {
       throw new ConfigurationError('Server command is required for spawning');
     }
 
-    // Split command into executable and arguments
-    const parts = this.serverCommand.trim().split(/\s+/);
-    const executable = parts[0];
-    const args = parts.slice(1);
-
-    if (!executable) {
+    const command = this.serverCommand.trim();
+    if (!command) {
       throw new ConfigurationError('Server command is empty');
+    }
+
+    // Check if command requires shell execution
+    const needsShell = requiresShellExecution(command);
+
+    let executable: string;
+    let args: string[];
+
+    if (needsShell) {
+      // Command contains shell operators - run through shell
+      // Use the user's shell (or default to sh)
+      executable = process.env.SHELL || '/bin/sh';
+      args = ['-c', command];
+    } else {
+      // Simple command - split and execute directly
+      const parts = command.split(/\s+/);
+      executable = parts[0]!; // Non-null assertion: command is already validated to be non-empty
+      args = parts.slice(1);
     }
 
     // Spawn the process
@@ -177,6 +210,7 @@ export class HTTPMCPClientManager implements MCPClientManager {
       stdio: ['pipe', 'pipe', 'pipe'],
       env: process.env as Record<string, string>,
       cwd: process.cwd(),
+      shell: false, // We handle shell ourselves if needed
     });
 
     // Capture stdout logs
@@ -192,8 +226,17 @@ export class HTTPMCPClientManager implements MCPClientManager {
     this.process.stderr?.on('data', (data: Buffer) => {
       const message = data.toString().trim();
       if (message) {
-        // Log server errors directly
-        console.error(`[Server Error] ${message}`);
+        // Many tools (like Python/Uvicorn) write INFO logs to stderr, which is normal
+        // Only prefix with [Server Error] if it actually looks like an error
+        const isError = /ERROR|CRITICAL|FATAL|Exception|Traceback|Error:/i.test(
+          message
+        );
+        const prefix = isError ? '[Server Error]' : '[Server]';
+        if (isError) {
+          console.error(`${prefix} ${message}`);
+        } else {
+          console.log(`${prefix} ${message}`);
+        }
       }
     });
 
@@ -236,30 +279,19 @@ export class HTTPMCPClientManager implements MCPClientManager {
         await this.transport.close();
       }
 
-      // Kill spawned process if it exists
-      if (this.process) {
-        this.process.kill();
-        this.process = null;
-      }
-
       this.connected = false;
       this.client = null;
       this.transport = null;
     } catch (error) {
       // Log but don't throw - cleanup errors are non-critical
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-
-      if (this.process) {
-        this.process.kill();
-        this.process = null;
-      }
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Error closing transport during disconnect', err);
 
       await this.eventEmitter.emit<TransportErrorPayload>(
         TransportEventType.TRANSPORT_ERROR,
         {
           transport_type: 'http',
-          error_message: errorMessage,
+          error_message: err.message,
           error_code: 'DISCONNECT_ERROR',
           recoverable: false,
         }
@@ -473,13 +505,30 @@ export class StdioMCPClientManager implements MCPClientManager {
     }
 
     try {
-      // Split command into executable and arguments
-      const parts = this.command.trim().split(/\s+/);
-      const executable = parts[0];
-      const args = parts.slice(1);
-
-      if (!executable) {
+      const command = this.command.trim();
+      if (!command) {
         throw new ConfigurationError('Command is empty');
+      }
+
+      // Check if command contains shell operators (needs shell execution)
+      // Production-level detection: look for actual shell operators in context
+      // Operators: &&, ||, |, ;, <, >, >>, <<, $, $(, `, ', ", (, ), {, }
+      // Check if command requires shell execution
+      const needsShell = requiresShellExecution(command);
+
+      let executable: string;
+      let args: string[];
+
+      if (needsShell) {
+        // Command contains shell operators - run through shell
+        // Use the user's shell (or default to sh)
+        executable = process.env.SHELL || '/bin/sh';
+        args = ['-c', command];
+      } else {
+        // Simple command - split and execute directly
+        const parts = command.split(/\s+/);
+        executable = parts[0]!; // Non-null assertion: command is already validated to be non-empty
+        args = parts.slice(1);
       }
 
       // Emit transport initialization event
@@ -521,8 +570,16 @@ export class StdioMCPClientManager implements MCPClientManager {
       this.process.stderr?.on('data', (data: Buffer) => {
         const message = data.toString().trim();
         if (message) {
-          // Log server errors directly
-          console.error(`[Server Error] ${message}`);
+          // Many tools (like Python/Uvicorn) write INFO logs to stderr, which is normal
+          // Only prefix with [Server Error] if it actually looks like an error
+          const isError =
+            /ERROR|CRITICAL|FATAL|Exception|Traceback|Error:/i.test(message);
+          const prefix = isError ? '[Server Error]' : '[Server]';
+          if (isError) {
+            console.error(`${prefix} ${message}`);
+          } else {
+            console.log(`${prefix} ${message}`);
+          }
         }
       });
 
@@ -584,6 +641,96 @@ export class StdioMCPClientManager implements MCPClientManager {
   }
 
   async disconnect(): Promise<void> {
+    // Always kill the process, even if not connected
+    // This ensures cleanup happens on all exit scenarios
+    if (this.process && !this.process.killed) {
+      const pid = this.process.pid;
+      try {
+        // For shell-spawned processes, we need to kill the process group
+        // to ensure all child processes (like Python) are killed
+        if (pid) {
+          try {
+            // Try to kill the entire process group (negative PID)
+            // This ensures child processes spawned by the shell are also killed
+            process.kill(-pid, 'SIGTERM');
+          } catch {
+            // If process group kill fails, fall back to regular kill
+            this.process.kill('SIGTERM');
+          }
+        } else {
+          this.process.kill('SIGTERM');
+        }
+
+        // Wait up to 1 second for graceful shutdown
+        await new Promise<void>(resolve => {
+          const timeout = setTimeout(() => {
+            resolve();
+          }, 1000);
+
+          if (this.process) {
+            this.process.once('exit', () => {
+              clearTimeout(timeout);
+              resolve();
+            });
+          } else {
+            clearTimeout(timeout);
+            resolve();
+          }
+        });
+
+        // Force kill if still running
+        if (this.process && !this.process.killed) {
+          if (pid) {
+            try {
+              // Kill the entire process group
+              process.kill(-pid, 'SIGKILL');
+            } catch {
+              // Fall back to regular kill
+              this.process.kill('SIGKILL');
+            }
+          } else {
+            this.process.kill('SIGKILL');
+          }
+          // Wait up to 500ms for SIGKILL to take effect
+          await new Promise<void>(resolve => {
+            const timeout = setTimeout(() => {
+              resolve();
+            }, 500);
+            if (this.process) {
+              this.process.once('exit', () => {
+                clearTimeout(timeout);
+                resolve();
+              });
+            } else {
+              clearTimeout(timeout);
+              resolve();
+            }
+          });
+        }
+      } catch {
+        // If kill fails, try SIGKILL as last resort
+        if (this.process && !this.process.killed) {
+          try {
+            if (pid) {
+              try {
+                process.kill(-pid, 'SIGKILL');
+              } catch {
+                this.process.kill('SIGKILL');
+              }
+            } else {
+              this.process.kill('SIGKILL');
+            }
+            // Wait a moment for it to take effect
+            await new Promise(resolve => setTimeout(resolve, 200));
+          } catch {
+            // Ignore errors - process might already be dead
+          }
+        }
+      } finally {
+        this.process = null;
+      }
+    }
+
     if (!this.connected) {
       return;
     }
@@ -591,10 +738,6 @@ export class StdioMCPClientManager implements MCPClientManager {
     try {
       if (this.transport) {
         await this.transport.close();
-      }
-      if (this.process) {
-        this.process.kill();
-        this.process = null;
       }
       this.connected = false;
       this.client = null;
