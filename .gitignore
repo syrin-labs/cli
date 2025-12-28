@@ -8,3 +8,7 @@ dist
 package-lock.json
 bun.lockb
 bun.lock
+
+# Syrin event files
+.syrin/events
+.syrin/.dev-history

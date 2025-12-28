@@ -1,0 +1,266 @@
+/**
+ * Configuration file generator.
+ * Creates well-documented, production-ready config.yaml files.
+ */
+
+import * as fs from 'fs';
+import * as path from 'path';
+import type { InitOptions, SyrinConfig } from '@/config/types';
+import { makeSyrinVersion } from '@/types/factories';
+import { Paths } from '@/constants';
+
+/**
+ * Generate a production-ready config.yaml file with comprehensive documentation.
+ * @param options - Initialization options
+ * @param configDir - Directory where .syrin/config.yaml will be created
+ * @returns Path to the created config file
+ */
+export function generateConfigFile(
+  options: InitOptions,
+  configDir: string
+): string {
+  const configPath = path.join(configDir, Paths.CONFIG_FILE);
+
+  // Ensure .syrin directory exists
+  if (!fs.existsSync(configDir)) {
+    fs.mkdirSync(configDir, { recursive: true });
+  }
+
+  const configContent = buildConfigContent(options);
+
+  fs.writeFileSync(configPath, configContent, 'utf-8');
+
+  return configPath;
+}
+
+/**
+ * Build the YAML content for the config file with documentation.
+ */
+function buildConfigContent(options: InitOptions): string {
+  const config: SyrinConfig = {
+    version: makeSyrinVersion('1.0.0'),
+    project_name: options.projectName,
+    agent_name: options.agentName,
+    transport: options.transport,
+    script: options.script,
+    llm: buildLLMConfig(options.llmProviders),
+  };
+
+  // Add transport-specific fields
+  if (options.transport === 'http' && options.mcpUrl) {
+    config.mcp_url = options.mcpUrl;
+  }
+
+  // Build YAML content with comments
+  const lines: string[] = [];
+
+  lines.push('# Syrin Configuration File');
+  lines.push('# ========================');
+  lines.push('# This file configures your Syrin runtime environment.');
+  lines.push(
+    '# For detailed documentation, visit: https://github.com/AnkanAI/syrin'
+  );
+  lines.push('');
+  lines.push('# Configuration Version');
+  lines.push('# The version of this configuration schema.');
+  lines.push(`version: "${String(config.version)}"`);
+  lines.push('');
+  lines.push('# Project Configuration');
+  lines.push('# ---------------------');
+  lines.push('# Project name: A unique identifier for your MCP server project');
+  lines.push(`project_name: "${String(config.project_name)}"`);
+  lines.push('');
+  lines.push(
+    '# Agent name: The name of your AI agent that will interact with the MCP server'
+  );
+  lines.push(`agent_name: "${String(config.agent_name)}"`);
+  lines.push('');
+  lines.push('# Transport Configuration');
+  lines.push('# -----------------------');
+  lines.push('# Transport type: How Syrin communicates with your MCP server');
+  lines.push(
+    '#   - "stdio": Communicate via standard input/output (spawns the MCP server process)'
+  );
+  lines.push(
+    '#   - "http":  Communicate via HTTP (connects to a running MCP server)'
+  );
+  lines.push(`transport: "${config.transport}"`);
+  lines.push('');
+
+  // Transport-specific configuration
+  if (config.transport === 'http') {
+    lines.push('# MCP Server URL (required for http transport)');
+    lines.push('# The HTTP endpoint where your MCP server is running');
+    lines.push('# Example: "http://localhost:8000/mcp"');
+    lines.push(`mcp_url: "${String(config.mcp_url)}"`);
+    lines.push('');
+  } else {
+    lines.push('# MCP Server URL (not used for stdio transport)');
+    lines.push('# Uncomment and configure if you switch to http transport');
+    lines.push('# mcp_url: "http://localhost:8000/mcp"');
+    lines.push('');
+  }
+
+  lines.push('# Script Configuration');
+  lines.push('# --------------------');
+  lines.push('# Command to run your MCP server');
+  lines.push('# For stdio transport, this is required');
+  lines.push(
+    '# Use --run-script flag in dev mode to spawn the server internally'
+  );
+  if (config.script) {
+    lines.push(`script: "${String(config.script)}"`);
+  } else {
+    lines.push('# script: "python3 server.py"');
+  }
+  lines.push('');
+
+  lines.push('# LLM Provider Configuration');
+  lines.push('# ---------------------------');
+  lines.push('# Configure one or more LLM providers for Syrin to use.');
+  lines.push('# API keys and model names can be set as:');
+  lines.push('#   - Environment variable names (recommended for security)');
+  lines.push('#   - Direct values (not recommended for production)');
+  lines.push('# At least one provider must be marked as default: true');
+  lines.push('');
+  lines.push('llm:');
+
+  // Generate LLM provider configurations
+  const llmEntries = Object.entries(config.llm);
+  for (const [providerName, providerConfig] of llmEntries) {
+    lines.push(`  # ${providerName.toUpperCase()} Provider`);
+    lines.push(`  ${providerName}:`);
+
+    if (providerName === 'ollama') {
+      // Ollama provider
+      if (providerConfig.MODEL_NAME) {
+        lines.push(
+          '    # Model name: Required for Ollama (e.g., "llama2", "mistral", "codellama")'
+        );
+        lines.push(
+          '    # Can be set as environment variable name or direct value'
+        );
+        lines.push(
+          '    # Example: "OLLAMA_MODEL_NAME" (reads from process.env.OLLAMA_MODEL_NAME)'
+        );
+        lines.push('    # Or: "llama2" (direct value)');
+        lines.push(`    MODEL_NAME: "${String(providerConfig.MODEL_NAME)}"`);
+        lines.push('');
+      }
+      if (providerConfig.default) {
+        lines.push('    # Set as default LLM provider');
+        lines.push('    default: true');
+      }
+    } else {
+      // Cloud providers (OpenAI, Claude)
+      if (providerConfig.API_KEY) {
+        lines.push(
+          '    # API key: Set as environment variable name or direct value'
+        );
+        lines.push(
+          '    # Example: "OPENAI_API_KEY" (reads from process.env.OPENAI_API_KEY)'
+        );
+        lines.push('    # Or: "sk-..." (direct value, not recommended)');
+        lines.push(`    API_KEY: "${String(providerConfig.API_KEY)}"`);
+        lines.push('');
+      }
+      if (providerConfig.MODEL_NAME) {
+        lines.push(
+          '    # Model name: Set as environment variable name or direct value'
+        );
+        lines.push(
+          '    # Example: "OPENAI_MODEL_NAME" (reads from process.env.OPENAI_MODEL_NAME)'
+        );
+        lines.push('    # Or: "gpt-4" (direct value)');
+        lines.push(`    MODEL_NAME: "${String(providerConfig.MODEL_NAME)}"`);
+        lines.push('');
+      }
+
+      if (providerConfig.default) {
+        lines.push('    # Set as default LLM provider');
+        lines.push('    default: true');
+      }
+    }
+
+    // Add commented-out alternative providers
+    if (
+      providerName === 'openai' &&
+      !llmEntries.some(([name]) => name === 'claude')
+    ) {
+      lines.push('');
+      lines.push('  # Claude Provider (uncomment to enable)');
+      lines.push('  # claude:');
+      lines.push('  #   API_KEY: "CLAUDE_API_KEY"');
+      lines.push('  #   MODEL_NAME: "CLAUDE_MODEL_NAME"');
+      lines.push('  #   default: false');
+    } else if (
+      providerName === 'claude' &&
+      !llmEntries.some(([name]) => name === 'openai')
+    ) {
+      lines.push('');
+      lines.push('  # OpenAI Provider (uncomment to enable)');
+      lines.push('  # openai:');
+      lines.push('  #   API_KEY: "OPENAI_API_KEY"');
+      lines.push('  #   MODEL_NAME: "OPENAI_MODEL_NAME"');
+      lines.push('  #   default: false');
+    }
+
+    if (!llmEntries.some(([name]) => name === 'ollama')) {
+      lines.push('');
+      lines.push('  # Ollama Provider - uncomment to enable');
+      lines.push('  # ollama:');
+      lines.push(
+        '  #   MODEL_NAME: "OLLAMA_MODEL_NAME"  # or "llama2", "mistral", etc.'
+      );
+      lines.push('  #   default: false');
+    }
+
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Build LLM configuration object from init options.
+ */
+function buildLLMConfig(
+  providers: InitOptions['llmProviders']
+): Record<string, SyrinConfig['llm'][string]> {
+  const llmConfig: Record<string, SyrinConfig['llm'][string]> = {};
+
+  if (providers.openai) {
+    llmConfig.openai = {
+      API_KEY: providers.openai.apiKey,
+      MODEL_NAME: providers.openai.modelName,
+      default: providers.openai.default ?? false,
+    };
+  }
+
+  if (providers.claude) {
+    llmConfig.claude = {
+      API_KEY: providers.claude.apiKey,
+      MODEL_NAME: providers.claude.modelName,
+      default: providers.claude.default ?? false,
+    };
+  }
+
+  if (providers.ollama) {
+    llmConfig.ollama = {
+      MODEL_NAME: providers.ollama.modelName,
+      default: providers.ollama.default ?? false,
+    };
+  }
+
+  return llmConfig;
+}
+
+/**
+ * Check if a Syrin project is already initialized in the current directory.
+ * @param projectRoot - Root directory of the project
+ * @returns true if project is already initialized
+ */
+export function isProjectInitialized(projectRoot: string): boolean {
+  const configPath = path.join(projectRoot, Paths.SYRIN_DIR, Paths.CONFIG_FILE);
+  return fs.existsSync(configPath);
+}
