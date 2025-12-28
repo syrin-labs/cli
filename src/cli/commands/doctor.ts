@@ -12,7 +12,8 @@ import {
 import { ConfigurationError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 import type { SyrinConfig } from '@/config/types';
-import { Icons, Labels, Messages } from '@/constants';
+import { Icons, Messages } from '@/constants';
+import { displayDoctorReport } from '@/presentation/doctor-ui';
 
 interface CheckResult {
   isValid: boolean;
@@ -86,7 +87,31 @@ function checkScript(config: SyrinConfig): CheckResult | null {
     return null;
   }
 
-  const commandName = extractCommandName(String(config.script));
+  const script = String(config.script);
+
+  // Skip validation for scripts that contain shell built-ins or compound commands
+  // These are typically complex shell scripts that can't be validated with simple command checking
+  // Common shell built-ins: source, cd, export, unset, alias, etc.
+  const shellBuiltIns = [
+    'source',
+    'cd',
+    'export',
+    'unset',
+    'alias',
+    'set',
+    'unsetenv',
+  ];
+  const commandName = extractCommandName(script);
+
+  // If the first command is a shell built-in, skip validation
+  // Scripts with shell built-ins are expected to be run in a shell context
+  if (shellBuiltIns.includes(commandName)) {
+    return {
+      isValid: true, // Assume valid if it uses shell built-ins (will be executed in shell)
+      message: 'working',
+    };
+  }
+
   const commandExists = checkCommandExists(commandName);
   return {
     isValid: commandExists,
@@ -187,108 +212,6 @@ function generateReport(
 }
 
 /**
- * Display doctor report in a formatted way.
- */
-function displayReport(report: DoctorReport): void {
-  const config = report.config;
-  const allValid =
-    report.transportCheck.isValid &&
-    (report.scriptCheck === null || report.scriptCheck.isValid) &&
-    report.llmChecks.every(l => l.apiKeyCheck.isValid && l.modelCheck.isValid);
-
-  console.log(`\n${Labels.DOCTOR_REPORT_TITLE}`);
-  console.log('===================\n');
-
-  // Version (we'll get this from package.json or config)
-  console.log(`${Labels.SYRIN_VERSION} v${String(config.version)}\n`);
-
-  // Project info
-  console.log(`${Labels.MCP_PROJECT_NAME} ${String(config.project_name)}`);
-  console.log(`${Labels.AGENT_NAME} ${String(config.agent_name)}\n`);
-
-  // Transport
-  console.log(`${Labels.TRANSPORT_LAYER} ${config.transport}`);
-  if (config.transport === 'http') {
-    const urlStatus = report.transportCheck.isValid
-      ? Icons.SUCCESS
-      : Icons.FAILURE;
-    console.log(
-      `${Labels.MCP_URL} ${String(config.mcp_url || Labels.STATUS_MISSING)} ${urlStatus}`
-    );
-  } else {
-    const cmdStatus = report.transportCheck.isValid
-      ? Icons.SUCCESS
-      : Icons.FAILURE;
-    const scriptDisplay = config.script
-      ? String(config.script)
-      : Labels.STATUS_MISSING;
-    console.log(`${Labels.COMMAND} ${scriptDisplay} ${cmdStatus}`);
-  }
-  if (!report.transportCheck.isValid && report.transportCheck.fix) {
-    console.log(`   ${Icons.WARNING}  ${report.transportCheck.fix}`);
-  }
-  console.log('');
-
-  // Script (only show if script exists)
-  if (report.scriptCheck !== null) {
-    console.log(`${Labels.SCRIPTS}`);
-    const status = report.scriptCheck.isValid ? Icons.SUCCESS : Icons.FAILURE;
-    const scriptStr = config.script ? String(config.script) : Labels.STATUS_NA;
-    const message = report.scriptCheck.isValid
-      ? Labels.STATUS_WORKING
-      : report.scriptCheck.message;
-    console.log(`- Script [${scriptStr}] ${status.padEnd(10)} ${message}`);
-    if (!report.scriptCheck.isValid && report.scriptCheck.fix) {
-      console.log(`   ${Icons.WARNING}  ${report.scriptCheck.fix}`);
-    }
-    console.log('');
-  }
-
-  // LLM Providers
-  console.log(`${Labels.LLMS}`);
-  report.llmChecks.forEach(llm => {
-    const providerName =
-      llm.provider.charAt(0).toUpperCase() + llm.provider.slice(1);
-    const defaultMark = llm.isDefault ? ` ${Labels.STATUS_DEFAULT}` : '';
-    const apiKeyStatus = llm.apiKeyCheck.isValid
-      ? Icons.SUCCESS
-      : Icons.FAILURE;
-    const modelStatus = llm.modelCheck.isValid ? Icons.SUCCESS : Icons.FAILURE;
-
-    console.log(
-      `- ${providerName} [${llm.apiKeyCheck.message}] ${apiKeyStatus}${defaultMark}`
-    );
-    if (!llm.apiKeyCheck.isValid && llm.apiKeyCheck.fix) {
-      console.log(`   ${Icons.WARNING}  ${llm.apiKeyCheck.fix}`);
-    }
-
-    console.log(
-      `  ${Labels.MODEL}  [${llm.modelCheck.message}] ${modelStatus}`
-    );
-    if (!llm.modelCheck.isValid && llm.modelCheck.fix) {
-      console.log(`   ${Icons.WARNING}  ${llm.modelCheck.fix}`);
-    }
-    console.log('');
-  });
-
-  // Local LLM Providers
-  if (report.localLlmChecks && report.localLlmChecks.length > 0) {
-    report.localLlmChecks.forEach(llm => {
-      const status = llm.check.isValid ? Icons.CHECK : Icons.ERROR;
-      console.log(`- ${llm.provider} ${status} ${llm.check.message}`);
-      console.log('');
-    });
-  }
-
-  // Summary
-  if (allValid) {
-    console.log(`${Messages.DOCTOR_SETUP_SUCCESS}\n`);
-  } else {
-    console.log(`${Icons.WARNING}  ${Messages.DOCTOR_ISSUES_FOUND}\n`);
-  }
-}
-
-/**
  * Execute the doctor command.
  * @param projectRoot - Project root directory (defaults to current working directory)
  */
@@ -300,8 +223,8 @@ export function executeDoctor(projectRoot: string = process.cwd()): void {
     // Generate report
     const report = generateReport(config, projectRoot);
 
-    // Display report
-    displayReport(report);
+    // Display report using Ink UI
+    displayDoctorReport(report);
 
     // Exit with appropriate code
     const allValid =

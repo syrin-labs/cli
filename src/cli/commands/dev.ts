@@ -3,6 +3,7 @@
  * Interactive development mode for testing MCP tools with LLMs.
  */
 
+import * as fs from 'fs';
 import * as path from 'path';
 import { loadConfig } from '@/config/loader';
 import { getLLMProvider } from '@/runtime/llm/factory';
@@ -11,7 +12,7 @@ import { RuntimeEventEmitter } from '@/events/emitter';
 import { MemoryEventStore } from '@/events/store/memory-store';
 import { FileEventStore } from '@/events/store/file-store';
 import { DevSession } from '@/runtime/dev/session';
-import { ChatUI } from '@/runtime/dev/chat-ui';
+import { ChatUI } from '@/presentation/dev/chat-ui';
 import { ConfigurationError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 import { Icons, Paths } from '@/constants';
@@ -273,6 +274,42 @@ export async function executeDev(
             }
           }
           chatUI.addMessage('system', toolsList.trim());
+          return;
+        }
+
+        if (input === '/history') {
+          // Read history from .syrin/.dev-history file
+          try {
+            if (fs.existsSync(historyFile)) {
+              const content = fs.readFileSync(historyFile, 'utf-8');
+              const historyLines = content
+                .split('\n')
+                .filter((line: string) => line.trim())
+                .slice(-100); // Show last 100 entries
+
+              if (historyLines.length === 0) {
+                chatUI.addMessage('system', 'No command history yet.');
+              } else {
+                let historyList = 'Command History (last 100 entries):\n';
+                historyLines.forEach((line: string, index: number) => {
+                  historyList += `  ${index + 1}. ${line}\n`;
+                });
+                chatUI.addMessage('system', historyList.trim());
+              }
+            } else {
+              chatUI.addMessage('system', 'No command history yet.');
+            }
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            chatUI.addMessage(
+              'system',
+              `Error reading history: ${errorMessage}`
+            );
+            const err =
+              error instanceof Error ? error : new Error(String(error));
+            logger.error('Error reading history file', err);
+          }
           return;
         }
 

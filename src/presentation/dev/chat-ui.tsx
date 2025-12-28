@@ -28,54 +28,56 @@ export interface ChatMessage {
 export interface ChatUIOptions {
   /** Agent name for the prompt */
   agentName?: string;
-  /** Whether to show timestamps */
+  /** Whether to show timestamps in messages */
   showTimestamps?: boolean;
-  /** Callback when user sends a message */
-  onMessage?: (message: string) => void | Promise<void>;
-  /** Callback when user wants to exit */
-  onExit?: () => void | Promise<void>;
-  /** Initial info messages to display in chat area */
-  initialMessages?: Array<{ role: 'system'; content: string }>;
+  /** Initial messages to display */
+  initialMessages?: Array<{
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+  }>;
+  /** Callback when user submits a message */
+  onMessage?: (message: string) => Promise<void>;
+  /** Callback when user exits */
+  onExit?: () => Promise<void>;
   /** History file path for persisting command history */
   historyFile?: string;
-  /** Maximum history size */
+  /** Maximum number of history entries to keep */
   maxHistorySize?: number;
 }
 
-/**
- * Chat UI implementation using Ink.
- */
 export class ChatUI {
-  private instance: { unmount: () => void } | null = null;
-  private addMessageRef: {
-    current:
-      | ((role: 'user' | 'assistant' | 'system', content: string) => void)
-      | null;
-  } = { current: null };
-  private updateLastAssistantMessageRef: {
-    current: ((content: string) => void) | null;
-  } = { current: null };
-  private getMessagesRef: {
-    current: (() => ChatMessage[]) | null;
-  } = { current: null };
-  private clearMessagesRef: {
-    current: (() => void) | null;
-  } = { current: null };
-  private readonly options: ChatUIOptions;
+  private options: ChatUIOptions;
+  private instance: {
+    unmount: () => void;
+    waitUntilExit: () => Promise<void>;
+  } | null = null;
+  private addMessageRef: React.MutableRefObject<
+    (role: 'user' | 'assistant' | 'system', content: string) => void
+  >;
+  private updateLastAssistantMessageRef: React.MutableRefObject<
+    (content: string) => void
+  >;
+  private getMessagesRef: React.MutableRefObject<() => ChatMessage[]>;
+  private clearMessagesRef: React.MutableRefObject<() => void>;
 
-  constructor(options: ChatUIOptions = {}) {
+  constructor(options: ChatUIOptions) {
     this.options = options;
+    // Initialize refs as mutable ref objects (will be populated when component mounts)
+    this.addMessageRef = { current: () => {} } as React.MutableRefObject<
+      (role: 'user' | 'assistant' | 'system', content: string) => void
+    >;
+    this.updateLastAssistantMessageRef = {
+      current: () => {},
+    } as React.MutableRefObject<(content: string) => void>;
+    this.getMessagesRef = {
+      current: () => [],
+    } as React.MutableRefObject<() => ChatMessage[]>;
+    this.clearMessagesRef = {
+      current: () => {},
+    } as React.MutableRefObject<() => void>;
   }
 
-  /**
-   * Start the chat UI.
-   * Dynamically imports React and Ink to avoid ESM/CommonJS conflicts.
-   */
   async start(): Promise<void> {
-    if (this.instance) {
-      return; // Already started
-    }
-
     // Dynamically import React and Ink (ESM modules)
     // Use Function constructor to preserve import() syntax and avoid TypeScript transpilation to require()
 
@@ -106,6 +108,7 @@ export class ChatUI {
 
     // Create the component inline to avoid importing a separate module file
     // This avoids top-level require() calls for ESM modules
+
     const ChatUIComponent = (): React.ReactElement => {
       const { exit } = useApp();
       const [messages, setMessages] = (
@@ -136,6 +139,7 @@ export class ChatUI {
       )('');
 
       // Load history from file on mount
+
       useEffect(() => {
         if (options.historyFile) {
           try {
@@ -151,9 +155,10 @@ export class ChatUI {
             // Ignore errors loading history
           }
         }
-      }, []);
+      }, []); // Only run on mount
 
       // Save history to file helper
+
       const saveHistoryToFile = useCallback(() => {
         if (options.historyFile && inputHistoryRef.current.length > 0) {
           try {
@@ -170,21 +175,22 @@ export class ChatUI {
             // Ignore errors saving history
           }
         }
-      }, [options.historyFile]);
+      }, [options.historyFile]); // Only depend on historyFile, not the ref
 
       // Initialize messages
+
       useEffect(() => {
         if (options.initialMessages && options.initialMessages.length > 0) {
           const initMsgs: ChatMessage[] = options.initialMessages.map(msg => ({
-            role: msg.role,
-            content: msg.content,
+            ...msg,
             timestamp: new Date(),
           }));
           setMessages(initMsgs);
         }
-      }, []);
+      }, []); // Only run on mount
 
       // Expose methods via refs
+
       useEffect(() => {
         addMessageRef.current = (
           role: 'user' | 'assistant' | 'system',
@@ -198,143 +204,138 @@ export class ChatUI {
 
         updateLastAssistantMessageRef.current = (content: string): void => {
           setMessages((prev: ChatMessage[]) => {
+            const newMessages = [...prev];
+            const lastIndex = newMessages.length - 1;
             if (
-              prev.length > 0 &&
-              prev[prev.length - 1]?.role === 'assistant'
+              lastIndex >= 0 &&
+              newMessages[lastIndex]?.role === 'assistant'
             ) {
-              return [
-                ...prev.slice(0, -1),
-                { ...prev[prev.length - 1]!, content },
-              ];
+              newMessages[lastIndex] = {
+                ...newMessages[lastIndex],
+                content,
+                timestamp: newMessages[lastIndex]?.timestamp || new Date(),
+              };
+            } else {
+              newMessages.push({
+                role: 'assistant',
+                content,
+                timestamp: new Date(),
+              });
             }
-            return [
-              ...prev,
-              { role: 'assistant', content, timestamp: new Date() },
-            ];
+            return newMessages;
           });
         };
 
-        getMessagesRef.current = (): ChatMessage[] => messages;
+        getMessagesRef.current = (): ChatMessage[] => {
+          return messages;
+        };
+
         clearMessagesRef.current = (): void => {
           setMessages([]);
         };
-      }, [
-        messages,
-        addMessageRef,
-        updateLastAssistantMessageRef,
-        getMessagesRef,
-        clearMessagesRef,
-      ]);
+      });
 
       // Handle special commands
+      // Returns true if the command was handled, false if it should be passed to onMessage
       const handleSpecialCommand = useCallback(
-        async (command: string): Promise<void> => {
+        async (command: string): Promise<boolean> => {
           const parts = command.split(/\s+/);
           const cmd = parts[0]?.toLowerCase();
 
           switch (cmd) {
             case '/exit':
             case '/quit':
-              await options.onExit?.();
+              try {
+                await options.onExit?.();
+              } catch {
+                // Ignore errors during exit
+              }
               exit();
-              break;
+              return true;
             case '/clear':
               setMessages([]);
-              break;
+              return true;
             case '/help':
               setMessages((prev: ChatMessage[]) => [
                 ...prev,
                 {
                   role: 'system',
-                  content: `Available commands:
-/exit, /quit - Exit dev mode
-/clear       - Clear chat history
-/help        - Show this help message
-/tools       - List available tools
-
-Navigation:
-↑/↓ Arrow keys - Navigate input history
-←/→ Arrow keys - Move cursor in input box
-Ctrl+C        - Exit`,
+                  content:
+                    'Available commands:\n' +
+                    '  /help       - Show this help message\n' +
+                    '  /clear      - Clear the chat history\n' +
+                    '  /tools      - List available MCP tools\n' +
+                    '  /history    - Show command history\n' +
+                    '  /exit, /quit - Exit the chat',
                   timestamp: new Date(),
                 },
               ]);
-              break;
+              return true;
             default:
-              setIsProcessing(true);
-              try {
-                await options.onMessage?.(command);
-              } catch (error) {
-                const errorMessage =
-                  error instanceof Error ? error.message : String(error);
-                setMessages((prev: ChatMessage[]) => [
-                  ...prev,
-                  {
-                    role: 'system',
-                    content: `Error: ${errorMessage}`,
-                    timestamp: new Date(),
-                  },
-                ]);
-              } finally {
-                setIsProcessing(false);
-              }
+              // Not a UI-level special command, pass to onMessage callback
+              return false;
           }
         },
-        []
+        [options, exit]
       );
 
       // Handle input submission
+
       const handleSubmit = useCallback(
         (value: string): void => {
           void (async (): Promise<void> => {
-            const trimmed = value.trim();
-            if (!trimmed || isProcessing) {
-              setInput('');
-              return;
-            }
+            const trimmedValue = value.trim();
+            if (!trimmedValue) return;
 
-            // Add to history (avoid duplicates of last command)
-            if (
-              inputHistoryRef.current.length === 0 ||
-              inputHistoryRef.current[inputHistoryRef.current.length - 1] !==
-                trimmed
-            ) {
-              inputHistoryRef.current.push(trimmed);
-              if (inputHistoryRef.current.length > maxHistorySize) {
-                inputHistoryRef.current.shift();
-              }
-              // Save history to file after adding new entry
-              saveHistoryToFile();
-            }
-            historyIndexRef.current = -1;
-            currentInputRef.current = '';
-
-            // Add user message
-            setMessages((prev: ChatMessage[]) => [
-              ...prev,
-              { role: 'user', content: trimmed, timestamp: new Date() },
-            ]);
-
+            // Clear input immediately
             setInput('');
 
-            // Handle special commands
-            if (trimmed.startsWith('/')) {
-              await handleSpecialCommand(trimmed);
-              return;
+            // Save current input before checking for special commands
+            currentInputRef.current = '';
+
+            // Add user message to chat
+            setMessages((prev: ChatMessage[]) => [
+              ...prev,
+              { role: 'user', content: trimmedValue, timestamp: new Date() },
+            ]);
+
+            // Handle UI-level special commands (only if handled by UI)
+            if (trimmedValue.startsWith('/')) {
+              const wasHandled = await handleSpecialCommand(trimmedValue);
+              if (wasHandled) {
+                return; // Command was handled by UI, don't pass to onMessage
+              }
+              // Command was not handled by UI, continue to pass to onMessage callback
             }
 
-            // Process message
+            // Add to history (only non-empty, non-special commands)
+            if (trimmedValue && !trimmedValue.startsWith('/')) {
+              const history = inputHistoryRef.current;
+              // Remove duplicate if exists
+              const filtered = history.filter(
+                (h: string) => h !== trimmedValue
+              );
+              // Add to end
+              filtered.push(trimmedValue);
+              // Keep only last N entries
+              inputHistoryRef.current = filtered.slice(-maxHistorySize);
+              // Save to file
+              saveHistoryToFile();
+            }
+
+            // Reset history navigation
+            historyIndexRef.current = -1;
+
+            // Process the message
             setIsProcessing(true);
             try {
-              await options.onMessage?.(trimmed);
+              await options.onMessage?.(trimmedValue);
             } catch (error) {
-              const errorMessage =
-                error instanceof Error ? error.message : String(error);
-              setMessages(prev => [
+              setMessages((prev: ChatMessage[]) => [
                 ...prev,
                 {
                   role: 'system',
-                  content: `Error: ${errorMessage}`,
+                  content: `Error: ${error instanceof Error ? error.message : String(error)}`,
                   timestamp: new Date(),
                 },
               ]);
@@ -343,21 +344,13 @@ Ctrl+C        - Exit`,
             }
           })();
         },
-        [isProcessing, handleSpecialCommand, saveHistoryToFile, maxHistorySize]
+        [options, handleSpecialCommand, maxHistorySize, saveHistoryToFile]
       );
 
-      // Handle Ctrl+C - always active to catch exit
+      // Handle Ctrl+C (always active)
 
       useInput(
-        (
-          _char: string,
-          key: {
-            ctrl?: boolean;
-            escape?: boolean;
-          }
-        ) => {
-          // Handle Ctrl+C to exit - always allow exit even when processing
-          // In raw mode, Ctrl+C comes as '\x03' (ETX character)
+        (_char: string, key: { ctrl?: boolean; escape?: boolean }) => {
           if ((key.ctrl && _char === 'c') || _char === '\x03' || key.escape) {
             void (async (): Promise<void> => {
               try {
@@ -369,21 +362,13 @@ Ctrl+C        - Exit`,
             })();
           }
         },
-        { isActive: true } // Always active to catch Ctrl+C
+        { isActive: true }
       );
 
-      // Handle arrow keys for history navigation - only when not processing
+      // Handle arrow keys for history navigation (only when not processing)
 
       useInput(
-        (
-          _char: string,
-          key: {
-            upArrow?: boolean;
-            downArrow?: boolean;
-          }
-        ) => {
-          // Only handle up/down arrows for history navigation
-          // TextInput handles all other input including left/right arrows for cursor movement
+        (_char: string, key: { upArrow?: boolean; downArrow?: boolean }) => {
           if (key.upArrow || key.downArrow) {
             if (inputHistoryRef.current.length === 0 || isProcessing) {
               return;
@@ -394,15 +379,21 @@ Ctrl+C        - Exit`,
               if (historyIndexRef.current === -1) {
                 currentInputRef.current = input;
               }
+              // Move up in history
+              historyIndexRef.current = Math.min(
+                historyIndexRef.current + 1,
+                inputHistoryRef.current.length - 1
+              );
+            } else {
+              // Move down in history
+              historyIndexRef.current = Math.max(
+                historyIndexRef.current - 1,
+                -1
+              );
+            }
 
-              // Navigate up (to older history)
-              historyIndexRef.current += 1;
-
-              // Clamp to valid range
-              if (historyIndexRef.current >= inputHistoryRef.current.length) {
-                historyIndexRef.current = inputHistoryRef.current.length - 1;
-              }
-
+            // Set input from history or restore current
+            if (historyIndexRef.current >= 0) {
               const historyItem =
                 inputHistoryRef.current[
                   inputHistoryRef.current.length - 1 - historyIndexRef.current
@@ -410,21 +401,8 @@ Ctrl+C        - Exit`,
               if (historyItem !== undefined) {
                 setInput(historyItem);
               }
-            } else if (key.downArrow) {
-              historyIndexRef.current -= 1;
-
-              if (historyIndexRef.current < 0) {
-                historyIndexRef.current = -1;
-                setInput(currentInputRef.current);
-              } else {
-                const historyItem =
-                  inputHistoryRef.current[
-                    inputHistoryRef.current.length - 1 - historyIndexRef.current
-                  ];
-                if (historyItem !== undefined) {
-                  setInput(historyItem);
-                }
-              }
+            } else {
+              setInput(currentInputRef.current);
             }
           }
         },
@@ -455,6 +433,7 @@ Ctrl+C        - Exit`,
       }, []);
 
       // Render using React.createElement (can't use JSX here without importing React at top level)
+
       return React.createElement(
         Box,
         { flexDirection: 'column', width: '100%', height: '100%' },
@@ -570,64 +549,47 @@ Ctrl+C        - Exit`,
   }
 
   /**
-   * Stop the chat UI.
-   */
-  stop(): void {
-    if (this.instance && typeof this.instance.unmount === 'function') {
-      this.instance.unmount();
-      this.instance = null;
-    }
-  }
-
-  /**
    * Add a message to the chat.
    */
-  addMessage(
-    role: 'user' | 'assistant' | 'system',
-    content: string,
-    _options?: { style?: { fg?: string; bg?: string } }
-  ): void {
-    if (this.addMessageRef.current) {
-      this.addMessageRef.current(role, content);
-    }
+  addMessage(role: 'user' | 'assistant' | 'system', content: string): void {
+    this.addMessageRef.current(role, content);
   }
 
   /**
-   * Update the last assistant message (for streaming or updating).
+   * Update the last assistant message (for streaming).
    */
   updateLastAssistantMessage(content: string): void {
-    if (this.updateLastAssistantMessageRef.current) {
-      this.updateLastAssistantMessageRef.current(content);
-    }
+    this.updateLastAssistantMessageRef.current(content);
   }
 
   /**
    * Get all messages.
    */
   getMessages(): ChatMessage[] {
-    if (this.getMessagesRef.current) {
-      return this.getMessagesRef.current();
-    }
-    return [];
+    return this.getMessagesRef.current();
   }
 
   /**
    * Clear all messages.
    */
   clearMessages(): void {
-    if (this.clearMessagesRef.current) {
-      this.clearMessagesRef.current();
+    this.clearMessagesRef.current();
+  }
+
+  /**
+   * Stop the chat UI (same as exit).
+   */
+  stop(): void {
+    if (this.instance) {
+      this.instance.unmount();
+      this.instance = null;
     }
   }
 
   /**
    * Exit the chat UI.
    */
-  async exit(): Promise<void> {
-    if (this.options.onExit) {
-      await this.options.onExit();
-    }
+  exit(): void {
     this.stop();
-    process.exit(0);
   }
 }

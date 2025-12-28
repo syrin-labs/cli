@@ -7,4 +7,3 @@ export * from './types';
 export * from './session';
 export * from './formatter';
 export * from './stack-trace';
-export * from './chat-ui';
