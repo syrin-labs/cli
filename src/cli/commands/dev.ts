@@ -253,6 +253,7 @@ export async function executeDev(
     const historyFile = path.join(projectRoot, Paths.SYRIN_DIR, '.dev-history');
     const chatUI = new ChatUI({
       agentName: config.agent_name,
+      llmProviderName: llmProvider.getName(),
       showTimestamps: false,
       initialMessages,
       historyFile,

@@ -28,6 +28,8 @@ export interface ChatMessage {
 export interface ChatUIOptions {
   /** Agent name for the prompt */
   agentName?: string;
+  /** LLM provider name (e.g., "OpenAI", "Claude", "Ollama") */
+  llmProviderName?: string;
   /** Whether to show timestamps in messages */
   showTimestamps?: boolean;
   /** Initial messages to display */
@@ -413,8 +415,366 @@ export class ChatUI {
       // The useInput hook intercepts all input including Ctrl+C, so SIGINT won't fire
       // We handle Ctrl+C directly in the useInput callback
 
-      // Wrap text
+      // Parse inline markdown (bold, italic, code)
+      const parseInlineMarkdown = useCallback(
+        (
+          text: string,
+          baseKey: number,
+          defaultColor?: string
+        ): React.ReactElement[] => {
+          const elements: React.ReactElement[] = [];
+          const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+          let keyIndex = 0;
 
+          for (const part of parts) {
+            if (!part) continue;
+
+            // Bold **text**
+            if (part.startsWith('**') && part.endsWith('**')) {
+              const content = part.slice(2, -2);
+              elements.push(
+                React.createElement(
+                  Text,
+                  {
+                    key: baseKey * 100 + keyIndex++,
+                    bold: true,
+                    ...(defaultColor ? { color: defaultColor } : {}),
+                  },
+                  content
+                )
+              );
+            }
+            // Italic *text*
+            else if (
+              part.startsWith('*') &&
+              part.endsWith('*') &&
+              !part.startsWith('**')
+            ) {
+              const content = part.slice(1, -1);
+              elements.push(
+                React.createElement(
+                  Text,
+                  {
+                    key: baseKey * 100 + keyIndex++,
+                    dimColor: true,
+                    ...(defaultColor ? { color: defaultColor } : {}),
+                  },
+                  content
+                )
+              );
+            }
+            // Code `text`
+            else if (part.startsWith('`') && part.endsWith('`')) {
+              const content = part.slice(1, -1);
+              elements.push(
+                React.createElement(
+                  Text,
+                  {
+                    key: baseKey * 100 + keyIndex++,
+                    color: defaultColor || 'cyan',
+                  },
+                  content
+                )
+              );
+            }
+            // Regular text
+            else {
+              elements.push(
+                React.createElement(
+                  Text,
+                  {
+                    key: baseKey * 100 + keyIndex++,
+                    ...(defaultColor
+                      ? {
+                          color: defaultColor,
+                          ...(defaultColor === 'yellow'
+                            ? {}
+                            : { dimColor: true }),
+                        }
+                      : {}),
+                  },
+                  part
+                )
+              );
+            }
+          }
+
+          return elements;
+        },
+        []
+      );
+
+      // Parse table markdown
+      const parseTable = useCallback(
+        (
+          rows: string[],
+          baseKey: number,
+          defaultColor?: string
+        ): React.ReactElement | null => {
+          if (rows.length === 0) return null;
+
+          const parsedRows = rows
+            .map(row => {
+              const cells = row
+                .split('|')
+                .map(cell => cell.trim())
+                .filter(cell => cell.length > 0);
+              return cells;
+            })
+            .filter(row => row.length > 0);
+
+          if (parsedRows.length === 0) return null;
+
+          // Skip separator row (second row if it's all dashes)
+          const dataRows = parsedRows.filter(
+            (row, idx) => idx !== 1 || !row.every(cell => /^-+$/.test(cell))
+          );
+
+          if (dataRows.length === 0) return null;
+
+          const headerRow = dataRows[0] || [];
+          const bodyRows = dataRows.slice(1);
+
+          return React.createElement(
+            Box,
+            { key: baseKey, flexDirection: 'column', marginY: 1 },
+            // Header row
+            React.createElement(
+              Box,
+              { key: 'header', flexDirection: 'row', marginBottom: 0.5 },
+              ...headerRow.map(
+                (cell, idx) =>
+                  React.createElement(
+                    Box,
+                    {
+                      key: idx,
+                      paddingX: 1,
+                      minWidth: Math.floor(80 / headerRow.length),
+                    },
+                    ...parseInlineMarkdown(
+                      cell,
+                      baseKey * 1000 + idx,
+                      defaultColor
+                    )
+                  ) as React.ReactElement
+              )
+            ),
+            // Separator
+            React.createElement(
+              Box,
+              { key: 'separator', marginY: 0.5 },
+              React.createElement(Text, { dimColor: true }, '─'.repeat(60))
+            ),
+            // Body rows
+            ...bodyRows.map(
+              (row, rowIdx) =>
+                React.createElement(
+                  Box,
+                  { key: rowIdx, flexDirection: 'row', marginBottom: 0.25 },
+                  ...row.map(
+                    (cell, cellIdx) =>
+                      React.createElement(
+                        Box,
+                        {
+                          key: cellIdx,
+                          paddingX: 1,
+                          minWidth: Math.floor(80 / headerRow.length),
+                        },
+                        ...parseInlineMarkdown(
+                          cell,
+                          baseKey * 10000 + rowIdx * 100 + cellIdx,
+                          defaultColor
+                        )
+                      ) as React.ReactElement
+                  )
+                ) as React.ReactElement
+            )
+          );
+        },
+        [parseInlineMarkdown]
+      );
+
+      // Markdown parser for formatting assistant/system messages
+      const parseMarkdown = useCallback(
+        (text: string, defaultColor?: string): React.ReactElement[] => {
+          const elements: React.ReactElement[] = [];
+          let elementKey = 0;
+
+          // Split by lines first to handle blocks
+          const lines = text.split('\n');
+
+          let i = 0;
+          while (i < lines.length) {
+            const line = lines[i] || '';
+
+            // Table detection
+            if (line.trim().startsWith('|') && line.includes('|')) {
+              const tableRows: string[] = [line];
+              i++;
+              // Collect all table rows
+              while (i < lines.length) {
+                const nextLine = lines[i] || '';
+                if (nextLine.trim().startsWith('|') && nextLine.includes('|')) {
+                  tableRows.push(nextLine);
+                  i++;
+                } else {
+                  break;
+                }
+              }
+              // Parse and render table
+              const tableElement = parseTable(
+                tableRows,
+                elementKey++,
+                defaultColor
+              );
+              if (tableElement) {
+                elements.push(tableElement);
+              }
+              continue;
+            }
+
+            // Numbered list (1. item or 1) item)
+            if (/^\s*\d+[.)]\s+/.test(line)) {
+              const listItems: string[] = [];
+              while (i < lines.length) {
+                const listLine = lines[i] || '';
+                if (/^\s*\d+[.)]\s+/.test(listLine)) {
+                  listItems.push(listLine.replace(/^\s*\d+[.)]\s+/, ''));
+                  i++;
+                } else if (listLine.trim() === '') {
+                  i++;
+                  if (
+                    i < lines.length &&
+                    /^\s*\d+[.)]\s+/.test(lines[i] || '')
+                  ) {
+                    continue;
+                  }
+                  break;
+                } else {
+                  break;
+                }
+              }
+              elements.push(
+                React.createElement(
+                  Box,
+                  { key: elementKey++, flexDirection: 'column', marginY: 0.5 },
+                  ...listItems.map(
+                    (item, idx) =>
+                      React.createElement(
+                        Box,
+                        { key: idx, marginLeft: 2, marginBottom: 0.25 },
+                        React.createElement(
+                          Text,
+                          {
+                            ...(defaultColor
+                              ? {
+                                  color: defaultColor,
+                                  ...(defaultColor === 'yellow'
+                                    ? {}
+                                    : { dimColor: true }),
+                                }
+                              : {}),
+                          },
+                          `${idx + 1}. `
+                        ),
+                        ...parseInlineMarkdown(
+                          item,
+                          elementKey * 1000 + idx,
+                          defaultColor
+                        )
+                      ) as React.ReactElement
+                  )
+                )
+              );
+              continue;
+            }
+
+            // Bulleted list (- item or * item)
+            if (/^\s*[-*]\s+/.test(line)) {
+              const listItems: string[] = [];
+              while (i < lines.length) {
+                const listLine = lines[i] || '';
+                if (/^\s*[-*]\s+/.test(listLine)) {
+                  listItems.push(listLine.replace(/^\s*[-*]\s+/, ''));
+                  i++;
+                } else if (listLine.trim() === '') {
+                  i++;
+                  if (i < lines.length && /^\s*[-*]\s+/.test(lines[i] || '')) {
+                    continue;
+                  }
+                  break;
+                } else {
+                  break;
+                }
+              }
+              elements.push(
+                React.createElement(
+                  Box,
+                  { key: elementKey++, flexDirection: 'column', marginY: 0.5 },
+                  ...listItems.map(
+                    (item, idx) =>
+                      React.createElement(
+                        Box,
+                        { key: idx, marginLeft: 2, marginBottom: 0.25 },
+                        React.createElement(
+                          Text,
+                          {
+                            ...(defaultColor
+                              ? {
+                                  color: defaultColor,
+                                  ...(defaultColor === 'yellow'
+                                    ? {}
+                                    : { dimColor: true }),
+                                }
+                              : {}),
+                          },
+                          '• '
+                        ),
+                        ...parseInlineMarkdown(
+                          item,
+                          elementKey * 1000 + idx,
+                          defaultColor
+                        )
+                      ) as React.ReactElement
+                  )
+                )
+              );
+              continue;
+            }
+
+            // Regular paragraph
+            if (line.trim()) {
+              const inlineElements = parseInlineMarkdown(
+                line,
+                elementKey++,
+                defaultColor
+              );
+              elements.push(
+                React.createElement(
+                  Box,
+                  {
+                    key: elementKey - 1,
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                  },
+                  ...inlineElements
+                )
+              );
+            } else {
+              // Empty line
+              elements.push(
+                React.createElement(Box, { key: elementKey++, height: 1 })
+              );
+            }
+            i++;
+          }
+
+          return elements;
+        },
+        [parseInlineMarkdown, parseTable]
+      );
+
+      // Wrap text (for user messages only)
       const wrapText = useCallback((text: string, width: number): string[] => {
         const words = text.split(/\s+/);
         const lines: string[] = [];
@@ -455,12 +815,10 @@ export class ChatUI {
             const timestamp = options.showTimestamps
               ? `[${message.timestamp?.toLocaleTimeString() || ''}] `
               : '';
-            const wrappedLines = wrapText(
-              message.content,
-              message.role === 'system' ? 80 : 60
-            );
 
             if (message.role === 'user') {
+              // User messages: simple text wrapping, no markdown
+              const wrappedLines = wrapText(message.content, 60);
               return React.createElement(
                 Box,
                 {
@@ -481,39 +839,68 @@ export class ChatUI {
                   )
                 )
               );
-            } else if (message.role === 'assistant') {
-              return React.createElement(
-                Box,
-                {
-                  key: index,
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  marginY: 1,
-                },
-                wrappedLines.map((line: string, lineIndex: number) =>
+            } else {
+              // Assistant and system messages: parse markdown
+              if (message.role === 'assistant') {
+                // LLM-generated messages: styled with subtle dark background for easy reading
+                const markdownElements = parseMarkdown(message.content);
+                return React.createElement(
+                  Box,
+                  {
+                    key: index,
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
+                    marginY: 1,
+                  },
                   React.createElement(
                     Box,
-                    { key: lineIndex, backgroundColor: 'grey', paddingX: 1 },
+                    {
+                      flexDirection: 'row',
+                      marginBottom: 0.25,
+                      marginLeft: 1,
+                    },
                     React.createElement(
                       Text,
-                      { color: 'white' },
-                      timestamp + line
+                      { color: 'cyan', bold: true },
+                      `🤖 ${options.llmProviderName || 'AI'}: `
                     )
-                  )
-                )
-              );
-            } else {
-              return React.createElement(
-                Box,
-                { key: index, flexDirection: 'column', marginY: 1 },
-                wrappedLines.map((line: string, lineIndex: number) =>
+                  ),
                   React.createElement(
-                    Text,
-                    { key: lineIndex, color: 'yellow' },
-                    timestamp + line
+                    Box,
+                    {
+                      flexDirection: 'column',
+                      backgroundColor: 'black',
+                      paddingX: 1,
+                      paddingY: 0.5,
+                      marginLeft: 1,
+                    },
+                    ...markdownElements
                   )
-                )
-              );
+                );
+              } else {
+                // System messages: styled with bright yellow color to make them pop (no prefix)
+                const markdownElements = parseMarkdown(
+                  message.content,
+                  'yellow'
+                );
+                return React.createElement(
+                  Box,
+                  {
+                    key: index,
+                    flexDirection: 'column',
+                    marginY: 0.5,
+                  },
+                  React.createElement(
+                    Box,
+                    {
+                      flexDirection: 'column',
+                      paddingX: 1,
+                      paddingY: 0.5,
+                    },
+                    ...markdownElements
+                  )
+                );
+              }
             }
           })
         ),
