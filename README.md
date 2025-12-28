@@ -20,6 +20,12 @@
 - 🔒 **Safe Execution** - Preview mode by default to prevent accidental tool execution
 - 📊 **Event Tracking** - Save and analyze events for debugging and monitoring
 
+## Demo
+
+Watch a quick demonstration of Syrin in action:
+
+<https://github.com/ankan-labs/syrin/raw/main/demo/syrin-demo.mp4>
+
 ## Quick Install
 
 ### Using npx (Recommended)
