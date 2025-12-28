@@ -94,7 +94,7 @@ Then use via `npx` or add to your `package.json` scripts:
 4. **Start development mode:**
 
    ```bash
-   syrin dev
+   syrin dev --exec
    ```
 
 ## Commands
