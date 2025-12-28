@@ -14,6 +14,7 @@
    @typescript-eslint/no-unsafe-call,
    @typescript-eslint/no-unsafe-member-access,
    @typescript-eslint/no-unsafe-return,
+   @typescript-eslint/no-unsafe-argument,
    @typescript-eslint/no-implied-eval
 */
 import * as fs from 'fs';
@@ -440,7 +441,7 @@ export class ChatUI {
                     bold: true,
                     ...(defaultColor ? { color: defaultColor } : {}),
                   },
-                  content
+                  content as React.ReactNode
                 )
               );
             }
@@ -459,7 +460,7 @@ export class ChatUI {
                     dimColor: true,
                     ...(defaultColor ? { color: defaultColor } : {}),
                   },
-                  content
+                  content as React.ReactNode
                 )
               );
             }
@@ -473,7 +474,7 @@ export class ChatUI {
                     key: baseKey * 100 + keyIndex++,
                     color: defaultColor || 'cyan',
                   },
-                  content
+                  content as React.ReactNode
                 )
               );
             }
@@ -493,7 +494,7 @@ export class ChatUI {
                         }
                       : {}),
                   },
-                  part
+                  part as React.ReactNode
                 )
               );
             }
@@ -628,7 +629,7 @@ export class ChatUI {
                 defaultColor
               );
               if (tableElement) {
-                elements.push(tableElement);
+                elements.push(tableElement as React.ReactElement);
               }
               continue;
             }
@@ -757,13 +758,16 @@ export class ChatUI {
                     flexDirection: 'row',
                     flexWrap: 'wrap',
                   },
-                  ...inlineElements
+                  ...(inlineElements as React.ReactElement[])
                 )
               );
             } else {
               // Empty line
               elements.push(
-                React.createElement(Box, { key: elementKey++, height: 1 })
+                React.createElement(Box, {
+                  key: elementKey++,
+                  height: 1,
+                }) as React.ReactElement
               );
             }
             i++;

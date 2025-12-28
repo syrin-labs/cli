@@ -132,8 +132,8 @@ function checkLLMProviders(
   const checks: DoctorReport['llmChecks'] = [];
 
   for (const [providerName, providerConfig] of Object.entries(config.llm)) {
-    if (providerName === 'llama' || providerConfig.provider) {
-      // Local LLM provider - skip API key checks
+    if (providerName === 'ollama') {
+      // Ollama provider - skip API key checks (only MODEL_NAME is needed)
       continue;
     }
 
@@ -180,8 +180,8 @@ function checkLocalLLMProviders(
 ): DoctorReport['localLlmChecks'] {
   const checks: DoctorReport['localLlmChecks'] = [];
 
-  for (const [providerName, providerConfig] of Object.entries(config.llm)) {
-    if (providerName === 'llama' || providerConfig.provider) {
+  for (const [providerName] of Object.entries(config.llm)) {
+    if (providerName === 'ollama') {
       checks.push({
         provider: providerName,
         check: {

@@ -140,10 +140,13 @@ export function displayDoctorReport(report: DoctorReport): void {
           ),
           config.transport === 'http'
             ? ((): React.ReactElement => {
-                const urlText =
+                const urlValue =
                   config.mcp_url !== undefined && config.mcp_url !== null
-                    ? 'URL: ' + String(config.mcp_url)
-                    : 'URL: Not configured';
+                    ? (config.mcp_url as unknown as string)
+                    : null;
+                const urlText = urlValue
+                  ? `URL: ${urlValue}`
+                  : 'URL: Not configured';
                 return React.createElement(
                   Box,
                   { marginLeft: 2, marginBottom: 0.5 },
@@ -154,10 +157,13 @@ export function displayDoctorReport(report: DoctorReport): void {
                 );
               })()
             : ((): React.ReactElement => {
-                const scriptText =
+                const scriptValue =
                   config.script !== undefined && config.script !== null
-                    ? 'Script: ' + String(config.script)
-                    : 'Script: Not configured';
+                    ? (config.script as unknown as string)
+                    : null;
+                const scriptText = scriptValue
+                  ? `Script: ${scriptValue}`
+                  : 'Script: Not configured';
                 return React.createElement(
                   Box,
                   { marginLeft: 2, marginBottom: 0.5 },

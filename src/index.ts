@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Syrin main entry point.
  * Exports the CLI runner.

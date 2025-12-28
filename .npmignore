@@ -1,0 +1,54 @@
+# Source files
+src/
+*.ts
+!dist/**/*.d.ts
+
+# Configuration files
+tsconfig.json
+tsconfig.node.json
+eslint.config.cjs
+.prettierrc*
+.editorconfig
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.*
+
+# Development files
+.syrin/
+parth/
+docs/
+*.md
+!README.md
+
+# Build artifacts (keep dist/)
+*.log
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

@@ -131,17 +131,21 @@ function buildConfigContent(options: InitOptions): string {
     lines.push(`  # ${providerName.toUpperCase()} Provider`);
     lines.push(`  ${providerName}:`);
 
-    if (providerName === 'llama') {
-      // Local provider (Ollama)
-      if (providerConfig.provider) {
+    if (providerName === 'ollama') {
+      // Ollama provider
+      if (providerConfig.MODEL_NAME) {
         lines.push(
-          '    # Provider identifier for local LLM (e.g., "ollama/local")'
+          '    # Model name: Required for Ollama (e.g., "llama2", "mistral", "codellama")'
         );
-        lines.push(`    provider: "${String(providerConfig.provider)}"`);
-      }
-      if (providerConfig.command) {
-        lines.push('    # Command to start local LLM server (if needed)');
-        lines.push(`    command: "${String(providerConfig.command)}"`);
+        lines.push(
+          '    # Can be set as environment variable name or direct value'
+        );
+        lines.push(
+          '    # Example: "OLLAMA_MODEL_NAME" (reads from process.env.OLLAMA_MODEL_NAME)'
+        );
+        lines.push('    # Or: "llama2" (direct value)');
+        lines.push(`    MODEL_NAME: "${String(providerConfig.MODEL_NAME)}"`);
+        lines.push('');
       }
       if (providerConfig.default) {
         lines.push('    # Set as default LLM provider');
@@ -201,12 +205,13 @@ function buildConfigContent(options: InitOptions): string {
       lines.push('  #   default: false');
     }
 
-    if (!llmEntries.some(([name]) => name === 'llama')) {
+    if (!llmEntries.some(([name]) => name === 'ollama')) {
       lines.push('');
-      lines.push('  # Local LLM Provider (Ollama) - uncomment to enable');
-      lines.push('  # llama:');
-      lines.push('  #   provider: "ollama/local"');
-      lines.push('  #   command: "<command to run from local>"');
+      lines.push('  # Ollama Provider - uncomment to enable');
+      lines.push('  # ollama:');
+      lines.push(
+        '  #   MODEL_NAME: "OLLAMA_MODEL_NAME"  # or "llama2", "mistral", etc.'
+      );
       lines.push('  #   default: false');
     }
 
@@ -240,14 +245,11 @@ function buildLLMConfig(
     };
   }
 
-  if (providers.llama) {
-    // For local providers, we don't include API_KEY and MODEL_NAME
-    const llamaConfig: SyrinConfig['llm'][string] = {
-      provider: providers.llama.provider,
-      command: providers.llama.command,
-      default: providers.llama.default ?? false,
+  if (providers.ollama) {
+    llmConfig.ollama = {
+      MODEL_NAME: providers.ollama.modelName,
+      default: providers.ollama.default ?? false,
     };
-    llmConfig.llama = llamaConfig;
   }
 
   return llmConfig;

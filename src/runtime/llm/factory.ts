@@ -57,16 +57,15 @@ export function createLLMProvider(
     );
   }
 
-  // Handle Ollama (local)
-  if (
-    providerName === 'ollama' ||
-    providerName === 'llama' ||
-    providerConfig.provider === 'ollama/local'
-  ) {
-    // For Ollama, we need to determine the model name
-    // It might be in MODEL_NAME or we need to use a default
-    const modelName = providerConfig.MODEL_NAME || 'llama2'; // Default model
-    return new OllamaProvider(modelName);
+  // Handle Ollama
+  if (providerName === 'ollama') {
+    // Ollama provider - MODEL_NAME is required
+    if (!providerConfig.MODEL_NAME) {
+      throw new ConfigurationError(
+        'Ollama provider requires MODEL_NAME to be set in config.yaml'
+      );
+    }
+    return OllamaProvider.fromConfig(providerConfig.MODEL_NAME, projectRoot);
   }
 
   throw new ConfigurationError(`Unsupported LLM provider: ${providerName}`);

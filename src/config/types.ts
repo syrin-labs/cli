@@ -7,10 +7,8 @@ import type {
   ProjectName,
   AgentName,
   MCPURL,
-  Command,
   APIKey,
   ModelName,
-  ProviderIdentifier,
   ScriptCommand,
   SyrinVersion,
 } from '@/types/ids';
@@ -20,14 +18,10 @@ export type TransportType = 'stdio' | 'http';
 export interface LLMProviderConfig {
   /** API key for the LLM provider (can be an environment variable name) - required for cloud providers */
   API_KEY?: APIKey;
-  /** Model name to use (can be an environment variable name) - required for cloud providers */
+  /** Model name to use (can be an environment variable name) - required for cloud providers and Ollama */
   MODEL_NAME?: ModelName;
   /** Whether this is the default LLM provider */
   default?: boolean;
-  /** Provider type (only for local providers like Ollama) */
-  provider?: ProviderIdentifier;
-  /** Command to run local provider (only for local providers) */
-  command?: Command;
 }
 
 export interface SyrinConfig {
@@ -65,9 +59,8 @@ export interface InitOptions {
   llmProviders: {
     openai?: { apiKey: APIKey; modelName: ModelName; default?: boolean };
     claude?: { apiKey: APIKey; modelName: ModelName; default?: boolean };
-    llama?: {
-      provider?: ProviderIdentifier;
-      command?: Command;
+    ollama?: {
+      modelName?: ModelName;
       default?: boolean;
     };
   };

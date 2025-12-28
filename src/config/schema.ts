@@ -10,10 +10,8 @@ import {
   makeProjectName,
   makeAgentName,
   makeMCPURL,
-  makeCommand,
   makeAPIKey,
   makeModelName,
-  makeProviderIdentifier,
   makeScriptCommand,
   makeSyrinVersion,
 } from '@/types/factories';
@@ -26,35 +24,25 @@ const LLMProviderSchema = z
     API_KEY: z.string().optional(),
     MODEL_NAME: z.string().optional(),
     default: z.boolean().optional(),
-    provider: z.string().optional(),
-    command: z.string().optional(),
   })
   .refine(
     data => {
-      // For local providers (with provider field), API_KEY and MODEL_NAME are not required
-      if (data.provider) {
+      // For cloud providers (have API_KEY), both API_KEY and MODEL_NAME are required
+      if (data.API_KEY) {
+        if (!data.MODEL_NAME) {
+          return false;
+        }
         return true;
       }
-      // For cloud providers, API_KEY and MODEL_NAME are required
-      if (!data.API_KEY || !data.MODEL_NAME) {
+      // For Ollama (no API_KEY), MODEL_NAME is required
+      if (!data.API_KEY && !data.MODEL_NAME) {
         return false;
       }
       return true;
     },
     {
-      message: 'API_KEY and MODEL_NAME are required for cloud providers',
-    }
-  )
-  .refine(
-    data => {
-      // If provider is specified, command should also be specified (for local providers)
-      if (data.provider && !data.command) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: 'Local providers must specify both provider and command',
+      message:
+        'For cloud providers (OpenAI, Claude), API_KEY and MODEL_NAME are required. For Ollama, MODEL_NAME is required.',
     }
   );
 
@@ -154,12 +142,6 @@ export function validateConfig(config: unknown): SyrinConfig {
               ? makeModelName(provider.MODEL_NAME)
               : undefined,
             default: provider.default,
-            provider: provider.provider
-              ? makeProviderIdentifier(provider.provider)
-              : undefined,
-            command: provider.command
-              ? makeCommand(provider.command)
-              : undefined,
           },
         ])
       ),

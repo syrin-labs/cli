@@ -79,7 +79,7 @@ function extractParameters(
  */
 export function displayTools(tools: ToolInfo[]): void {
   const importDynamic = new Function('specifier', 'return import(specifier)');
-  void (async () => {
+  void (async (): Promise<void> => {
     const [ReactModule, inkModule] = await Promise.all([
       importDynamic('react'),
       importDynamic('ink'),

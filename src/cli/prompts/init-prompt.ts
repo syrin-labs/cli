@@ -9,10 +9,8 @@ import {
   makeProjectName,
   makeAgentName,
   makeMCPURL,
-  makeCommand,
   makeAPIKey,
   makeModelName,
-  makeProviderIdentifier,
   makeScriptCommand,
 } from '@/types/factories';
 
@@ -30,8 +28,7 @@ interface InitAnswers {
   openaiModel?: string;
   claudeApiKey?: string;
   claudeModel?: string;
-  llamaProvider?: string;
-  llamaCommand?: string;
+  ollamaModelName?: string;
   defaultProvider: string;
 }
 
@@ -135,7 +132,7 @@ export async function promptInitOptions(
       choices: [
         { name: 'OpenAI', value: 'openai', checked: true },
         { name: 'Claude (Anthropic)', value: 'claude' },
-        { name: 'Local LLM (Ollama)', value: 'llama' },
+        { name: 'Ollama', value: 'ollama' },
       ],
       default: defaults?.llmProviders
         ? Object.keys(defaults.llmProviders)
@@ -217,19 +214,20 @@ export async function promptInitOptions(
     },
     {
       type: 'input',
-      name: 'llamaProvider',
-      message: 'Local LLM Provider identifier (e.g., "ollama/local"):',
-      default: 'ollama/local',
+      name: 'ollamaModelName',
+      message: 'Ollama Model Name (e.g., "llama2", "mistral", "codellama"):',
+      default: 'OLLAMA_MODEL_NAME',
       when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes('llama') ?? false,
-    },
-    {
-      type: 'input',
-      name: 'llamaCommand',
-      message: 'Local LLM Command (optional):',
-      default: '',
-      when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes('llama') ?? false,
+        answers.llmProviders?.includes('ollama') ?? false,
+      validate: (
+        input: string,
+        answers?: Partial<InitAnswers>
+      ): boolean | string => {
+        if (answers?.llmProviders?.includes('ollama') && !input.trim()) {
+          return 'Ollama model name is required';
+        }
+        return true;
+      },
     },
     {
       type: 'list',
@@ -249,7 +247,7 @@ export async function promptInitOptions(
     llmProviders.openai = {
       apiKey: makeAPIKey(answers.openaiApiKey || ''),
       modelName: makeModelName(answers.openaiModel || ''),
-      default: answers.defaultProvider === 'openai',
+      default: answers.defaultProvider === 'openai' || false,
     };
   }
 
@@ -257,19 +255,16 @@ export async function promptInitOptions(
     llmProviders.claude = {
       apiKey: makeAPIKey(answers.claudeApiKey || ''),
       modelName: makeModelName(answers.claudeModel || ''),
-      default: answers.defaultProvider === 'claude',
+      default: answers.defaultProvider === 'claude' || false,
     };
   }
 
-  if (answers.llmProviders.includes('llama')) {
-    llmProviders.llama = {
-      provider: answers.llamaProvider
-        ? makeProviderIdentifier(answers.llamaProvider)
+  if (answers.llmProviders.includes('ollama')) {
+    llmProviders.ollama = {
+      modelName: answers.ollamaModelName
+        ? makeModelName(answers.ollamaModelName)
         : undefined,
-      command: answers.llamaCommand
-        ? makeCommand(answers.llamaCommand)
-        : undefined,
-      default: answers.defaultProvider === 'llama',
+      default: answers.defaultProvider === 'ollama' || false,
     };
   }
 
