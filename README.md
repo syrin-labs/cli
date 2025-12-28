@@ -24,7 +24,7 @@
 
 Watch a quick demonstration of Syrin in action:
 
-<https://github.com/ankan-labs/syrin/raw/main/demo/syrin-demo.mp4>
+![Syrin Demo](demo/syrin-demo.gif)
 
 ## Quick Install
 
