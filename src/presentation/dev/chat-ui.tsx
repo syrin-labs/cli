@@ -992,7 +992,7 @@ export class ChatUI {
           : '';
 
         if (message.role === 'user') {
-          // User messages: simple text wrapping, no markdown
+          // User messages: minimalistic bordered rectangle with blue background
           const wrappedLines = wrapText(message.content, 60);
           return React.createElement(
             Box,
@@ -1002,11 +1002,23 @@ export class ChatUI {
               alignItems: 'flex-end',
               marginY: 1,
             },
-            wrappedLines.map((line: string, lineIndex: number) =>
-              React.createElement(
-                Box,
-                { key: lineIndex, backgroundColor: 'blue', paddingX: 1 },
-                React.createElement(Text, { color: 'white' }, timestamp + line)
+            React.createElement(
+              Box,
+              {
+                flexDirection: 'column',
+                borderStyle: 'round',
+                borderColor: 'blue',
+                backgroundColor: 'blue',
+                paddingX: 1,
+                paddingY: 0.5,
+                marginRight: 1,
+              },
+              wrappedLines.map((line: string, lineIndex: number) =>
+                React.createElement(
+                  Text,
+                  { key: lineIndex, color: 'white' },
+                  timestamp + line
+                )
               )
             )
           );
@@ -1027,6 +1039,19 @@ export class ChatUI {
                 alignItems: 'flex-start',
                 marginY: 1,
               },
+              React.createElement(
+                Box,
+                {
+                  flexDirection: 'row',
+                  marginBottom: 0.25,
+                  marginLeft: 1,
+                },
+                React.createElement(
+                  Text,
+                  { color: 'cyan', bold: true },
+                  `🤖 ${options.llmProviderName || 'AI'}: `
+                )
+              ),
               React.createElement(
                 Box,
                 {
@@ -1159,23 +1184,41 @@ export class ChatUI {
             ];
           })()
         ),
-        // Input area
+        // Input area - modern minimal design with border and black background
         React.createElement(
           Box,
-          { backgroundColor: 'blue', width: '100%' },
+          {
+            width: '100%',
+            borderStyle: 'round',
+            borderColor: 'gray',
+            backgroundColor: 'black',
+            paddingX: 1,
+            paddingY: 0.5,
+          },
           React.createElement(
-            Text,
-            { color: 'white', bold: true },
-            ` ${options.agentName || 'You'} > `
-          ),
-          isProcessing
-            ? React.createElement(Text, { color: 'white' }, 'Processing...')
-            : React.createElement(TextInput, {
-                value: input,
-                onChange: setInput,
-                onSubmit: handleSubmit,
-                placeholder: 'Type your message...',
-              })
+            Box,
+            {
+              flexDirection: 'row',
+              alignItems: 'center',
+            },
+            React.createElement(
+              Text,
+              { color: 'white', dimColor: true },
+              `${options.agentName || 'You'} > `
+            ),
+            isProcessing
+              ? React.createElement(
+                  Text,
+                  { color: 'white', dimColor: true },
+                  'Processing...'
+                )
+              : React.createElement(TextInput, {
+                  value: input,
+                  onChange: setInput,
+                  onSubmit: handleSubmit,
+                  placeholder: 'Type your message...',
+                })
+          )
         )
       );
     };
