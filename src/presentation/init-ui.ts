@@ -3,7 +3,7 @@
  * Separates UI/logic concerns by providing functions for displaying messages.
  */
 
-import { Icons, Messages, Paths, Commands } from '@/constants';
+import { Icons, Messages, Paths, ToolCommands } from '@/constants';
 import { log } from '@/utils/logger';
 
 /**
@@ -17,10 +17,10 @@ export function displayAlreadyInitialized(): void {
   log.blank();
   log.plain(`${Icons.DOCUMENT} ${Messages.INIT_NEXT_STEPS_HEADER}`);
   log.plain(`   ${Messages.INIT_ALREADY_INIT_MSG(Paths.CONFIG_PATH)}`);
-  log.plain(`   ${Messages.INIT_VERIFY_SETUP(Commands.DOCTOR)}`);
+  log.plain(`   ${Messages.INIT_VERIFY_SETUP(ToolCommands.DOCTOR)}`);
   log.blank();
   log.info(Messages.INIT_REINITIALIZE_TIP);
-  log.plain(`   ${Messages.INIT_REINITIALIZE_INSTRUCTION(Commands.INIT)}`);
+  log.plain(`   ${Messages.INIT_REINITIALIZE_INSTRUCTION(ToolCommands.INIT)}`);
   log.blank();
 }
 
@@ -37,7 +37,7 @@ export function displayInitSuccess(configPath: string): void {
   log.plain(`${Icons.DOCUMENT} ${Messages.INIT_NEXT_STEPS_HEADER}`);
   log.plain(`   1. ${Messages.INIT_REVIEW_CONFIG(Paths.CONFIG_PATH)}`);
   log.plain(`   2. ${Messages.INIT_SETUP_ENV_VARS}`);
-  log.plain(`   3. ${Messages.INIT_RUN_DOCTOR(Commands.DOCTOR)}`);
-  log.plain(`   4. ${Messages.INIT_RUN_DEV(Commands.DEV)}`);
+  log.plain(`   3. ${Messages.INIT_RUN_DOCTOR(ToolCommands.DOCTOR)}`);
+  log.plain(`   4. ${Messages.INIT_RUN_DEV(ToolCommands.DEV)}`);
   log.blank();
 }

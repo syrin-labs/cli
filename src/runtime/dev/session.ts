@@ -82,15 +82,23 @@ export class DevSession {
   }
 
   /**
+   * Add user message to conversation history without processing.
+   * Useful for special commands that don't need LLM processing.
+   */
+  addUserMessageToHistory(userInput: string): void {
+    this.state.conversationHistory.push({
+      role: 'user',
+      content: userInput,
+    });
+  }
+
+  /**
    * Process user input.
    * This is the main entry point for handling user messages.
    */
   async processUserInput(userInput: string): Promise<void> {
     // Add user message to conversation history
-    this.state.conversationHistory.push({
-      role: 'user',
-      content: userInput,
-    });
+    this.addUserMessageToHistory(userInput);
 
     // Process the conversation (may involve multiple LLM calls if tools are used)
     await this.processConversation();

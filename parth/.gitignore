@@ -19,4 +19,4 @@ __pycache__/
 # Syrin
 .syrin/events/
 .syrin/.dev-history
-.syrin/data
+.syrin/data/

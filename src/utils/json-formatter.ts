@@ -257,6 +257,7 @@ export function formatJSONWithPagination(
 
 /**
  * Get summary information about JSON structure.
+ * Optimized to avoid expensive stringification for large data.
  */
 export function getJSONSummary(data: unknown): {
   type: string;
@@ -266,8 +267,54 @@ export function getJSONSummary(data: unknown): {
   depth: number;
   hasLargeArrays: boolean;
 } {
-  const jsonString = JSON.stringify(data);
-  const size = Buffer.byteLength(jsonString, 'utf8');
+  // Fast size estimation without full stringification for large data
+  let size: number;
+  try {
+    // For small data, use actual stringification
+    // For large data, estimate to avoid blocking
+    if (typeof data === 'string') {
+      size = Buffer.byteLength(data, 'utf8');
+    } else {
+      // Quick check: if it's a large array/object, estimate instead
+      const isLarge =
+        (Array.isArray(data) && data.length > 1000) ||
+        (typeof data === 'object' &&
+          data !== null &&
+          !Array.isArray(data) &&
+          Object.keys(data as Record<string, unknown>).length > 100);
+
+      if (isLarge) {
+        // Estimate size without full stringification
+        // Create a small sample by taking a slice/portion of the data
+        let sample: unknown;
+        if (Array.isArray(data)) {
+          // Sample first 10 items
+          sample = data.slice(0, 10);
+        } else {
+          // Sample first 10 keys
+          const keys = Object.keys(data as Record<string, unknown>).slice(
+            0,
+            10
+          );
+          sample = Object.fromEntries(
+            keys.map(key => [key, (data as Record<string, unknown>)[key]])
+          );
+        }
+        const sampleString = JSON.stringify(sample);
+        const estimatedSizePerChar =
+          Buffer.byteLength(sampleString, 'utf8') / sampleString.length;
+        const estimatedChars = estimateObjectSize(data);
+        size = Math.floor(estimatedChars * estimatedSizePerChar);
+      } else {
+        // Small data: use actual stringification
+        const jsonString = JSON.stringify(data);
+        size = Buffer.byteLength(jsonString, 'utf8');
+      }
+    }
+  } catch {
+    // Fallback: estimate
+    size = estimateObjectSize(data) * 2; // Rough estimate
+  }
 
   function analyze(
     value: unknown,
@@ -351,4 +398,52 @@ export function getJSONSummary(data: unknown): {
     hasLargeArrays:
       analysis.hasLargeArrays || (Array.isArray(data) && data.length > 100),
   };
+}
+
+/**
+ * Estimate object size without full stringification (much faster for large objects).
+ */
+function estimateObjectSize(obj: unknown): number {
+  if (obj === null || obj === undefined) return 4; // "null"
+  if (typeof obj === 'string') return obj.length + 2; // quotes
+  if (typeof obj === 'number') return 10; // average number length
+  if (typeof obj === 'boolean') return 5; // "true"/"false"
+  if (Array.isArray(obj)) {
+    // Estimate: brackets + commas + items
+    let size = 2; // brackets
+    for (let i = 0; i < Math.min(obj.length, 100); i++) {
+      // Sample first 100 items
+      size += estimateObjectSize(obj[i]) + 1; // +1 for comma
+    }
+    if (obj.length > 100) {
+      // Extrapolate for remaining items
+      const avgItemSize = size / Math.min(obj.length, 100);
+      size += (obj.length - 100) * avgItemSize;
+    }
+    return size;
+  }
+  if (typeof obj === 'object') {
+    const SAMPLE_LIMIT = 100;
+    const keys = Object.keys(obj as Record<string, unknown>);
+    const sampleCount = Math.min(keys.length, SAMPLE_LIMIT);
+    let accumulatedSize = 0;
+
+    // Sample first sampleCount keys
+    for (let i = 0; i < sampleCount; i++) {
+      const key = keys[i]!; // Safe: i < sampleCount <= keys.length
+      accumulatedSize += key.length + 3; // key + quotes + colon
+      accumulatedSize +=
+        estimateObjectSize((obj as Record<string, unknown>)[key]) + 1; // +1 for comma
+    }
+
+    // If all keys were sampled, return exact size
+    if (sampleCount === keys.length) {
+      return 2 + accumulatedSize; // +2 for braces
+    }
+
+    // Extrapolate for remaining keys
+    const extrapolatedSize = accumulatedSize * (keys.length / sampleCount);
+    return 2 + extrapolatedSize; // +2 for braces
+  }
+  return 10; // fallback estimate
 }

@@ -130,6 +130,7 @@ export class ChatUI {
     const updateLastAssistantMessageRef = this.updateLastAssistantMessageRef;
     const getMessagesRef = this.getMessagesRef;
     const clearMessagesRef = this.clearMessagesRef;
+    const getLastLargeDataMessageRef = this.getLastLargeDataMessageRef;
 
     // Create the component inline to avoid importing a separate module file
     // This avoids top-level require() calls for ESM modules
@@ -156,10 +157,6 @@ export class ChatUI {
 
       // Viewport limiting: only show last N messages for performance
       const maxVisibleMessages = 50; // Show last 50 messages by default
-      const [showAllMessages, setShowAllMessages] = (
-        useState as (initial: boolean) => [boolean, (value: boolean) => void]
-      )(false);
-      // Note: showAllMessages is used in command handlers (setShowAllMessages)
       const inputHistoryRef = (
         useRef as (initial: string[]) => { current: string[] }
       )([]);
@@ -288,13 +285,6 @@ export class ChatUI {
         setMessages([]);
       }, []);
 
-      // Expose getLastLargeDataMessage via ref
-      const getLastLargeDataMessageRef = (
-        useRef as (initial: () => ChatMessage | null) => {
-          current: () => ChatMessage | null;
-        }
-      )(() => null);
-
       // Update refs only when callbacks change (which is stable due to useCallback)
       useEffect(() => {
         addMessageRef.current = addMessage;
@@ -341,33 +331,9 @@ export class ChatUI {
                     '  /clear        - Clear the chat history\n' +
                     '  /tools        - List available MCP tools\n' +
                     '  /history      - Show command history\n' +
-                    '  /show-all     - Show all messages (default: last 50)\n' +
-                    '  /show-recent  - Show only recent messages\n' +
                     '  /save-json [tool-name-or-index] - Save tool result JSON to file\n' +
                     '                (no arg = last result, number = by index, name = by name)\n' +
                     '  /exit, /quit  - Exit the chat',
-                  timestamp: new Date(),
-                },
-              ]);
-              return true;
-            case '/show-all':
-              setShowAllMessages(true);
-              setMessages((prev: ChatMessage[]) => [
-                ...prev,
-                {
-                  role: 'system',
-                  content: `Showing all ${messages.length} messages.`,
-                  timestamp: new Date(),
-                },
-              ]);
-              return true;
-            case '/show-recent':
-              setShowAllMessages(false);
-              setMessages((prev: ChatMessage[]) => [
-                ...prev,
-                {
-                  role: 'system',
-                  content: `Showing last ${Math.min(maxVisibleMessages, messages.length)} messages.`,
                   timestamp: new Date(),
                 },
               ]);
@@ -400,23 +366,15 @@ export class ChatUI {
               { role: 'user', content: trimmedValue, timestamp: new Date() },
             ]);
 
-            // Handle UI-level special commands (only if handled by UI)
-            if (trimmedValue.startsWith('/')) {
-              const wasHandled = await handleSpecialCommand(trimmedValue);
-              if (wasHandled) {
-                return; // Command was handled by UI, don't pass to onMessage
-              }
-              // Command was not handled by UI, continue to pass to onMessage callback
-            }
-
-            // Add to history (only non-empty, non-special commands)
-            if (trimmedValue && !trimmedValue.startsWith('/')) {
+            // Save to history FIRST (before handling commands) - ensures all commands are saved
+            // Move existing prompt to recent position if duplicate (don't repeat)
+            if (trimmedValue) {
               const history = inputHistoryRef.current;
-              // Remove duplicate if exists
+              // Remove duplicate if exists (this moves it to end)
               const filtered = history.filter(
                 (h: string) => h !== trimmedValue
               );
-              // Add to end
+              // Add to end (most recent)
               filtered.push(trimmedValue);
               // Keep only last N entries
               inputHistoryRef.current = filtered.slice(-maxHistorySize);
@@ -426,6 +384,15 @@ export class ChatUI {
 
             // Reset history navigation
             historyIndexRef.current = -1;
+
+            // Handle UI-level special commands (only if handled by UI)
+            if (trimmedValue.startsWith('/')) {
+              const wasHandled = await handleSpecialCommand(trimmedValue);
+              if (wasHandled) {
+                return; // Command was handled by UI, don't pass to onMessage
+              }
+              // Command was not handled by UI, continue to pass to onMessage callback
+            }
 
             // Process the message
             setIsProcessing(true);
@@ -1070,14 +1037,13 @@ export class ChatUI {
           Box,
           { flexDirection: 'column', flexGrow: 1, paddingX: 1 },
           ((): Array<React.ReactElement | null> => {
-            // Determine which messages to show
-            const visibleMessages = showAllMessages
-              ? messages
-              : messages.slice(-maxVisibleMessages);
+            // Determine which messages to show (always show last N messages)
+            const visibleMessages = messages.slice(-maxVisibleMessages);
             const hiddenCount = messages.length - visibleMessages.length;
-            const startIndex = showAllMessages
-              ? 0
-              : Math.max(0, messages.length - maxVisibleMessages);
+            const startIndex = Math.max(
+              0,
+              messages.length - maxVisibleMessages
+            );
 
             return [
               // Show message if there are hidden messages
@@ -1092,7 +1058,7 @@ export class ChatUI {
                     React.createElement(
                       Text,
                       { color: 'yellow', dimColor: true },
-                      `... ${hiddenCount} earlier message${hiddenCount > 1 ? 's' : ''} hidden. Type /show-all to view all messages.`
+                      `... ${hiddenCount} earlier message${hiddenCount > 1 ? 's' : ''} hidden (showing last ${maxVisibleMessages} messages).`
                     )
                   )
                 : null,

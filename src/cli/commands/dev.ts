@@ -239,6 +239,8 @@ export async function executeDev(
 
     // Create Chat UI
     const historyFile = path.join(projectRoot, Paths.DEV_HISTORY_FILE);
+    // Bind the method to avoid closure type inference issues
+    const addToHistory = session.addUserMessageToHistory.bind(session);
     const chatUI = new ChatUI({
       agentName: config.agent_name,
       llmProviderName: llmProvider.getName(),
@@ -247,6 +249,10 @@ export async function executeDev(
       historyFile,
       maxHistorySize: 1000,
       onMessage: async (input: string): Promise<void> => {
+        // Add user input to session conversation history (even for special commands)
+        // This ensures all commands are saved in chat history
+        addToHistory(input);
+
         // Handle special commands
         if (input === '/tools') {
           const tools = session.getAvailableTools();

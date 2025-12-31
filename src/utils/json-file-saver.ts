@@ -22,13 +22,39 @@ export function saveJSONToFile(
     fs.mkdirSync(dir, { recursive: true });
   }
 
+  // Sanitize toolName to ensure valid filename
+  // Remove or replace invalid filesystem characters: / \ : * ? " < > |
+  let sanitizedToolName = toolName
+    .replace(/[/\\:*?"<>|]/g, '-') // Replace invalid chars with hyphen
+    .replace(/-+/g, '-') // Collapse repeated hyphens
+    .trim(); // Remove leading/trailing whitespace
+
+  // Ensure non-empty and limit length
+  if (!sanitizedToolName || sanitizedToolName.length === 0) {
+    sanitizedToolName = 'tool';
+  } else if (sanitizedToolName.length > 100) {
+    sanitizedToolName = sanitizedToolName.substring(0, 100);
+  }
+
   // Generate filename with timestamp
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `${toolName}-${timestamp}.json`;
+  const filename = `${sanitizedToolName}-${timestamp}.json`;
   const filePath = path.join(dir, filename);
 
-  // Write JSON with pretty formatting
-  const jsonString = JSON.stringify(data, null, 2);
+  // Parse if data is already a JSON string to avoid double-escaping
+  let parsedData: unknown = data;
+  if (typeof data === 'string') {
+    try {
+      // Try to parse as JSON - if it's already a JSON string, parse it first
+      parsedData = JSON.parse(data);
+    } catch {
+      // If parsing fails, it's not JSON, keep as string
+      parsedData = data;
+    }
+  }
+
+  // Write JSON with pretty formatting (no escape sequences)
+  const jsonString = JSON.stringify(parsedData, null, 2);
   fs.writeFileSync(filePath, jsonString, 'utf-8');
 
   return filePath;

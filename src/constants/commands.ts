@@ -3,7 +3,10 @@
  * Centralized command names used throughout the CLI.
  */
 
-export const Commands = {
+/**
+ * CLI tool commands (main CLI commands).
+ */
+export const ToolCommands = {
   /** Main CLI name */
   CLI_NAME: 'syrin',
   /** Init command */
@@ -16,4 +19,24 @@ export const Commands = {
   TEST: 'syrin test',
   /** List command */
   LIST: 'syrin list',
+} as const;
+
+/**
+ * Chat commands (available in dev mode chat interface).
+ */
+export const ChatCommands = {
+  /** Show help message */
+  HELP: '/help',
+  /** Clear chat history */
+  CLEAR: '/clear',
+  /** List available MCP tools */
+  TOOLS: '/tools',
+  /** Show command history */
+  HISTORY: '/history',
+  /** Save tool result JSON to file */
+  SAVE_JSON: '/save-json',
+  /** Exit the chat */
+  EXIT: '/exit',
+  /** Quit the chat (alias for exit) */
+  QUIT: '/quit',
 } as const;

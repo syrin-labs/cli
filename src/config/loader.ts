@@ -9,7 +9,7 @@ import { load } from 'js-yaml';
 import { validateConfig } from './schema';
 import { ConfigurationError } from '@/utils/errors';
 import type { SyrinConfig } from './types';
-import { Paths, Messages, Commands } from '@/constants';
+import { Paths, Messages, ToolCommands } from '@/constants';
 
 /**
  * Load configuration from .syrin/config.yaml file.
@@ -23,7 +23,7 @@ export function loadConfig(projectRoot: string = process.cwd()): SyrinConfig {
   // Check if config file exists
   if (!fs.existsSync(configPath)) {
     throw new ConfigurationError(
-      Messages.ERROR_CONFIG_NOT_FOUND(Commands.INIT),
+      Messages.ERROR_CONFIG_NOT_FOUND(ToolCommands.INIT),
       {
         context: { projectRoot, configPath },
       }
