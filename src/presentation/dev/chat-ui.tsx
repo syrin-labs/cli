@@ -72,6 +72,9 @@ export class ChatUI {
   private updateLastAssistantMessageRef: React.MutableRefObject<
     (content: string) => void
   >;
+  private updateLastSystemMessageRef: React.MutableRefObject<
+    (content: string) => void
+  >;
   private getMessagesRef: React.MutableRefObject<() => ChatMessage[]>;
   private clearMessagesRef: React.MutableRefObject<() => void>;
   private getLastLargeDataMessageRef: React.MutableRefObject<
@@ -89,6 +92,9 @@ export class ChatUI {
       ) => void
     >;
     this.updateLastAssistantMessageRef = {
+      current: () => {},
+    } as React.MutableRefObject<(content: string) => void>;
+    this.updateLastSystemMessageRef = {
       current: () => {},
     } as React.MutableRefObject<(content: string) => void>;
     this.getMessagesRef = {
@@ -128,6 +134,7 @@ export class ChatUI {
     const options = this.options;
     const addMessageRef = this.addMessageRef;
     const updateLastAssistantMessageRef = this.updateLastAssistantMessageRef;
+    const updateLastSystemMessageRef = this.updateLastSystemMessageRef;
     const getMessagesRef = this.getMessagesRef;
     const clearMessagesRef = this.clearMessagesRef;
     const getLastLargeDataMessageRef = this.getLastLargeDataMessageRef;
@@ -267,6 +274,27 @@ export class ChatUI {
         []
       );
 
+      const updateLastSystemMessage = useCallback((content: string): void => {
+        setMessages((prev: ChatMessage[]) => {
+          const newMessages = [...prev];
+          const lastIndex = newMessages.length - 1;
+          if (lastIndex >= 0 && newMessages[lastIndex]?.role === 'system') {
+            newMessages[lastIndex] = {
+              ...newMessages[lastIndex],
+              content,
+              timestamp: newMessages[lastIndex]?.timestamp || new Date(),
+            };
+          } else {
+            newMessages.push({
+              role: 'system',
+              content,
+              timestamp: new Date(),
+            });
+          }
+          return newMessages;
+        });
+      }, []);
+
       const getMessages = useCallback((): ChatMessage[] => {
         return messages;
       }, [messages]);
@@ -289,12 +317,14 @@ export class ChatUI {
       useEffect(() => {
         addMessageRef.current = addMessage;
         updateLastAssistantMessageRef.current = updateLastAssistantMessage;
+        updateLastSystemMessageRef.current = updateLastSystemMessage;
         getMessagesRef.current = getMessages;
         clearMessagesRef.current = clearMessages;
         getLastLargeDataMessageRef.current = getLastLargeDataMessage;
       }, [
         addMessage,
         updateLastAssistantMessage,
+        updateLastSystemMessage,
         getMessages,
         clearMessages,
         getLastLargeDataMessage,
@@ -489,7 +519,9 @@ export class ChatUI {
           defaultColor?: string
         ): React.ReactElement[] => {
           const elements: React.ReactElement[] = [];
-          const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g);
+          const parts = text.split(
+            /(\*\*[^*]+\*\*|\*[^*]+\*|``[^`]+``|`[^`]+`)/g
+          );
           let keyIndex = 0;
 
           for (const part of parts) {
@@ -529,7 +561,22 @@ export class ChatUI {
                 )
               );
             }
-            // Code `text`
+            // Command ``text`` (double backticks - styled differently)
+            else if (part.startsWith('``') && part.endsWith('``')) {
+              const content = part.slice(2, -2);
+              elements.push(
+                React.createElement(
+                  Text,
+                  {
+                    key: baseKey * 100 + keyIndex++,
+                    color: 'green',
+                    bold: true,
+                  },
+                  content as React.ReactNode
+                )
+              );
+            }
+            // Code `text` (single backtick - tool names, etc.)
             else if (part.startsWith('`') && part.endsWith('`')) {
               const content = part.slice(1, -1);
               elements.push(
@@ -926,7 +973,7 @@ export class ChatUI {
           );
 
           if (message.role === 'assistant') {
-            // LLM-generated messages: styled with subtle dark background for easy reading
+            // LLM-generated messages: minimalistic bordered rectangle style
             return React.createElement(
               Box,
               {
@@ -938,21 +985,9 @@ export class ChatUI {
               React.createElement(
                 Box,
                 {
-                  flexDirection: 'row',
-                  marginBottom: 0.25,
-                  marginLeft: 1,
-                },
-                React.createElement(
-                  Text,
-                  { color: 'cyan', bold: true },
-                  `🤖 ${options.llmProviderName || 'AI'}: `
-                )
-              ),
-              React.createElement(
-                Box,
-                {
                   flexDirection: 'column',
-                  backgroundColor: 'black',
+                  borderStyle: 'round',
+                  borderColor: 'gray',
                   paddingX: 1,
                   paddingY: 0.5,
                   marginLeft: 1,
@@ -1140,6 +1175,13 @@ export class ChatUI {
    */
   updateLastAssistantMessage(content: string): void {
     this.updateLastAssistantMessageRef.current(content);
+  }
+
+  /**
+   * Update the last system message (for live updates like waiting indicators).
+   */
+  updateLastSystemMessage(content: string): void {
+    this.updateLastSystemMessageRef.current(content);
   }
 
   /**

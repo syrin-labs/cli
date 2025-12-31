@@ -7,6 +7,12 @@ import { logger } from '@/utils/logger';
 import { EventStoreError } from '@/utils/errors';
 
 /**
+ * Event subscriber callback type.
+ * Called when an event is emitted, after it's been persisted to the store.
+ */
+export type EventSubscriber = (event: EventEnvelope) => void | Promise<void>;
+
+/**
  * Event emitter interface.
  * Supports both sync and async event stores.
  */
@@ -20,14 +26,23 @@ export interface EventEmitter {
     eventType: EventType,
     payload: TPayload
   ): EventEnvelope<TPayload> | Promise<EventEnvelope<TPayload>>;
+
+  /**
+   * Subscribe to events.
+   * The callback will be called for all events emitted after subscription.
+   * Returns an unsubscribe function.
+   */
+  subscribe?(subscriber: EventSubscriber): () => void;
 }
 
 /**
  * Runtime event emitter implementation.
  * Handles event creation, sequencing, and persistence.
+ * Supports event subscribers for real-time event notifications.
  */
 export class RuntimeEventEmitter implements EventEmitter {
   private sequence: number = 0;
+  private subscribers: EventSubscriber[] = [];
 
   constructor(
     private readonly store: EventStore,
@@ -63,6 +78,8 @@ export class RuntimeEventEmitter implements EventEmitter {
               event_id: event.event_id,
               sequence: event.sequence,
             });
+            // Notify subscribers after event is persisted
+            this.notifySubscribers(event);
             return event;
           })
           .catch((error: unknown) => {
@@ -85,6 +102,8 @@ export class RuntimeEventEmitter implements EventEmitter {
         event_id: event.event_id,
         sequence: event.sequence,
       });
+      // Notify subscribers after event is persisted
+      this.notifySubscribers(event);
       return event;
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -112,6 +131,51 @@ export class RuntimeEventEmitter implements EventEmitter {
    */
   getSessionId(): SessionID {
     return this.sessionId;
+  }
+
+  /**
+   * Subscribe to events.
+   * The callback will be called for all events emitted after subscription.
+   * Returns an unsubscribe function.
+   */
+  subscribe(subscriber: EventSubscriber): () => void {
+    this.subscribers.push(subscriber);
+    // Return unsubscribe function
+    return () => {
+      this.subscribers = this.subscribers.filter(sub => sub !== subscriber);
+    };
+  }
+
+  /**
+   * Notify all subscribers of a new event.
+   * Errors in subscribers are logged but don't affect event emission.
+   * Subscribers are called synchronously for real-time updates.
+   */
+  private notifySubscribers(event: EventEnvelope): void {
+    // Notify subscribers synchronously for real-time visibility
+    // Errors are caught to prevent breaking event emission
+    for (const subscriber of this.subscribers) {
+      try {
+        const result = subscriber(event);
+        // Handle async subscribers
+        if (result instanceof Promise) {
+          result.catch((error: unknown) => {
+            const err =
+              error instanceof Error ? error : new Error(String(error));
+            logger.error('Error in event subscriber', err, {
+              event_id: event.event_id,
+              event_type: event.event_type,
+            });
+          });
+        }
+      } catch (error: unknown) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        logger.error('Error in event subscriber', err, {
+          event_id: event.event_id,
+          event_type: event.event_type,
+        });
+      }
+    }
   }
 
   private generateEventID(): string {

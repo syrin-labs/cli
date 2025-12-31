@@ -13,49 +13,7 @@ import { MemoryEventStore } from '@/events/store/memory-store';
 import { FileEventStore } from '@/events/store/file-store';
 import { DevSession } from '@/runtime/dev/session';
 import { ChatUI } from '@/presentation/dev/chat-ui';
-import { DataManager } from '@/runtime/dev/data-manager';
-import type { ToolCallInfo } from '@/runtime/dev/types';
-
-/**
- * Quickly estimate result size without full JSON stringification.
- * Uses sampling for large objects to avoid blocking.
- */
-function estimateResultSize(result: unknown): number {
-  if (typeof result === 'string') {
-    return Buffer.byteLength(result, 'utf8');
-  }
-
-  try {
-    // For objects/arrays, use a quick sample-based estimate
-    if (Array.isArray(result)) {
-      if (result.length === 0) return 100;
-      // Sample first 3 items to estimate average size
-      const sample = result.slice(0, Math.min(3, result.length));
-      const sampleSize = Buffer.byteLength(JSON.stringify(sample), 'utf8');
-      const avgItemSize = sampleSize / sample.length;
-      return Math.floor(avgItemSize * result.length);
-    }
-
-    if (typeof result === 'object' && result !== null) {
-      const keys = Object.keys(result);
-      if (keys.length === 0) return 100;
-      // Sample first 3 keys
-      const sampleKeys = keys.slice(0, Math.min(3, keys.length));
-      const sample = Object.fromEntries(
-        sampleKeys.map(k => [k, (result as Record<string, unknown>)[k]])
-      );
-      const sampleSize = Buffer.byteLength(JSON.stringify(sample), 'utf8');
-      const avgKeySize = sampleSize / sampleKeys.length;
-      return Math.floor(avgKeySize * keys.length);
-    }
-
-    // Primitives: use JSON.stringify (fast for primitives)
-    return Buffer.byteLength(JSON.stringify(result), 'utf8');
-  } catch {
-    // Fallback: rough estimate
-    return 1000;
-  }
-}
+import { DevEventMapper } from '@/runtime/dev/event-mapper';
 import { ConfigurationError } from '@/utils/errors';
 import { handleCommandError } from '@/cli/utils';
 import { logger, log } from '@/utils/logger';
@@ -67,8 +25,6 @@ import {
   buildDevWelcomeMessages,
   formatToolsList,
   formatCommandHistory,
-  formatToolCallInfo,
-  formatToolResult,
 } from '@/presentation/dev-ui';
 
 /**
@@ -285,8 +241,11 @@ export async function executeDev(
     const historyFile = path.join(projectRoot, Paths.DEV_HISTORY_FILE);
     // Bind the method to avoid closure type inference issues
     const addToHistory = session.addUserMessageToHistory.bind(session);
-    // Track session active state to prevent setImmediate callbacks from running after UI stops
-    let sessionActive = true;
+    // Declare event mapper variable (will be initialized after ChatUI starts)
+    // We need it in the onExit closure, so declare it here before ChatUI constructor
+    // eslint-disable-next-line prefer-const
+    let eventMapper: DevEventMapper | undefined;
+    // Create ChatUI first (event mapper needs it)
     const chatUI = new ChatUI({
       agentName: config.agent_name,
       llmProviderName: llmProvider.getName(),
@@ -454,122 +413,11 @@ export async function executeDev(
 
         // Process user input through session
         try {
-          // Track state before processing
-          const stateBefore = session.getState();
-          const toolCallsBefore = stateBefore.toolCalls.length;
-
           await session.processUserInput(input);
 
-          // Get updated state
-          const stateAfter = session.getState();
-
-          // Display any new tool calls that were executed
-          const newToolCalls: ToolCallInfo[] =
-            stateAfter.toolCalls.slice(toolCallsBefore);
-          for (const toolCall of newToolCalls) {
-            // Display tool call info
-            const toolInfo = formatToolCallInfo(
-              toolCall.name,
-              toolCall.arguments
-            );
-            chatUI.addMessage('system', toolInfo);
-
-            // Display tool result
-            if (toolCall.resultReference) {
-              // Large data was externalized - show reference message
-              const dataManager = session.getDataManager();
-              const ref = dataManager.getReference(toolCall.resultReference);
-              if (ref) {
-                const sizeDisplay = DataManager.formatSize(ref.size);
-                const durationMs = toolCall.duration || 0;
-                chatUI.addMessage(
-                  'system',
-                  `Tool ${toolCall.name} completed (${durationMs}ms).\nResult (${sizeDisplay}) stored externally.\n💡 Use /save-json to export the full data to a file.`
-                );
-
-                // Format result asynchronously and add as follow-up message
-                setImmediate(() => {
-                  // Check if session is still active before proceeding
-                  if (!sessionActive) {
-                    return;
-                  }
-                  try {
-                    const result = session.getToolResult(toolCall);
-                    const resultInfo = formatToolResult(
-                      toolCall.name,
-                      result,
-                      toolCall.duration
-                    );
-                    // Check again before adding message (session might have stopped during formatting)
-                    if (!sessionActive) {
-                      return;
-                    }
-                    // Add formatted result as continuation
-                    chatUI.addMessage('system', resultInfo);
-                  } catch (error) {
-                    const err =
-                      error instanceof Error ? error : new Error(String(error));
-                    logger.error('Error loading tool result', err);
-                  }
-                });
-              }
-            } else if (toolCall.result !== undefined) {
-              // Always format asynchronously to prevent UI blocking
-              // Estimate size quickly without full stringification
-              const resultSize = estimateResultSize(toolCall.result);
-              const sizeDisplay = DataManager.formatSize(resultSize);
-              const durationMs = toolCall.duration || 0;
-
-              // Show placeholder immediately for any non-trivial result
-              if (resultSize > 5 * 1024) {
-                // > 5KB: Show placeholder, format async
-                chatUI.addMessage(
-                  'system',
-                  `Tool ${toolCall.name} completed (${durationMs}ms).\nResult (${sizeDisplay}) - formatting...`
-                );
-
-                setImmediate(() => {
-                  // Check if session is still active before proceeding
-                  if (!sessionActive) {
-                    return;
-                  }
-                  try {
-                    const resultInfo = formatToolResult(
-                      toolCall.name,
-                      toolCall.result,
-                      toolCall.duration
-                    );
-                    // Check again before adding message (session might have stopped during formatting)
-                    if (!sessionActive) {
-                      return;
-                    }
-                    // Add formatted result
-                    chatUI.addMessage('system', resultInfo);
-                  } catch (error) {
-                    const err =
-                      error instanceof Error ? error : new Error(String(error));
-                    logger.error('Error formatting tool result', err);
-                  }
-                });
-              } else {
-                // Very small (< 5KB): format immediately (fast enough)
-                try {
-                  const resultInfo = formatToolResult(
-                    toolCall.name,
-                    toolCall.result,
-                    toolCall.duration
-                  );
-                  chatUI.addMessage('system', resultInfo);
-                } catch (error) {
-                  const err =
-                    error instanceof Error ? error : new Error(String(error));
-                  logger.error('Error formatting tool result', err);
-                }
-              }
-            }
-          }
-
           // Get the latest assistant response from conversation history
+          // Note: Tool call events are already displayed incrementally by the event mapper
+          const stateAfter = session.getState();
           const lastMessage =
             stateAfter.conversationHistory[
               stateAfter.conversationHistory.length - 1
@@ -587,8 +435,8 @@ export async function executeDev(
         }
       },
       onExit: async (): Promise<void> => {
-        // Mark session as inactive to prevent pending setImmediate callbacks
-        sessionActive = false;
+        // Stop event mapper (it's guaranteed to be defined by this point)
+        eventMapper?.stop();
         // Cleanup on exit
         try {
           await session.complete();
@@ -606,6 +454,20 @@ export async function executeDev(
       },
     });
 
+    // Start Chat UI first to ensure refs are ready
+    // Start Chat UI (header message is already set in options)
+    await chatUI.start();
+
+    // Create and start event mapper for incremental visibility
+    // This provides real-time event updates to the UI as events are emitted
+    // Must be started AFTER ChatUI is started so refs are ready
+    eventMapper = new DevEventMapper(
+      eventEmitter,
+      chatUI,
+      llmProvider.getName()
+    );
+    eventMapper.start(); // Now it's defined, we can call start
+
     // Handle SIGINT (Ctrl+C) - ensure cleanup happens
     let isExiting = false;
     process.once('SIGINT', () => {
@@ -614,8 +476,8 @@ export async function executeDev(
       }
       isExiting = true;
       log.plain(Messages.DEV_GOODBYE);
-      // Mark session as inactive to prevent pending setImmediate callbacks
-      sessionActive = false;
+      // Stop event mapper (it's guaranteed to be defined by this point)
+      eventMapper?.stop();
       chatUI.stop();
       void (async (): Promise<void> => {
         try {
@@ -635,9 +497,6 @@ export async function executeDev(
         process.exit(0);
       })();
     });
-
-    // Start Chat UI (header message is already set in options)
-    await chatUI.start();
   } catch (error) {
     handleCommandError(error, Messages.DEV_ERROR_START);
   }

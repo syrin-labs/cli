@@ -1,0 +1,582 @@
+/**
+ * Dev Mode Event Mapper.
+ * Maps runtime events to UI messages for incremental visibility in dev mode.
+ * Uses the generic event subscriber pattern for decoupling.
+ */
+
+import type { EventEmitter, EventSubscriber } from '@/events/emitter';
+import type { EventEnvelope } from '@/events/types';
+import {
+  LLMProposalEventType,
+  ValidationEventType,
+  ToolExecutionEventType,
+  TransportEventType,
+  LLMContextEventType,
+} from '@/events/event-type';
+import type { LLMProposedToolCallPayload } from '@/events/payloads/llm';
+import type {
+  ToolCallValidationStartedPayload,
+  ToolCallValidationPassedPayload,
+  ToolCallValidationFailedPayload,
+} from '@/events/payloads/validation';
+import type {
+  ToolExecutionStartedPayload,
+  ToolExecutionCompletedPayload,
+  ToolExecutionFailedPayload,
+} from '@/events/payloads/tool';
+import type {
+  TransportMessageSentPayload,
+  TransportMessageReceivedPayload,
+} from '@/events/payloads/transport';
+import type {
+  PostToolLLMPromptBuiltPayload,
+  LLMFinalResponseGeneratedPayload,
+} from '@/events/payloads/llm';
+import type { ChatUI } from '@/presentation/dev/chat-ui';
+import { DataManager } from './data-manager';
+
+/**
+ * Dev Event Mapper.
+ * Subscribes to events and updates the ChatUI incrementally.
+ */
+export class DevEventMapper {
+  private unsubscribe: (() => void) | null = null;
+  private readonly executionIdToToolName = new Map<string, string>();
+  private readonly executionIdToArguments = new Map<
+    string,
+    Record<string, unknown>
+  >(); // Track arguments for duplicate detection
+  private readonly proposedToolArguments = new Map<
+    string,
+    Record<string, unknown>
+  >(); // Track proposed tool arguments
+  private readonly executionOrder: string[] = []; // Track execution order for indexing
+  private validationPending = new Map<string, boolean>(); // Track validation state
+  private readonly waitingTimers = new Map<
+    string,
+    ReturnType<typeof setInterval>
+  >();
+  private readonly waitingStartTimes = new Map<string, number>();
+  private readonly llmGenerationTimers = new Map<
+    string,
+    ReturnType<typeof setInterval>
+  >();
+  private readonly llmGenerationStartTimes = new Map<string, number>();
+
+  constructor(
+    private readonly eventEmitter: EventEmitter,
+    private readonly chatUI: ChatUI,
+    private readonly llmProviderName: string = 'LLM'
+  ) {}
+
+  /**
+   * Start listening to events and updating the UI.
+   */
+  start(): void {
+    if (!this.eventEmitter.subscribe) {
+      // Event emitter doesn't support subscriptions (shouldn't happen with RuntimeEventEmitter)
+      return;
+    }
+
+    const subscriber: EventSubscriber = (event: EventEnvelope) => {
+      this.handleEvent(event);
+    };
+
+    this.unsubscribe = this.eventEmitter.subscribe(subscriber);
+  }
+
+  /**
+   * Stop listening to events.
+   */
+  stop(): void {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+    // Clear all waiting timers
+    for (const timer of this.waitingTimers.values()) {
+      clearInterval(timer);
+    }
+    // Clear all LLM generation timers
+    for (const timer of this.llmGenerationTimers.values()) {
+      clearInterval(timer);
+    }
+    this.waitingTimers.clear();
+    this.waitingStartTimes.clear();
+    this.llmGenerationTimers.clear();
+    this.llmGenerationStartTimes.clear();
+    this.executionIdToToolName.clear();
+    this.executionOrder.length = 0; // Clear array
+  }
+
+  /**
+   * Handle an event and update the UI accordingly.
+   */
+  private handleEvent(event: EventEnvelope): void {
+    switch (event.event_type) {
+      case LLMProposalEventType.LLM_PROPOSED_TOOL_CALL:
+        this.handleToolProposed(
+          event as EventEnvelope<LLMProposedToolCallPayload>
+        );
+        break;
+
+      case ValidationEventType.TOOL_CALL_VALIDATION_STARTED:
+        this.handleValidationStarted(
+          event as EventEnvelope<ToolCallValidationStartedPayload>
+        );
+        break;
+
+      case ValidationEventType.TOOL_CALL_VALIDATION_PASSED:
+        this.handleValidationPassed(
+          event as EventEnvelope<ToolCallValidationPassedPayload>
+        );
+        break;
+
+      case ValidationEventType.TOOL_CALL_VALIDATION_FAILED:
+        this.handleValidationFailed(
+          event as EventEnvelope<ToolCallValidationFailedPayload>
+        );
+        break;
+
+      case ToolExecutionEventType.TOOL_EXECUTION_STARTED:
+        this.handleToolExecutionStarted(
+          event as EventEnvelope<ToolExecutionStartedPayload>
+        );
+        break;
+
+      case TransportEventType.TRANSPORT_MESSAGE_SENT:
+        this.handleTransportMessageSent(
+          event as EventEnvelope<TransportMessageSentPayload>
+        );
+        break;
+
+      case TransportEventType.TRANSPORT_MESSAGE_RECEIVED:
+        this.handleTransportMessageReceived(
+          event as EventEnvelope<TransportMessageReceivedPayload>
+        );
+        break;
+
+      case ToolExecutionEventType.TOOL_EXECUTION_COMPLETED:
+        this.handleToolExecutionCompleted(
+          event as EventEnvelope<ToolExecutionCompletedPayload>
+        );
+        break;
+
+      case ToolExecutionEventType.TOOL_EXECUTION_FAILED:
+        this.handleToolExecutionFailed(
+          event as EventEnvelope<ToolExecutionFailedPayload>
+        );
+        break;
+
+      case LLMContextEventType.POST_TOOL_LLM_PROMPT_BUILT:
+        this.handlePostToolLLMPromptBuilt(
+          event as EventEnvelope<PostToolLLMPromptBuiltPayload>
+        );
+        break;
+
+      case LLMProposalEventType.LLM_FINAL_RESPONSE_GENERATED:
+        this.handleLLMFinalResponseGenerated(
+          event as EventEnvelope<LLMFinalResponseGeneratedPayload>
+        );
+        break;
+
+      default:
+        // Ignore other event types for now
+        break;
+    }
+  }
+
+  /**
+   * Handle LLM proposed tool call event.
+   */
+  private handleToolProposed(
+    event: EventEnvelope<LLMProposedToolCallPayload>
+  ): void {
+    const payload = event.payload;
+    // Store proposed arguments for comparison later
+    this.proposedToolArguments.set(payload.tool_name, payload.arguments);
+
+    const argsJson = this.formatArgumentsForDisplay(payload.arguments);
+    this.chatUI.addMessage(
+      'system',
+      `🔧 **Tool Selected**: \`${payload.tool_name}\`\n**Arguments**:\n${argsJson}`
+    );
+  }
+
+  /**
+   * Handle tool call validation started event.
+   * Consolidate with validation passed - just mark as pending.
+   */
+  private handleValidationStarted(
+    event: EventEnvelope<ToolCallValidationStartedPayload>
+  ): void {
+    const payload = event.payload;
+    // Store validation pending state - will be updated when passed
+    this.validationPending.set(payload.tool_name, true);
+  }
+
+  /**
+   * Handle tool call validation passed event.
+   * Consolidated with validation started - show single message.
+   */
+  private handleValidationPassed(
+    event: EventEnvelope<ToolCallValidationPassedPayload>
+  ): void {
+    const payload = event.payload;
+    // Show consolidated validation message
+    this.chatUI.addMessage('system', `✓ Validated: \`${payload.tool_name}\``);
+    this.validationPending.delete(payload.tool_name);
+  }
+
+  /**
+   * Handle tool call validation failed event.
+   */
+  private handleValidationFailed(
+    event: EventEnvelope<ToolCallValidationFailedPayload>
+  ): void {
+    const payload = event.payload;
+    const errors = payload.validation_errors
+      .map(err => `  - ${err.message} (${err.code})`)
+      .join('\n');
+    this.chatUI.addMessage(
+      'system',
+      `❌ Validation failed for **${payload.tool_name}**:\n${errors}`
+    );
+  }
+
+  /**
+   * Handle tool execution started event.
+   */
+  private handleToolExecutionStarted(
+    event: EventEnvelope<ToolExecutionStartedPayload>
+  ): void {
+    const payload = event.payload;
+    // Store mapping for later use
+    this.executionIdToToolName.set(payload.execution_id, payload.tool_name);
+    this.executionIdToArguments.set(payload.execution_id, payload.arguments);
+    // Track execution order for indexing
+    if (!this.executionOrder.includes(payload.execution_id)) {
+      this.executionOrder.push(payload.execution_id);
+    }
+
+    // Check if arguments are same as the proposed tool call
+    const proposedArgs = this.proposedToolArguments.get(payload.tool_name);
+    const argsAreSame =
+      proposedArgs &&
+      JSON.stringify(proposedArgs, Object.keys(proposedArgs).sort()) ===
+        JSON.stringify(
+          payload.arguments,
+          Object.keys(payload.arguments).sort()
+        );
+
+    if (argsAreSame) {
+      // Arguments are same - just show executing message
+      this.chatUI.addMessage(
+        'system',
+        `🚀 **Executing**: \`${payload.tool_name}\``
+      );
+    } else {
+      // Arguments differ - show parameters
+      const argsJson = this.formatArgumentsForDisplay(payload.arguments);
+      this.chatUI.addMessage(
+        'system',
+        `🚀 **Executing**: \`${payload.tool_name}\`\n**Parameters**:\n${argsJson}`
+      );
+    }
+  }
+
+  /**
+   * Handle transport message sent event.
+   */
+  private handleTransportMessageSent(
+    event: EventEnvelope<TransportMessageSentPayload>
+  ): void {
+    const payload = event.payload;
+    if (payload.message_type === 'tools/call') {
+      const sizeDisplay = DataManager.formatSize(payload.size_bytes);
+      const messageId = `waiting-${Date.now()}-${Math.random()}`;
+      const startTime = Date.now();
+
+      // Store start time
+      this.waitingStartTimes.set(messageId, startTime);
+
+      // Add initial waiting message
+      this.chatUI.addMessage(
+        'system',
+        `📤 **Request sent** to MCP server (${sizeDisplay})\n⏳ **Waiting** for response... (0.0s)`
+      );
+
+      // Start timer to update message with elapsed time
+      // Use 500ms interval to balance smooth updates with scroll performance
+      const timer = setInterval(() => {
+        const elapsed = (Date.now() - startTime) / 1000;
+        const elapsedStr =
+          elapsed < 1 ? `${elapsed.toFixed(1)}s` : `${Math.floor(elapsed)}s`;
+
+        this.chatUI.updateLastSystemMessage(
+          `📤 **Request sent** to MCP server (${sizeDisplay})\n⏳ **Waiting** for response... (${elapsedStr})`
+        );
+      }, 500); // Update every 500ms to balance smooth counter with scroll performance
+
+      this.waitingTimers.set(messageId, timer);
+    }
+  }
+
+  /**
+   * Handle transport message received event.
+   */
+  private handleTransportMessageReceived(
+    event: EventEnvelope<TransportMessageReceivedPayload>
+  ): void {
+    const payload = event.payload;
+    if (payload.message_type === 'tools/call_response') {
+      const sizeDisplay = DataManager.formatSize(payload.size_bytes);
+
+      // Find and stop the most recent waiting timer
+      if (this.waitingTimers.size > 0) {
+        // Get the last (most recent) timer
+        const timerEntries = Array.from(this.waitingTimers.entries());
+        const lastEntry = timerEntries[timerEntries.length - 1];
+        if (lastEntry) {
+          const [messageId, timer] = lastEntry;
+
+          // Clear the timer
+          clearInterval(timer);
+          this.waitingTimers.delete(messageId);
+
+          // Calculate final elapsed time
+          const startTime = this.waitingStartTimes.get(messageId);
+          if (startTime) {
+            const elapsed = (Date.now() - startTime) / 1000;
+            const elapsedStr =
+              elapsed < 1
+                ? `${elapsed.toFixed(1)}s`
+                : `${Math.floor(elapsed)}s`;
+
+            // Update the waiting message with final time
+            this.chatUI.updateLastSystemMessage(
+              `📤 **Request sent** to MCP server\n📥 **Response received** from MCP server (${sizeDisplay}) - ${elapsedStr}`
+            );
+
+            this.waitingStartTimes.delete(messageId);
+          }
+        }
+      } else {
+        // Fallback: if no timer found, just add a new message
+        this.chatUI.addMessage(
+          'system',
+          `📥 Response received from MCP server (${sizeDisplay})`
+        );
+      }
+    }
+  }
+
+  /**
+   * Handle tool execution completed event.
+   */
+  private handleToolExecutionCompleted(
+    event: EventEnvelope<ToolExecutionCompletedPayload>
+  ): void {
+    const payload = event.payload;
+    const toolName =
+      this.executionIdToToolName.get(payload.execution_id) || payload.tool_name;
+
+    // Get tool call index (1-based for user convenience)
+    const executionIndex = this.executionOrder.indexOf(payload.execution_id);
+    const toolIndex = executionIndex >= 0 ? executionIndex + 1 : null;
+
+    // Format result preview (truncate if large)
+    const resultPreview = this.formatResultPreview(payload.result, toolIndex);
+    const duration = payload.duration_ms;
+    const durationStr =
+      duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(1)}s`;
+
+    this.chatUI.addMessage(
+      'system',
+      `✅ **Tool Response**: \`${toolName}\` completed (${durationStr})${resultPreview ? `\n**Result**:\n${resultPreview}` : ''}`
+    );
+
+    // Clean up mapping (but keep in executionOrder for indexing)
+    this.executionIdToToolName.delete(payload.execution_id);
+  }
+
+  /**
+   * Handle tool execution failed event.
+   */
+  private handleToolExecutionFailed(
+    event: EventEnvelope<ToolExecutionFailedPayload>
+  ): void {
+    const payload = event.payload;
+    const toolName =
+      this.executionIdToToolName.get(payload.execution_id) || payload.tool_name;
+    const duration = payload.duration_ms;
+
+    this.chatUI.addMessage(
+      'system',
+      `❌ **${toolName}** failed (${duration}ms)\nError: ${payload.error.message} (${payload.error.code})`
+    );
+
+    // Clean up mapping
+    this.executionIdToToolName.delete(payload.execution_id);
+  }
+
+  /**
+   * Handle post-tool LLM prompt built event.
+   * This happens after tool execution, when LLM is about to generate a response.
+   */
+  private handlePostToolLLMPromptBuilt(
+    event: EventEnvelope<PostToolLLMPromptBuiltPayload>
+  ): void {
+    const payload = event.payload;
+    const promptId = payload.prompt_id;
+    const startTime = Date.now();
+
+    // Store start time
+    this.llmGenerationStartTimes.set(promptId, startTime);
+
+    // Add initial generation message
+    this.chatUI.addMessage(
+      'system',
+      `🤖 **${this.llmProviderName}** generating response... (0.0s)`
+    );
+
+    // Start timer to update message with elapsed time
+    // Use 500ms interval to balance smooth updates with scroll performance
+    const timer = setInterval(() => {
+      const elapsed = (Date.now() - startTime) / 1000;
+      const elapsedStr =
+        elapsed < 1 ? `${elapsed.toFixed(1)}s` : `${Math.floor(elapsed)}s`;
+
+      this.chatUI.updateLastSystemMessage(
+        `🤖 **${this.llmProviderName}** generating response... (${elapsedStr})`
+      );
+    }, 500); // Update every 500ms to balance smooth counter with scroll performance
+
+    this.llmGenerationTimers.set(promptId, timer);
+  }
+
+  /**
+   * Handle LLM final response generated event.
+   * This happens when LLM has finished generating the response.
+   */
+  private handleLLMFinalResponseGenerated(
+    event: EventEnvelope<LLMFinalResponseGeneratedPayload>
+  ): void {
+    const payload = event.payload;
+    const duration = payload.duration_ms;
+    const durationSeconds = duration / 1000;
+    const durationStr =
+      durationSeconds < 1
+        ? `${durationSeconds.toFixed(1)}s`
+        : `${Math.floor(durationSeconds)}s`;
+
+    // Find and stop the most recent LLM generation timer
+    // We'll use the last timer since responses come in order
+    if (this.llmGenerationTimers.size > 0) {
+      const timerEntries = Array.from(this.llmGenerationTimers.entries());
+      const lastEntry = timerEntries[timerEntries.length - 1];
+      if (lastEntry) {
+        const [promptId, timer] = lastEntry;
+
+        // Clear the timer
+        clearInterval(timer);
+        this.llmGenerationTimers.delete(promptId);
+
+        // Update the generation message with final time
+        this.chatUI.updateLastSystemMessage(
+          `🤖 **${this.llmProviderName}** generating response... (${durationStr})`
+        );
+
+        this.llmGenerationStartTimes.delete(promptId);
+      }
+    }
+  }
+
+  /**
+   * Format arguments for display with JSON formatting.
+   */
+  private formatArgumentsForDisplay(args: Record<string, unknown>): string {
+    if (Object.keys(args).length === 0) {
+      return '{}';
+    }
+
+    try {
+      const formatted = JSON.stringify(args, null, 2);
+      // Truncate if too long
+      if (formatted.length > 300) {
+        return formatted.substring(0, 300) + '\n... (truncated)';
+      }
+      return formatted;
+    } catch {
+      try {
+        return JSON.stringify(args);
+      } catch {
+        return '[Unable to format arguments]';
+      }
+    }
+  }
+
+  /**
+   * Format result preview for display.
+   */
+  private formatResultPreview(
+    result: unknown,
+    toolIndex: number | null = null
+  ): string {
+    if (result === null || result === undefined) {
+      return 'null';
+    }
+
+    try {
+      // Parse string as JSON if needed, then stringify with formatting
+      let parsedResult: unknown = result;
+      if (typeof result === 'string') {
+        try {
+          parsedResult = JSON.parse(result);
+        } catch {
+          // Not JSON, use as-is
+          parsedResult = result;
+        }
+      }
+
+      // Format as JSON with indentation
+      const formattedJson = JSON.stringify(parsedResult, null, 2);
+      const maxPreviewLength = 500; // Increased from 300 for better preview
+
+      // Truncate if too long
+      if (formattedJson.length > maxPreviewLength) {
+        // Find a good truncation point (end of a line)
+        let truncateAt = maxPreviewLength;
+        const lastNewline = formattedJson.lastIndexOf('\n', maxPreviewLength);
+        if (lastNewline > maxPreviewLength * 0.7) {
+          // If we find a newline in the last 30%, use it for cleaner truncation
+          truncateAt = lastNewline;
+        }
+
+        const preview = formattedJson.substring(0, truncateAt);
+        const saveHint =
+          toolIndex !== null
+            ? `\n\n💡 Result truncated. Use \`\`/save-json ${toolIndex}\`\` to save the full data to a file.`
+            : '\n\n💡 Result truncated. Use ``/save-json`` to save the full data to a file.';
+
+        return `${preview}\n... (truncated)${saveHint}`;
+      }
+
+      return formattedJson;
+    } catch {
+      try {
+        const fallback = JSON.stringify(result);
+        if (fallback.length > 500) {
+          const saveHint =
+            toolIndex !== null
+              ? `\n\n💡 Result truncated. Use \`\`/save-json ${toolIndex}\`\` to save the full data to a file.`
+              : '\n\n💡 Result truncated. Use ``/save-json`` to save the full data to a file.';
+          return fallback.substring(0, 500) + '\n... (truncated)' + saveHint;
+        }
+        return fallback;
+      } catch {
+        return '[Unable to format result]';
+      }
+    }
+  }
+}
