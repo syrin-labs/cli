@@ -1010,7 +1010,7 @@ export class ChatUI {
                 borderColor: 'blue',
                 backgroundColor: 'blue',
                 paddingX: 1,
-                paddingY: 0.5,
+                paddingY: 0.1,
                 marginRight: 1,
               },
               wrappedLines.map((line: string, lineIndex: number) =>
@@ -1126,21 +1126,40 @@ export class ChatUI {
 
       return React.createElement(
         Box,
-        { flexDirection: 'column', width: '100%', height: '100%' },
-        // Header
+        {
+          flexDirection: 'column',
+          width: '100%',
+          height: '100%',
+        },
+        // Header - distinct style with blue background and border
         React.createElement(
           Box,
-          { backgroundColor: 'blue', width: '100%' },
+          {
+            width: '100%',
+            borderStyle: 'single',
+            borderColor: 'blue',
+          },
           React.createElement(
             Text,
-            { bold: true, color: 'white' },
-            ' Syrin Dev Mode | Enter /exit or /quit to exit '
+            { color: 'white', bold: true },
+            ' Syrin Dev Mode '
+          ),
+          React.createElement(
+            Text,
+            { color: 'white', dimColor: true },
+            '| Enter /exit or /quit to exit'
           )
         ),
-        // Messages area - using memoized components with viewport limiting
+        // Messages area - scrollable, takes remaining space (allows terminal scrolling)
         React.createElement(
           Box,
-          { flexDirection: 'column', flexGrow: 1, paddingX: 1 },
+          {
+            flexDirection: 'column',
+            flexGrow: 1,
+            flexShrink: 1,
+            paddingX: 1,
+            minHeight: 0, // Allow shrinking below content size
+          },
           ((): Array<React.ReactElement | null> => {
             // Determine which messages to show (always show last N messages)
             const visibleMessages = messages.slice(-maxVisibleMessages);
@@ -1184,16 +1203,19 @@ export class ChatUI {
             ];
           })()
         ),
-        // Input area - modern minimal design with border and black background
+        // Input area - fixed at bottom, modern minimal design with border and black background
+        // flexShrink: 0 ensures it never shrinks, keeping it always visible at bottom
         React.createElement(
           Box,
           {
             width: '100%',
+            flexShrink: 0,
+            flexGrow: 0,
             borderStyle: 'round',
             borderColor: 'gray',
             backgroundColor: 'black',
             paddingX: 1,
-            paddingY: 0.5,
+            paddingY: 1,
           },
           React.createElement(
             Box,
