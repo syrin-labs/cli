@@ -52,16 +52,8 @@ export class DevEventMapper {
   >(); // Track proposed tool arguments
   private readonly executionOrder: string[] = []; // Track execution order for indexing
   private validationPending = new Map<string, boolean>(); // Track validation state
-  private readonly waitingTimers = new Map<
-    string,
-    ReturnType<typeof setInterval>
-  >();
-  private readonly waitingStartTimes = new Map<string, number>();
-  private readonly llmGenerationTimers = new Map<
-    string,
-    ReturnType<typeof setInterval>
-  >();
-  private readonly llmGenerationStartTimes = new Map<string, number>();
+  private validationRules = new Map<string, string[]>(); // Store validation rules per tool
+  private readonly waitingStartTimes = new Map<string, number>(); // Track start time to calculate elapsed when response arrives
 
   constructor(
     private readonly eventEmitter: EventEmitter,
@@ -93,19 +85,13 @@ export class DevEventMapper {
       this.unsubscribe();
       this.unsubscribe = null;
     }
-    // Clear all waiting timers
-    for (const timer of this.waitingTimers.values()) {
-      clearInterval(timer);
-    }
-    // Clear all LLM generation timers
-    for (const timer of this.llmGenerationTimers.values()) {
-      clearInterval(timer);
-    }
-    this.waitingTimers.clear();
+    // Clear all waiting and generation start times (no timers to clear)
     this.waitingStartTimes.clear();
-    this.llmGenerationTimers.clear();
-    this.llmGenerationStartTimes.clear();
     this.executionIdToToolName.clear();
+    this.executionIdToArguments.clear();
+    this.proposedToolArguments.clear();
+    this.validationPending.clear();
+    this.validationRules.clear();
     this.executionOrder.length = 0; // Clear array
   }
 
@@ -199,7 +185,7 @@ export class DevEventMapper {
     const argsJson = this.formatArgumentsForDisplay(payload.arguments);
     this.chatUI.addMessage(
       'system',
-      `🔧 **Tool Selected**: \`${payload.tool_name}\`\n**Arguments**:\n${argsJson}`
+      `🔧 **Tool Selected**: \`${payload.tool_name}\`\n**Arguments**:\n\`\`\`json\n${argsJson}\n\`\`\``
     );
   }
 
@@ -213,19 +199,37 @@ export class DevEventMapper {
     const payload = event.payload;
     // Store validation pending state - will be updated when passed
     this.validationPending.set(payload.tool_name, true);
+    // Store validation rules to display when validation passes
+    this.validationRules.set(payload.tool_name, payload.validation_rules);
   }
 
   /**
    * Handle tool call validation passed event.
-   * Consolidated with validation started - show single message.
+   * Consolidated with validation started - show single message with validation details.
    */
   private handleValidationPassed(
     event: EventEnvelope<ToolCallValidationPassedPayload>
   ): void {
     const payload = event.payload;
-    // Show consolidated validation message
-    this.chatUI.addMessage('system', `✓ Validated: \`${payload.tool_name}\``);
+    const rules = this.validationRules.get(payload.tool_name) || [];
+
+    // Format validation rules for display
+    let validationDetails = '';
+    if (rules.length > 0) {
+      const rulesList = rules.map(rule => `  • ${rule}`).join('\n');
+      validationDetails = `\n**Checks passed**:\n${rulesList}`;
+    } else {
+      // Fallback message if no rules available
+      validationDetails =
+        '\n**Checks passed**: Parameter validation, data type matching';
+    }
+
+    this.chatUI.addMessage(
+      'system',
+      `✓ Validated: \`${payload.tool_name}\`${validationDetails}`
+    );
     this.validationPending.delete(payload.tool_name);
+    this.validationRules.delete(payload.tool_name);
   }
 
   /**
@@ -280,7 +284,7 @@ export class DevEventMapper {
       const argsJson = this.formatArgumentsForDisplay(payload.arguments);
       this.chatUI.addMessage(
         'system',
-        `🚀 **Executing**: \`${payload.tool_name}\`\n**Parameters**:\n${argsJson}`
+        `🚀 **Executing**: \`${payload.tool_name}\`\n**Parameters**:\n\`\`\`json\n${argsJson}\n\`\`\``
       );
     }
   }
@@ -297,28 +301,14 @@ export class DevEventMapper {
       const messageId = `waiting-${Date.now()}-${Math.random()}`;
       const startTime = Date.now();
 
-      // Store start time
+      // Store start time for calculating elapsed time when response arrives
       this.waitingStartTimes.set(messageId, startTime);
 
-      // Add initial waiting message
+      // Add static waiting message (no live updates to prevent scroll jumping)
       this.chatUI.addMessage(
         'system',
-        `📤 **Request sent** to MCP server (${sizeDisplay})\n⏳ **Waiting** for response... (0.0s)`
+        `📤 **Request sent** to MCP server (${sizeDisplay})\n⏳ **Waiting** for response...`
       );
-
-      // Start timer to update message with elapsed time
-      // Use 500ms interval to balance smooth updates with scroll performance
-      const timer = setInterval(() => {
-        const elapsed = (Date.now() - startTime) / 1000;
-        const elapsedStr =
-          elapsed < 1 ? `${elapsed.toFixed(1)}s` : `${Math.floor(elapsed)}s`;
-
-        this.chatUI.updateLastSystemMessage(
-          `📤 **Request sent** to MCP server (${sizeDisplay})\n⏳ **Waiting** for response... (${elapsedStr})`
-        );
-      }, 500); // Update every 500ms to balance smooth counter with scroll performance
-
-      this.waitingTimers.set(messageId, timer);
     }
   }
 
@@ -332,34 +322,25 @@ export class DevEventMapper {
     if (payload.message_type === 'tools/call_response') {
       const sizeDisplay = DataManager.formatSize(payload.size_bytes);
 
-      // Find and stop the most recent waiting timer
-      if (this.waitingTimers.size > 0) {
-        // Get the last (most recent) timer
-        const timerEntries = Array.from(this.waitingTimers.entries());
-        const lastEntry = timerEntries[timerEntries.length - 1];
+      // Calculate elapsed time and update the waiting message with final response
+      if (this.waitingStartTimes.size > 0) {
+        // Get the last (most recent) waiting start time
+        const startTimeEntries = Array.from(this.waitingStartTimes.entries());
+        const lastEntry = startTimeEntries[startTimeEntries.length - 1];
         if (lastEntry) {
-          const [messageId, timer] = lastEntry;
-
-          // Clear the timer
-          clearInterval(timer);
-          this.waitingTimers.delete(messageId);
+          const [messageId, startTime] = lastEntry;
 
           // Calculate final elapsed time
-          const startTime = this.waitingStartTimes.get(messageId);
-          if (startTime) {
-            const elapsed = (Date.now() - startTime) / 1000;
-            const elapsedStr =
-              elapsed < 1
-                ? `${elapsed.toFixed(1)}s`
-                : `${Math.floor(elapsed)}s`;
+          const elapsed = (Date.now() - startTime) / 1000;
+          const elapsedStr =
+            elapsed < 1 ? `${elapsed.toFixed(1)}s` : `${Math.floor(elapsed)}s`;
 
-            // Update the waiting message with final time
-            this.chatUI.updateLastSystemMessage(
-              `📤 **Request sent** to MCP server\n📥 **Response received** from MCP server (${sizeDisplay}) - ${elapsedStr}`
-            );
+          // Update the waiting message with final response time (only one state update)
+          this.chatUI.updateLastSystemMessage(
+            `📤 **Request sent** to MCP server (${sizeDisplay})\n📥 **Response received** from MCP server (${sizeDisplay}) - ${elapsedStr}`
+          );
 
-            this.waitingStartTimes.delete(messageId);
-          }
+          this.waitingStartTimes.delete(messageId);
         }
       } else {
         // Fallback: if no timer found, just add a new message
@@ -411,6 +392,9 @@ export class DevEventMapper {
       this.executionIdToToolName.get(payload.execution_id) || payload.tool_name;
     const duration = payload.duration_ms;
 
+    // Clear waiting timer if it exists (timeouts/failures don't emit TRANSPORT_MESSAGE_RECEIVED)
+    this.clearMostRecentWaitingTimer();
+
     this.chatUI.addMessage(
       'system',
       `❌ **${toolName}** failed (${duration}ms)\nError: ${payload.error.message} (${payload.error.code})`
@@ -421,38 +405,35 @@ export class DevEventMapper {
   }
 
   /**
+   * Clear the most recent waiting timer.
+   * Used when a tool execution completes (success) or fails (timeout/error).
+   */
+  private clearMostRecentWaitingTimer(): void {
+    if (this.waitingStartTimes.size > 0) {
+      // Get the last (most recent) waiting start time
+      const startTimeEntries = Array.from(this.waitingStartTimes.entries());
+      const lastEntry = startTimeEntries[startTimeEntries.length - 1];
+      if (lastEntry) {
+        const [messageId] = lastEntry;
+
+        // Clear the start time (no timer to clear since we don't use live updates)
+        this.waitingStartTimes.delete(messageId);
+      }
+    }
+  }
+
+  /**
    * Handle post-tool LLM prompt built event.
    * This happens after tool execution, when LLM is about to generate a response.
    */
   private handlePostToolLLMPromptBuilt(
-    event: EventEnvelope<PostToolLLMPromptBuiltPayload>
+    _event: EventEnvelope<PostToolLLMPromptBuiltPayload>
   ): void {
-    const payload = event.payload;
-    const promptId = payload.prompt_id;
-    const startTime = Date.now();
-
-    // Store start time
-    this.llmGenerationStartTimes.set(promptId, startTime);
-
-    // Add initial generation message
+    // Simply add a static message - no tracking needed
     this.chatUI.addMessage(
       'system',
-      `🤖 **${this.llmProviderName}** generating response... (0.0s)`
+      `🤖 **${this.llmProviderName}** generating response...`
     );
-
-    // Start timer to update message with elapsed time
-    // Use 500ms interval to balance smooth updates with scroll performance
-    const timer = setInterval(() => {
-      const elapsed = (Date.now() - startTime) / 1000;
-      const elapsedStr =
-        elapsed < 1 ? `${elapsed.toFixed(1)}s` : `${Math.floor(elapsed)}s`;
-
-      this.chatUI.updateLastSystemMessage(
-        `🤖 **${this.llmProviderName}** generating response... (${elapsedStr})`
-      );
-    }, 500); // Update every 500ms to balance smooth counter with scroll performance
-
-    this.llmGenerationTimers.set(promptId, timer);
   }
 
   /**
@@ -460,36 +441,9 @@ export class DevEventMapper {
    * This happens when LLM has finished generating the response.
    */
   private handleLLMFinalResponseGenerated(
-    event: EventEnvelope<LLMFinalResponseGeneratedPayload>
+    _event: EventEnvelope<LLMFinalResponseGeneratedPayload>
   ): void {
-    const payload = event.payload;
-    const duration = payload.duration_ms;
-    const durationSeconds = duration / 1000;
-    const durationStr =
-      durationSeconds < 1
-        ? `${durationSeconds.toFixed(1)}s`
-        : `${Math.floor(durationSeconds)}s`;
-
-    // Find and stop the most recent LLM generation timer
-    // We'll use the last timer since responses come in order
-    if (this.llmGenerationTimers.size > 0) {
-      const timerEntries = Array.from(this.llmGenerationTimers.entries());
-      const lastEntry = timerEntries[timerEntries.length - 1];
-      if (lastEntry) {
-        const [promptId, timer] = lastEntry;
-
-        // Clear the timer
-        clearInterval(timer);
-        this.llmGenerationTimers.delete(promptId);
-
-        // Update the generation message with final time
-        this.chatUI.updateLastSystemMessage(
-          `🤖 **${this.llmProviderName}** generating response... (${durationStr})`
-        );
-
-        this.llmGenerationStartTimes.delete(promptId);
-      }
-    }
+    // No-op: The static message is sufficient, no need to update it
   }
 
   /**

@@ -577,6 +577,7 @@ export class ChatUI {
               );
             }
             // Code `text` (single backtick - tool names, etc.)
+            // Always use cyan for backtick values to differentiate from labels
             else if (part.startsWith('`') && part.endsWith('`')) {
               const content = part.slice(1, -1);
               elements.push(
@@ -584,7 +585,7 @@ export class ChatUI {
                   Text,
                   {
                     key: baseKey * 100 + keyIndex++,
-                    color: defaultColor || 'cyan',
+                    color: 'cyan',
                   },
                   content as React.ReactNode
                 )
@@ -729,6 +730,50 @@ export class ChatUI {
           let i = 0;
           while (i < lines.length) {
             const line = lines[i] || '';
+
+            // Code block detection (```language or ```)
+            if (line.trim().startsWith('```')) {
+              const languageMatch = line.trim().match(/^```(\w+)?$/);
+              const language = languageMatch?.[1] || '';
+              const codeLines: string[] = [];
+              i++; // Skip opening line
+
+              // Collect code block content until closing ```
+              while (i < lines.length) {
+                const codeLine = lines[i] || '';
+                if (codeLine.trim() === '```') {
+                  i++; // Skip closing line
+                  break;
+                }
+                codeLines.push(codeLine);
+                i++;
+              }
+
+              // Render code block with distinct color (blue for JSON, white for others)
+              const codeColor = language === 'json' ? 'blue' : 'white';
+              elements.push(
+                React.createElement(
+                  Box,
+                  {
+                    key: elementKey++,
+                    flexDirection: 'column',
+                    marginY: 0.5,
+                    marginLeft: 2,
+                  },
+                  ...codeLines.map((codeLine, lineIdx) =>
+                    React.createElement(
+                      Text,
+                      {
+                        key: lineIdx,
+                        color: codeColor,
+                      },
+                      codeLine as React.ReactNode
+                    )
+                  )
+                )
+              );
+              continue;
+            }
 
             // Table detection
             if (line.trim().startsWith('|') && line.includes('|')) {
