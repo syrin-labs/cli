@@ -8,6 +8,7 @@ import { updatePackage, detectInstallType } from '@/utils/package-manager';
 import { handleCommandError } from '@/cli/utils';
 import { Messages } from '@/constants';
 import { Icons } from '@/constants';
+import { log } from '@/utils/logger';
 
 const PACKAGE_NAME = '@ankan-ai/syrin';
 
@@ -17,33 +18,31 @@ const PACKAGE_NAME = '@ankan-ai/syrin';
 export async function executeUpdate(): Promise<void> {
   try {
     const currentVersion = getCurrentVersion();
-    console.log(`${Icons.TIP} ${Messages.UPDATE_CHECKING}`);
-    console.log(
-      `${Icons.TIP} ${Messages.UPDATE_CURRENT_VERSION(`v${currentVersion}`)}\n`
-    );
+    log.info(Messages.UPDATE_CHECKING);
+    log.info(Messages.UPDATE_CURRENT_VERSION(`v${currentVersion}`));
+    log.blank();
 
     // Check for latest version
     const versionInfo = await checkVersion(PACKAGE_NAME);
 
     if (!versionInfo.latest) {
-      console.log(
-        `${Icons.WARNING} Could not check for updates (network error or registry unavailable)`
+      log.warning(
+        'Could not check for updates (network error or registry unavailable)'
       );
-      console.log(`Current version: v${currentVersion}\n`);
+      log.plain(`Current version: v${currentVersion}`);
+      log.blank();
       return;
     }
 
     if (versionInfo.isLatest) {
-      console.log(
-        `${Icons.CHECK} ${Messages.UPDATE_ALREADY_LATEST(`v${currentVersion}`)}\n`
-      );
+      log.success(Messages.UPDATE_ALREADY_LATEST(`v${currentVersion}`));
+      log.blank();
       return;
     }
 
-    console.log(
-      `${Icons.TIP} ${Messages.UPDATE_LATEST_VERSION(`v${versionInfo.latest}`)}\n`
-    );
-    console.log(`${Icons.TIP} ${Messages.UPDATE_IN_PROGRESS(PACKAGE_NAME)}`);
+    log.info(Messages.UPDATE_LATEST_VERSION(`v${versionInfo.latest}`));
+    log.blank();
+    log.info(Messages.UPDATE_IN_PROGRESS(PACKAGE_NAME));
 
     // Determine install type for better error messages
     const installType = detectInstallType();
@@ -53,15 +52,18 @@ export async function executeUpdate(): Promise<void> {
 
     if (result.success) {
       const newVersion = result.version || versionInfo.latest;
-      console.log(
-        `\n${Icons.CHECK} ${Messages.UPDATE_SUCCESS(`v${newVersion}`)}\n`
+      log.blank();
+      log.success(
+        `${Icons.CHECK} ${Messages.UPDATE_SUCCESS(`v${newVersion}`)}`
       );
+      log.blank();
 
       // Show helpful message about config migration if needed
-      console.log(
-        `${Icons.TIP} If your config.yaml structure changed, check the migration guide.`
+      log.info(
+        'If your config.yaml structure changed, check the migration guide.'
       );
-      console.log(`   Documentation: https://github.com/ankan-labs/syrin\n`);
+      log.plain(`   Documentation: https://github.com/ankan-labs/syrin`);
+      log.blank();
     } else {
       const errorMessage = result.error || Messages.UPDATE_FAILED;
 
@@ -74,13 +76,13 @@ export async function executeUpdate(): Promise<void> {
           installType === 'global'
             ? `sudo npm install -g ${PACKAGE_NAME}@latest`
             : `npm install ${PACKAGE_NAME}@latest`;
-        console.error(
-          `\n${Icons.ERROR} ${Messages.UPDATE_PERMISSION_HINT(sudoCommand)}\n`
-        );
+        log.blank();
+        log.error(Messages.UPDATE_PERMISSION_HINT(sudoCommand));
+        log.blank();
       } else {
-        console.error(
-          `\n${Icons.ERROR} ${Messages.UPDATE_ERROR(errorMessage)}\n`
-        );
+        log.blank();
+        log.error(Messages.UPDATE_ERROR(errorMessage));
+        log.blank();
       }
       process.exit(1);
     }

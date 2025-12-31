@@ -1,13 +1,5 @@
-/* eslint-disable
-   @typescript-eslint/no-unsafe-assignment,
-   @typescript-eslint/no-unsafe-call,
-   @typescript-eslint/no-unsafe-member-access,
-   @typescript-eslint/no-unsafe-return,
-   @typescript-eslint/no-unsafe-argument,
-   @typescript-eslint/no-implied-eval
-*/
-
 import { getVersionDisplayString } from '@/utils/version-display';
+import { log } from '@/utils/logger';
 
 /**
  * Presentation layer for doctor command UI.
@@ -44,364 +36,137 @@ interface DoctorReport {
 }
 
 /**
- * Display doctor report using Ink.
+ * Display doctor report using plain console output.
+ * This avoids Ink taking control of stdin, which disables terminal history.
  */
 export async function displayDoctorReport(report: DoctorReport): Promise<void> {
-  const importDynamic = new Function('specifier', 'return import(specifier)');
-  await (async (): Promise<void> => {
-    const [ReactModule, inkModule] = await Promise.all([
-      importDynamic('react'),
-      importDynamic('ink'),
-    ]);
+  const { config, transportCheck, scriptCheck, llmChecks, localLlmChecks } =
+    report;
 
-    const React = ReactModule.default || ReactModule;
-    const { Box, Text, render } = inkModule;
+  const allValid =
+    transportCheck.isValid &&
+    (scriptCheck === null || scriptCheck.isValid) &&
+    llmChecks.every(l => l.apiKeyCheck.isValid && l.modelCheck.isValid);
 
-    // Get version info for display
-    const versionDisplayString =
-      await getVersionDisplayString('@ankan-ai/syrin');
+  // Get version info for display
+  const versionDisplayString = await getVersionDisplayString('@ankan-ai/syrin');
 
-    const DoctorReportComponent = (): React.ReactElement => {
-      const { config, transportCheck, scriptCheck, llmChecks, localLlmChecks } =
-        report;
+  // Header
+  log.blank();
+  log.heading('Syrin Doctor Report');
+  log.label('═══════════════════');
+  log.labelValue('Version:', versionDisplayString);
+  log.blank();
 
-      const allValid =
-        transportCheck.isValid &&
-        (scriptCheck === null || scriptCheck.isValid) &&
-        llmChecks.every(l => l.apiKeyCheck.isValid && l.modelCheck.isValid);
+  // Project Info
+  log.labelValue('Project:', String(config.project_name));
+  log.labelValue('Agent:', String(config.agent_name));
+  log.blank();
 
-      const elements: React.ReactElement[] = [];
+  // Transport Section
+  log.heading('Transport');
+  log.labelValue('  Type:', config.transport);
+  if (config.transport === 'http') {
+    const urlValue =
+      config.mcp_url !== undefined && config.mcp_url !== null
+        ? (config.mcp_url as unknown as string)
+        : null;
+    const urlText = urlValue ? `URL: ${urlValue}` : 'URL: Not configured';
+    if (transportCheck.isValid) {
+      log.plain(`  ${urlText} ${log.tick()}`);
+    } else {
+      log.plain(`  ${urlText} ${log.cross()}`);
+    }
+  } else {
+    const scriptValue =
+      config.script !== undefined && config.script !== null
+        ? (config.script as unknown as string)
+        : null;
+    const scriptText = scriptValue
+      ? `Script: ${scriptValue}`
+      : 'Script: Not configured';
+    if (transportCheck.isValid) {
+      log.plain(`  ${scriptText} ${log.tick()}`);
+    } else {
+      log.plain(`  ${scriptText} ${log.cross()}`);
+    }
+  }
+  if (!transportCheck.isValid && transportCheck.fix) {
+    log.warnSymbol(`    ${transportCheck.fix}`);
+  }
+  log.blank();
 
-      // Header
-      elements.push(
-        React.createElement(
-          Box,
-          { key: 'header', flexDirection: 'column', marginBottom: 2 },
-          React.createElement(
-            Box,
-            { marginBottom: 0.5 },
-            React.createElement(Text, { bold: true }, 'Syrin Doctor Report')
-          ),
-          React.createElement(
-            Box,
-            { marginBottom: 1 },
-            React.createElement(Text, { dimColor: true }, '═══════════════════')
-          ),
-          React.createElement(
-            Box,
-            { marginBottom: 1 },
-            React.createElement(
-              Text,
-              { dimColor: true },
-              `Version: ${versionDisplayString}`
-            )
-          )
-        )
-      );
+  // Script Section (if present)
+  if (scriptCheck !== null && config.script) {
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string
+    const scriptText = String(config.script);
+    log.heading('Script');
+    if (scriptCheck.isValid) {
+      log.plain(`  ${scriptText} ${log.tick()}`);
+    } else {
+      log.plain(`  ${scriptText} ${log.cross()}`);
+    }
+    if (!scriptCheck.isValid && scriptCheck.fix) {
+      log.warnSymbol(`    ${scriptCheck.fix}`);
+    }
+    log.blank();
+  }
 
-      // Project Info
-      elements.push(
-        React.createElement(
-          Box,
-          { key: 'project', flexDirection: 'column', marginBottom: 1.5 },
-          React.createElement(
-            Box,
-            { marginBottom: 0.5 },
-            React.createElement(
-              Text,
-              { dimColor: true },
-              `Project: ${String(config.project_name)}`
-            )
-          ),
-          React.createElement(
-            Box,
-            { marginBottom: 0.5 },
-            React.createElement(
-              Text,
-              { dimColor: true },
-              `Agent: ${String(config.agent_name)}`
-            )
-          )
-        )
-      );
+  // LLM Providers Section
+  if (llmChecks.length > 0) {
+    log.heading('LLM Providers');
+    for (const llm of llmChecks) {
+      const providerName =
+        llm.provider.charAt(0).toUpperCase() + llm.provider.slice(1);
+      const defaultMark = llm.isDefault
+        ? log.styleText(' (default)', 'cyan')
+        : '';
+      log.plain(`  ${log.styleText(providerName, 'bold')}${defaultMark}`);
 
-      // Transport Section
-      elements.push(
-        React.createElement(
-          Box,
-          { key: 'transport', flexDirection: 'column', marginBottom: 1.5 },
-          React.createElement(
-            Box,
-            { marginBottom: 0.5 },
-            React.createElement(Text, { bold: true }, 'Transport')
-          ),
-          React.createElement(
-            Box,
-            { marginLeft: 2, marginBottom: 0.5 },
-            React.createElement(
-              Text,
-              { dimColor: true },
-              `Type: ${config.transport}`
-            )
-          ),
-          config.transport === 'http'
-            ? ((): React.ReactElement => {
-                const urlValue =
-                  config.mcp_url !== undefined && config.mcp_url !== null
-                    ? (config.mcp_url as unknown as string)
-                    : null;
-                const urlText = urlValue
-                  ? `URL: ${urlValue}`
-                  : 'URL: Not configured';
-                return React.createElement(
-                  Box,
-                  { marginLeft: 2, marginBottom: 0.5 },
-                  React.createElement(Text, {}, urlText),
-                  transportCheck.isValid
-                    ? React.createElement(Text, { color: 'green' }, ' ✓')
-                    : React.createElement(Text, { color: 'red' }, ' ✗')
-                );
-              })()
-            : ((): React.ReactElement => {
-                const scriptValue =
-                  config.script !== undefined && config.script !== null
-                    ? (config.script as unknown as string)
-                    : null;
-                const scriptText = scriptValue
-                  ? `Script: ${scriptValue}`
-                  : 'Script: Not configured';
-                return React.createElement(
-                  Box,
-                  { marginLeft: 2, marginBottom: 0.5 },
-                  React.createElement(Text, {}, scriptText),
-                  transportCheck.isValid
-                    ? React.createElement(Text, { color: 'green' }, ' ✓')
-                    : React.createElement(Text, { color: 'red' }, ' ✗')
-                );
-              })(),
-          !transportCheck.isValid && transportCheck.fix
-            ? React.createElement(
-                Box,
-                { marginLeft: 4, marginTop: 0.5 },
-                React.createElement(
-                  Text,
-                  { color: 'yellow', dimColor: true },
-                  `⚠  ${transportCheck.fix}`
-                )
-              )
-            : null
-        )
-      );
-
-      // Script Section (if present)
-      if (scriptCheck !== null && config.script) {
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string
-        const scriptText = String(config.script);
-        elements.push(
-          React.createElement(
-            Box,
-            { key: 'script', flexDirection: 'column', marginBottom: 1.5 },
-            React.createElement(
-              Box,
-              { marginBottom: 0.5 },
-              React.createElement(Text, { bold: true }, 'Script')
-            ),
-            React.createElement(
-              Box,
-              { marginLeft: 2, marginBottom: 0.5 },
-              React.createElement(Text, { dimColor: true }, scriptText),
-              scriptCheck.isValid
-                ? React.createElement(Text, { color: 'green' }, ' ✓')
-                : React.createElement(Text, { color: 'red' }, ' ✗')
-            ),
-            !scriptCheck.isValid && scriptCheck.fix
-              ? React.createElement(
-                  Box,
-                  { marginLeft: 4, marginTop: 0.5 },
-                  React.createElement(
-                    Text,
-                    { color: 'yellow', dimColor: true },
-                    `⚠  ${scriptCheck.fix}`
-                  )
-                )
-              : null
-          )
-        );
+      // API Key
+      const apiKeyLabel = `    API Key: [${llm.apiKeyCheck.message}]`;
+      if (llm.apiKeyCheck.isValid) {
+        log.plain(`${apiKeyLabel} ${log.tick()}`);
+      } else {
+        log.plain(`${apiKeyLabel} ${log.cross()}`);
+      }
+      if (!llm.apiKeyCheck.isValid && llm.apiKeyCheck.fix) {
+        log.warnSymbol(`      ${llm.apiKeyCheck.fix}`);
       }
 
-      // LLM Providers Section
-      if (llmChecks.length > 0) {
-        elements.push(
-          React.createElement(
-            Box,
-            { key: 'llms', flexDirection: 'column', marginBottom: 1.5 },
-            React.createElement(
-              Box,
-              { marginBottom: 0.5 },
-              React.createElement(Text, { bold: true }, 'LLM Providers')
-            ),
-            ...llmChecks.flatMap((llm): React.ReactElement[] => {
-              const providerName =
-                llm.provider.charAt(0).toUpperCase() + llm.provider.slice(1);
-              const defaultMark = llm.isDefault ? ' (default)' : '';
-              const providerElements: React.ReactElement[] = [];
-
-              providerElements.push(
-                React.createElement(
-                  Box,
-                  {
-                    key: `${llm.provider}-header`,
-                    marginLeft: 2,
-                    marginBottom: 0.5,
-                  },
-                  React.createElement(
-                    Text,
-                    { bold: true },
-                    `${providerName}${defaultMark}`
-                  )
-                )
-              );
-
-              // API Key
-              providerElements.push(
-                React.createElement(
-                  Box,
-                  {
-                    key: `${llm.provider}-apikey`,
-                    marginLeft: 4,
-                    marginBottom: 0.25,
-                  },
-                  React.createElement(
-                    Text,
-                    { dimColor: true },
-                    `API Key: [${llm.apiKeyCheck.message}]`
-                  ),
-                  llm.apiKeyCheck.isValid
-                    ? React.createElement(Text, { color: 'green' }, ' ✓')
-                    : React.createElement(Text, { color: 'red' }, ' ✗')
-                )
-              );
-              if (!llm.apiKeyCheck.isValid && llm.apiKeyCheck.fix) {
-                providerElements.push(
-                  React.createElement(
-                    Box,
-                    {
-                      key: `${llm.provider}-apikey-fix`,
-                      marginLeft: 6,
-                      marginTop: 0.25,
-                    },
-                    React.createElement(
-                      Text,
-                      { color: 'yellow', dimColor: true },
-                      `⚠  ${llm.apiKeyCheck.fix}`
-                    )
-                  )
-                );
-              }
-
-              // Model
-              providerElements.push(
-                React.createElement(
-                  Box,
-                  {
-                    key: `${llm.provider}-model`,
-                    marginLeft: 4,
-                    marginBottom: 0.5,
-                  },
-                  React.createElement(
-                    Text,
-                    { dimColor: true },
-                    `Model: [${llm.modelCheck.message}]`
-                  ),
-                  llm.modelCheck.isValid
-                    ? React.createElement(Text, { color: 'green' }, ' ✓')
-                    : React.createElement(Text, { color: 'red' }, ' ✗')
-                )
-              );
-              if (!llm.modelCheck.isValid && llm.modelCheck.fix) {
-                providerElements.push(
-                  React.createElement(
-                    Box,
-                    {
-                      key: `${llm.provider}-model-fix`,
-                      marginLeft: 6,
-                      marginTop: 0.25,
-                    },
-                    React.createElement(
-                      Text,
-                      { color: 'yellow', dimColor: true },
-                      `⚠  ${llm.modelCheck.fix}`
-                    )
-                  )
-                );
-              }
-
-              return providerElements;
-            })
-          )
-        );
+      // Model
+      const modelLabel = `    Model: [${llm.modelCheck.message}]`;
+      if (llm.modelCheck.isValid) {
+        log.plain(`${modelLabel} ${log.tick()}`);
+      } else {
+        log.plain(`${modelLabel} ${log.cross()}`);
       }
-
-      // Local LLM Providers
-      if (localLlmChecks && localLlmChecks.length > 0) {
-        elements.push(
-          React.createElement(
-            Box,
-            { key: 'local-llms', flexDirection: 'column', marginBottom: 1.5 },
-            React.createElement(
-              Box,
-              { marginBottom: 0.5 },
-              React.createElement(Text, { bold: true }, 'Local LLM Providers')
-            ),
-            ...localLlmChecks.map(
-              llm =>
-                React.createElement(
-                  Box,
-                  { key: llm.provider, marginLeft: 2, marginBottom: 0.5 },
-                  React.createElement(Text, {}, llm.provider),
-                  llm.check.isValid
-                    ? React.createElement(Text, { color: 'green' }, ' ✓')
-                    : React.createElement(Text, { color: 'red' }, ' ✗')
-                ) as React.ReactElement
-            )
-          )
-        );
+      if (!llm.modelCheck.isValid && llm.modelCheck.fix) {
+        log.warnSymbol(`      ${llm.modelCheck.fix}`);
       }
+    }
+    log.blank();
+  }
 
-      // Summary
-      elements.push(
-        React.createElement(
-          Box,
-          { key: 'summary', marginTop: 1 },
-          allValid
-            ? React.createElement(
-                Text,
-                { color: 'green', bold: true },
-                '✓ All checks passed'
-              )
-            : React.createElement(
-                Text,
-                { color: 'yellow', bold: true },
-                '⚠  Some issues found'
-              )
-        )
-      );
+  // Local LLM Providers
+  if (localLlmChecks && localLlmChecks.length > 0) {
+    log.heading('Local LLM Providers');
+    for (const llm of localLlmChecks) {
+      if (llm.check.isValid) {
+        log.plain(`  ${llm.provider} ${log.tick()}`);
+      } else {
+        log.plain(`  ${llm.provider} ${log.cross()}`);
+      }
+    }
+    log.blank();
+  }
 
-      return React.createElement(
-        Box,
-        { flexDirection: 'column', paddingX: 1 },
-        ...elements
-      );
-    };
-
-    const instance = render(React.createElement(DoctorReportComponent), {
-      stdout: process.stdout,
-      stderr: process.stderr,
-      stdin: process.stdin,
-      patchConsole: false,
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 100));
-    instance.unmount();
-  })();
+  // Summary
+  if (allValid) {
+    log.success('All checks passed');
+    log.blank();
+  } else {
+    log.warning('⚠  Some issues found');
+    log.blank();
+  }
 }

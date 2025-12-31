@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { LLMProvider } from './provider';
 import type { LLMRequest, LLMResponse, ToolCall } from './types';
 import { ConfigurationError } from '@/utils/errors';
-import { logger } from '@/utils/logger';
+import { logger, log } from '@/utils/logger';
 import { checkCommandExists } from '@/config/env-checker';
 
 /**
@@ -73,7 +73,7 @@ class OllamaProcessManager {
     this.isStarting = true;
 
     try {
-      console.log('🚀 Starting Ollama service...');
+      log.info('🚀 Starting Ollama service...');
 
       // Spawn Ollama serve process
       this.ollamaProcess = childProcess.spawn('ollama', ['serve'], {
@@ -127,7 +127,8 @@ class OllamaProcessManager {
         await new Promise(resolve => setTimeout(resolve, retryDelay));
         try {
           await client.list();
-          console.log('✅ Ollama service is running\n');
+          log.success('✅ Ollama service is running');
+          log.blank();
           this.isStarting = false;
           return; // Success!
         } catch {
@@ -250,10 +251,12 @@ export class OllamaProvider implements LLMProvider {
 
       if (!modelExists) {
         logger.info(`Model ${this.modelName} not found. Downloading...`);
-        console.log(`\n📥 Downloading model: ${this.modelName}`);
-        console.log(
-          'This may take a few minutes depending on your internet connection...\n'
+        log.blank();
+        log.info(`📥 Downloading model: ${this.modelName}`);
+        log.plain(
+          'This may take a few minutes depending on your internet connection...'
         );
+        log.blank();
 
         // Pull the model using official API with streaming for progress
         const stream = await this.client.pull({
@@ -282,7 +285,9 @@ export class OllamaProvider implements LLMProvider {
             process.stdout.write(`\r📥 ${chunk.status}`);
           }
         }
-        console.log('\n✅ Model downloaded successfully!\n');
+        log.blank();
+        log.success('✅ Model downloaded successfully!');
+        log.blank();
       }
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : String(err);

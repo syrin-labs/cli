@@ -15,14 +15,8 @@ import { DevSession } from '@/runtime/dev/session';
 import { ChatUI } from '@/presentation/dev/chat-ui';
 import { ConfigurationError } from '@/utils/errors';
 import { handleCommandError } from '@/cli/utils';
-import { logger } from '@/utils/logger';
-import {
-  Messages,
-  Paths,
-  Icons,
-  TransportTypes,
-  FileExtensions,
-} from '@/constants';
+import { logger, log } from '@/utils/logger';
+import { Messages, Paths, TransportTypes, FileExtensions } from '@/constants';
 import { makeSessionID } from '@/types/factories';
 import { v4 as uuidv4 } from 'uuid';
 import type { SyrinConfig } from '@/config/types';
@@ -139,9 +133,9 @@ export async function executeDev(
         `${sessionId}${FileExtensions.JSONL}`
       );
       logger.info(`Events will be saved to: ${eventFilePath}`);
-      console.log(
-        `\n${Icons.TIP} Events are being saved to: ${eventFilePath}\n`
-      );
+      log.blank();
+      log.info(`Events are being saved to: ${eventFilePath}`);
+      log.blank();
     } else {
       eventStore = new MemoryEventStore();
     }
@@ -367,7 +361,7 @@ export async function executeDev(
         return; // Already handling exit
       }
       isExiting = true;
-      console.log(Messages.DEV_GOODBYE);
+      log.plain(Messages.DEV_GOODBYE);
       chatUI.stop();
       void (async (): Promise<void> => {
         try {

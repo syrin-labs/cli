@@ -11,8 +11,8 @@ import { executeList } from '@/cli/commands/list';
 import { executeDev } from '@/cli/commands/dev';
 import { executeUpdate } from '@/cli/commands/update';
 import { executeRollback } from '@/cli/commands/rollback';
-import { logger } from '@/utils/logger';
-import { Icons, Messages, ListTypes, ListType } from '@/constants';
+import { logger, log } from '@/utils/logger';
+import { Messages, ListTypes, ListType } from '@/constants';
 import { getCurrentVersion } from '@/utils/version-checker';
 
 const program = new Command();
@@ -54,7 +54,9 @@ export function setupCLI(): void {
         // Handle other Error cases
         if (error instanceof Error) {
           logger.error('Init command failed', error);
-          console.error(`\n${Icons.ERROR} Error: ${error.message}\n`);
+          log.blank();
+          log.error(`Error: ${error.message}`);
+          log.blank();
           process.exit(1);
         }
 
@@ -190,10 +192,10 @@ export function setupCLI(): void {
               listType
             )
           ) {
-            console.error(
-              `\n${Icons.ERROR} ${Messages.LIST_INVALID_TYPE(type)}`
-            );
-            console.error(`${Messages.LIST_VALID_TYPES}\n`);
+            log.blank();
+            log.error(Messages.LIST_INVALID_TYPE(type));
+            log.plain(Messages.LIST_VALID_TYPES);
+            log.blank();
             process.exit(1);
           }
 
@@ -309,7 +311,7 @@ export function run(): void {
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('CLI setup failed', err);
-    console.error(Messages.CLI_START_FAILED);
+    log.error(Messages.CLI_START_FAILED);
     process.exit(1);
   }
 }

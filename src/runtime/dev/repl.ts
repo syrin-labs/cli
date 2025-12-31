@@ -7,6 +7,7 @@ import * as readline from 'readline';
 import * as fs from 'fs';
 import * as path from 'path';
 import type { EventEmitter } from '@/events/emitter';
+import { log } from '@/utils/logger';
 
 /**
  * REPL options.
@@ -102,7 +103,9 @@ export class InteractiveREPL {
         } catch (error) {
           const errorMessage =
             error instanceof Error ? error.message : String(error);
-          console.error(`\nError: ${errorMessage}\n`);
+          log.blank();
+          log.error(`Error: ${errorMessage}`);
+          log.blank();
         }
 
         this.rl.prompt();
@@ -116,7 +119,8 @@ export class InteractiveREPL {
         if (onClose) {
           await onClose();
         }
-        console.log('\nGoodbye!');
+        log.blank();
+        log.plain('Goodbye!');
         process.exit(0);
       })();
     });
@@ -166,7 +170,7 @@ export class InteractiveREPL {
    * Write a line to the console.
    */
   writeLine(message: string): void {
-    console.log(message);
+    log.plain(message);
   }
 
   /**
@@ -247,7 +251,7 @@ export class InteractiveREPL {
         break;
 
       default:
-        console.log(
+        log.plain(
           `Unknown command: ${cmd}. Type /help for available commands.`
         );
     }
@@ -257,17 +261,18 @@ export class InteractiveREPL {
    * Show help message.
    */
   private showHelp(): void {
-    console.log('\nAvailable commands:');
-    console.log('  /exit, /quit  - Exit dev mode');
-    console.log('  /clear        - Clear the console');
-    console.log('  /help         - Show this help message');
-    console.log('  /history      - Show command history');
-    console.log('  /tools        - List available tools');
-    console.log('');
-    console.log('Navigation:');
-    console.log('  ↑/↓ Arrow keys - Navigate command history');
-    console.log('  Ctrl+C        - Interrupt (use /exit to quit)');
-    console.log('');
+    log.blank();
+    log.plain('Available commands:');
+    log.plain('  /exit, /quit  - Exit dev mode');
+    log.plain('  /clear        - Clear the console');
+    log.plain('  /help         - Show this help message');
+    log.plain('  /history      - Show command history');
+    log.plain('  /tools        - List available tools');
+    log.blank();
+    log.plain('Navigation:');
+    log.plain('  ↑/↓ Arrow keys - Navigate command history');
+    log.plain('  Ctrl+C        - Interrupt (use /exit to quit)');
+    log.blank();
   }
 
   /**
@@ -275,16 +280,17 @@ export class InteractiveREPL {
    */
   private showHistory(): void {
     if (this.history.length === 0) {
-      console.log('No history yet.');
+      log.plain('No history yet.');
       return;
     }
 
-    console.log('\nCommand History:');
+    log.blank();
+    log.plain('Command History:');
     const recentHistory = this.history.slice(-20); // Show last 20
     recentHistory.forEach((cmd, index) => {
-      console.log(`  ${index + 1}. ${cmd}`);
+      log.plain(`  ${index + 1}. ${cmd}`);
     });
-    console.log('');
+    log.blank();
   }
 
   /**

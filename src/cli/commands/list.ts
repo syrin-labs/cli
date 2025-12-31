@@ -104,13 +104,13 @@ export async function executeList(options: ListCommandOptions): Promise<void> {
       // List based on type
       if (type === ListTypes.TOOLS) {
         const toolsResult = await listTools(client);
-        displayTools(toolsResult.tools);
+        await displayTools(toolsResult.tools);
       } else if (type === ListTypes.RESOURCES) {
         const resourcesResult = await listResources(client);
-        displayResources(resourcesResult.resources);
+        await displayResources(resourcesResult.resources);
       } else if (type === ListTypes.PROMPTS) {
         const promptsResult = await listPrompts(client);
-        displayPrompts(promptsResult.prompts);
+        await displayPrompts(promptsResult.prompts);
       }
     } finally {
       // Always close the connection

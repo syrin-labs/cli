@@ -4,6 +4,7 @@
  */
 
 import { getVersionDisplayString } from '@/utils/version-display';
+import { log } from '@/utils/logger';
 
 /**
  * Display version banner for a command.
@@ -12,12 +13,14 @@ import { getVersionDisplayString } from '@/utils/version-display';
 export async function showVersionBanner(): Promise<void> {
   try {
     const versionString = await getVersionDisplayString();
-    console.log(`Syrin ${versionString}\n`);
+    log.label(`Syrin ${versionString}`);
+    log.blank();
   } catch {
     // If version check fails, just show current version
     // This should rarely happen, but we don't want to break commands
     const { getCurrentVersion } = await import('@/utils/version-checker');
     const currentVersion = getCurrentVersion();
-    console.log(`Syrin v${currentVersion}\n`);
+    log.label(`Syrin v${currentVersion}`);
+    log.blank();
   }
 }

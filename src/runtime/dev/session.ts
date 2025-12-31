@@ -271,6 +271,7 @@ After tool execution, you will receive the results and can provide a final respo
           reason: `Duplicate tool call detected: ${toolCall.name} with identical arguments was already executed`,
         });
         // Use logger instead of console.warn for proper event tracking
+
         logger.warn(
           `Skipping duplicate tool call: ${toolCall.name} with arguments ${normalizedArgs}`
         );

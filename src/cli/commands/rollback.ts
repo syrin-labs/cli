@@ -18,6 +18,7 @@ import { handleCommandError } from '@/cli/utils';
 import { Messages } from '@/constants';
 import { Icons } from '@/constants';
 import { ConfigurationError } from '@/utils/errors';
+import { log } from '@/utils/logger';
 
 const PACKAGE_NAME = '@ankan-ai/syrin';
 
@@ -44,13 +45,14 @@ export async function executeRollback(
 
     // Check if trying to rollback to current version
     if (normalizedVersion === currentVersion) {
-      console.log(`${Icons.TIP} Already on version v${normalizedVersion}\n`);
+      log.info(`Already on version v${normalizedVersion}`);
+      log.blank();
       return;
     }
 
     // Verify version exists on npm registry
-    console.log(
-      `${Icons.TIP} Verifying version v${normalizedVersion} exists on npm registry...`
+    log.info(
+      `Verifying version v${normalizedVersion} exists on npm registry...`
     );
     try {
       const packageInfo = await fetchPackageInfo(PACKAGE_NAME);
@@ -67,24 +69,26 @@ export async function executeRollback(
         throw error;
       }
       // If it's a network error, warn but continue
-      console.log(
-        `${Icons.WARNING} Could not verify version on registry (continuing anyway...)\n`
+      log.warning(
+        'Could not verify version on registry (continuing anyway...)'
       );
+      log.blank();
     }
 
     // Compare versions to warn about rolling back
     const comparison = compareVersions(currentVersion, normalizedVersion);
     if (comparison > 0) {
-      console.log(
-        `${Icons.WARNING} Warning: Rolling back to an older version (v${currentVersion} -> v${normalizedVersion})\n`
+      log.warning(
+        `Warning: Rolling back to an older version (v${currentVersion} -> v${normalizedVersion})`
       );
+      log.blank();
     }
 
     // Determine install type for better error messages
     const installType = detectInstallType();
 
-    console.log(
-      `${Icons.TIP} ${Messages.ROLLBACK_IN_PROGRESS(`v${normalizedVersion}`, PACKAGE_NAME)}`
+    log.info(
+      Messages.ROLLBACK_IN_PROGRESS(`v${normalizedVersion}`, PACKAGE_NAME)
     );
 
     // Install the specific version
@@ -92,15 +96,16 @@ export async function executeRollback(
 
     if (result.success) {
       const installedVersion = result.version || normalizedVersion;
-      console.log(
-        `\n${Icons.CHECK} ${Messages.ROLLBACK_SUCCESS(`v${installedVersion}`)}\n`
+      log.blank();
+      log.success(
+        `${Icons.CHECK} ${Messages.ROLLBACK_SUCCESS(`v${installedVersion}`)}`
       );
+      log.blank();
 
       // Show helpful message about config compatibility
-      console.log(
-        `${Icons.TIP} Make sure your config.yaml is compatible with this version.`
-      );
-      console.log(`   Documentation: https://github.com/ankan-labs/syrin\n`);
+      log.info('Make sure your config.yaml is compatible with this version.');
+      log.plain(`   Documentation: https://github.com/ankan-labs/syrin`);
+      log.blank();
     } else {
       const errorMessage = result.error || Messages.ROLLBACK_FAILED;
 
@@ -113,19 +118,21 @@ export async function executeRollback(
           installType === 'global'
             ? `sudo npm install -g ${PACKAGE_NAME}@${normalizedVersion}`
             : `npm install ${PACKAGE_NAME}@${normalizedVersion}`;
-        console.error(
-          `\n${Icons.ERROR} ${Messages.UPDATE_PERMISSION_HINT(sudoCommand)}\n`
-        );
+        log.blank();
+        log.error(Messages.UPDATE_PERMISSION_HINT(sudoCommand));
+        log.blank();
       } else {
-        console.error(
-          `\n${Icons.ERROR} ${Messages.ROLLBACK_ERROR(errorMessage)}\n`
-        );
+        log.blank();
+        log.error(Messages.ROLLBACK_ERROR(errorMessage));
+        log.blank();
       }
       process.exit(1);
     }
   } catch (error) {
     if (error instanceof ConfigurationError) {
-      console.error(`\n${Icons.ERROR} ${error.message}\n`);
+      log.blank();
+      log.error(error.message);
+      log.blank();
       process.exit(1);
       return;
     }

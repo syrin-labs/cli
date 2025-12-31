@@ -3,6 +3,7 @@
  */
 
 import * as childProcess from 'child_process';
+import { log } from '@/utils/logger';
 
 /**
  * Check if a command contains shell operators that require shell execution.
@@ -59,7 +60,7 @@ export function setupProcessLogCapture(
   process.stdout?.on('data', (data: Buffer) => {
     const message = data.toString().trim();
     if (message) {
-      console.log(`[Server] ${message}`);
+      log.plain(`[Server] ${message}`);
     }
   });
 
@@ -74,9 +75,9 @@ export function setupProcessLogCapture(
       );
       const prefix = isError ? '[Server Error]' : '[Server]';
       if (isError) {
-        console.error(`${prefix} ${message}`);
+        log.error(`${prefix} ${message}`);
       } else {
-        console.log(`${prefix} ${message}`);
+        log.plain(`${prefix} ${message}`);
       }
     }
   });

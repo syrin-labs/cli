@@ -10,7 +10,6 @@ import {
   extractCommandName,
 } from '@/config/env-checker';
 import { handleCommandError } from '@/cli/utils';
-import { showVersionBanner } from '@/cli/utils/version-banner';
 import type { SyrinConfig } from '@/config/types';
 import { Messages, TransportTypes, Defaults, LLMProviders } from '@/constants';
 import { displayDoctorReport } from '@/presentation/doctor-ui';
@@ -221,7 +220,6 @@ export async function executeDoctor(
   projectRoot: string = process.cwd()
 ): Promise<void> {
   try {
-    await showVersionBanner();
     // Load configuration
     const config = loadConfig(projectRoot);
 

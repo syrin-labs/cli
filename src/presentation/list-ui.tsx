@@ -1,13 +1,5 @@
-/* eslint-disable
-   @typescript-eslint/no-unsafe-assignment,
-   @typescript-eslint/no-unsafe-call,
-   @typescript-eslint/no-unsafe-member-access,
-   @typescript-eslint/no-unsafe-return,
-   @typescript-eslint/no-unsafe-argument,
-   @typescript-eslint/no-implied-eval
-*/
-
 import { getVersionDisplayString } from '@/utils/version-display';
+import { log } from '@/utils/logger';
 
 /**
  * Presentation layer for list command UI components.
@@ -77,469 +69,142 @@ function extractParameters(
 }
 
 /**
- * Display tools list using Ink.
+ * Display tools list using plain console output.
+ * This avoids Ink taking control of stdin, which disables terminal history.
  */
-export function displayTools(tools: ToolInfo[]): void {
-  const importDynamic = new Function('specifier', 'return import(specifier)');
-  void (async (): Promise<void> => {
-    const [ReactModule, inkModule] = await Promise.all([
-      importDynamic('react'),
-      importDynamic('ink'),
-    ]);
+export async function displayTools(tools: ToolInfo[]): Promise<void> {
+  // Get version info for display
+  const versionDisplayString = await getVersionDisplayString();
 
-    const React = ReactModule.default || ReactModule;
-    const { Box, Text, render } = inkModule;
+  log.blank();
+  log.label(`Syrin ${versionDisplayString}`);
+  log.blank();
+  log.heading(
+    `Tools: ${tools.length} ${tools.length === 1 ? 'tool' : 'tools'}`
+  );
+  log.blank();
 
-    // Get version info for display
-    const versionDisplayString = await getVersionDisplayString();
+  if (tools.length === 0) {
+    log.label('  No tools available');
+    log.blank();
+    return;
+  }
 
-    const ToolsComponent = (): React.ReactElement => {
-      if (tools.length === 0) {
-        return React.createElement(
-          Box,
-          { flexDirection: 'column', paddingX: 1 },
-          React.createElement(
-            Box,
-            { marginBottom: 1 },
-            React.createElement(Text, { bold: true }, 'Tools:')
-          ),
-          React.createElement(
-            Box,
-            { marginLeft: 2 },
-            React.createElement(
-              Text,
-              { dimColor: true },
-              '  No tools available'
-            )
-          )
+  tools.forEach((tool, index) => {
+    const inputParams = extractParameters(tool.inputSchema);
+    const outputParams = extractParameters(tool.outputSchema);
+
+    log.numberedItem(index + 1, tool.name);
+
+    // Description
+    if (tool.description) {
+      log.label(`    ${tool.description.split('\n')[0]}`);
+    }
+
+    // Input parameters summary
+    if (inputParams.length > 0) {
+      log.label('    Parameters:');
+      for (const param of inputParams) {
+        const requiredText = param.required ? ' (required)' : '';
+        log.plain(
+          `      • ${log.styleText(param.name, 'cyan')} ${log.styleText(`(${param.type})`, 'dim')}${requiredText ? log.styleText(requiredText, 'yellow') : ''}`
         );
       }
+    } else {
+      log.label('    No parameters');
+    }
 
-      const toolElements: React.ReactElement[] = [];
-
-      for (const tool of tools) {
-        const inputParams = extractParameters(tool.inputSchema);
-        const outputParams = extractParameters(tool.outputSchema);
-
-        // Tool header
-        toolElements.push(
-          React.createElement(
-            Box,
-            { key: tool.name, flexDirection: 'column', marginY: 1 },
-            React.createElement(
-              Box,
-              { marginBottom: 0.5 },
-              React.createElement(
-                Text,
-                { color: 'green', bold: true },
-                `  ✓ ${tool.name}`
-              )
-            ),
-
-            // Description
-            tool.description
-              ? React.createElement(
-                  Box,
-                  { marginLeft: 4, marginBottom: 0.5 },
-                  React.createElement(
-                    Text,
-                    { dimColor: true },
-                    tool.description.split('\n')[0] // First line only
-                  )
-                )
-              : null,
-
-            // Input parameters summary
-            inputParams.length > 0
-              ? React.createElement(
-                  Box,
-                  { flexDirection: 'column', marginLeft: 4, marginTop: 0.5 },
-                  React.createElement(
-                    Box,
-                    { marginBottom: 0.5 },
-                    React.createElement(
-                      Text,
-                      { dimColor: true },
-                      '  Parameters:'
-                    )
-                  ),
-                  ...inputParams.map(
-                    (param): React.ReactElement =>
-                      React.createElement(
-                        Box,
-                        { key: param.name, marginLeft: 4, marginBottom: 0.25 },
-                        React.createElement(
-                          Text,
-                          {},
-                          `  • ${param.name} (${param.type})${param.required ? ' - required' : ''}`
-                        )
-                      )
-                  )
-                )
-              : React.createElement(
-                  Box,
-                  { marginLeft: 4, marginTop: 0.5 },
-                  React.createElement(
-                    Text,
-                    { dimColor: true },
-                    '  No parameters'
-                  )
-                ),
-
-            // Output summary
-            outputParams.length > 0
-              ? React.createElement(
-                  Box,
-                  { flexDirection: 'column', marginLeft: 4, marginTop: 0.5 },
-                  React.createElement(
-                    Box,
-                    { marginBottom: 0.5 },
-                    React.createElement(Text, { dimColor: true }, '  Returns:')
-                  ),
-                  React.createElement(
-                    Box,
-                    { marginLeft: 4 },
-                    React.createElement(
-                      Text,
-                      {},
-                      `  ${outputParams.length} ${outputParams.length === 1 ? 'property' : 'properties'}`
-                    )
-                  )
-                )
-              : null
-          )
-        );
-      }
-
-      return React.createElement(
-        Box,
-        { flexDirection: 'column', paddingX: 1 },
-        // Version display
-        React.createElement(
-          Box,
-          { key: 'version', marginBottom: 1 },
-          React.createElement(
-            Text,
-            { dimColor: true },
-            `Syrin ${versionDisplayString}`
-          )
-        ),
-        React.createElement(Box, { key: 'version-spacer', marginBottom: 1 }),
-        React.createElement(
-          Box,
-          { marginBottom: 1 },
-          React.createElement(Text, { bold: true }, 'Tools:'),
-          React.createElement(
-            Text,
-            { dimColor: true },
-            ` ${tools.length} ${tools.length === 1 ? 'tool' : 'tools'}`
-          )
-        ),
-        ...toolElements
+    // Output summary
+    if (outputParams.length > 0) {
+      log.plain(
+        `    ${log.styleText('Returns:', 'dim')} ${log.styleText(String(outputParams.length), 'cyan')} ${log.styleText(outputParams.length === 1 ? 'property' : 'properties', 'dim')}`
       );
-    };
+    }
 
-    const instance = render(React.createElement(ToolsComponent), {
-      stdout: process.stdout,
-      stderr: process.stderr,
-      stdin: process.stdin,
-      patchConsole: false,
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 100));
-    instance.unmount();
-  })();
+    log.blank();
+  });
 }
 
 /**
- * Display resources list using Ink.
+ * Display resources list using plain console output.
+ * This avoids Ink taking control of stdin, which disables terminal history.
  */
-export function displayResources(resources: ResourceInfo[]): void {
-  const importDynamic = new Function('specifier', 'return import(specifier)');
-  void (async (): Promise<void> => {
-    const [ReactModule, inkModule] = await Promise.all([
-      importDynamic('react'),
-      importDynamic('ink'),
-    ]);
+export async function displayResources(
+  resources: ResourceInfo[]
+): Promise<void> {
+  // Get version info for display
+  const versionDisplayString = await getVersionDisplayString();
 
-    const React = ReactModule.default || ReactModule;
-    const { Box, Text, render } = inkModule;
+  log.blank();
+  log.label(`Syrin ${versionDisplayString}`);
+  log.blank();
+  log.heading(
+    `Resources: ${resources.length} ${resources.length === 1 ? 'resource' : 'resources'}`
+  );
+  log.blank();
 
-    // Get version info for display
-    const versionDisplayString = await getVersionDisplayString();
+  if (resources.length === 0) {
+    log.label('  No resources available');
+    log.blank();
+    return;
+  }
 
-    const ResourcesComponent = (): React.ReactElement => {
-      if (resources.length === 0) {
-        return React.createElement(
-          Box,
-          { flexDirection: 'column', paddingX: 1 },
-          React.createElement(
-            Box,
-            { marginBottom: 1 },
-            React.createElement(Text, { bold: true }, 'Resources:')
-          ),
-          React.createElement(
-            Box,
-            { marginLeft: 2 },
-            React.createElement(
-              Text,
-              { dimColor: true },
-              '  No resources available'
-            )
-          )
-        );
-      }
-
-      const resourceElements: React.ReactElement[] = [];
-
-      for (const resource of resources) {
-        resourceElements.push(
-          React.createElement(
-            Box,
-            {
-              key: resource.uri,
-              flexDirection: 'column',
-              marginY: 1,
-            } as unknown as Record<string, unknown>,
-            React.createElement(
-              Box,
-              { marginBottom: 0.5 },
-              React.createElement(
-                Text,
-                { color: 'green', bold: true },
-                `  ✓ ${resource.uri}`
-              )
-            ),
-            resource.name
-              ? React.createElement(
-                  Box,
-                  { marginLeft: 4, marginBottom: 0.5 },
-                  React.createElement(Text, { dimColor: true }, '  Name: '),
-                  React.createElement(Text, {}, resource.name)
-                )
-              : null,
-            resource.description
-              ? React.createElement(
-                  Box,
-                  { marginLeft: 4, marginBottom: 0.5 },
-                  React.createElement(
-                    Text,
-                    { dimColor: true },
-                    resource.description.split('\n')[0] // First line only
-                  )
-                )
-              : null,
-            resource.mimeType
-              ? React.createElement(
-                  Box,
-                  { marginLeft: 4 },
-                  React.createElement(
-                    Text,
-                    { dimColor: true },
-                    `  Type: ${resource.mimeType}`
-                  )
-                )
-              : null
-          )
-        );
-      }
-
-      return React.createElement(
-        Box,
-        { flexDirection: 'column', paddingX: 1 },
-        // Version display
-        React.createElement(
-          Box,
-          { key: 'version', marginBottom: 1 },
-          React.createElement(
-            Text,
-            { dimColor: true },
-            `Syrin ${versionDisplayString}`
-          )
-        ),
-        React.createElement(Box, { key: 'version-spacer', marginBottom: 1 }),
-        React.createElement(
-          Box,
-          { marginBottom: 1 },
-          React.createElement(Text, { bold: true }, 'Resources:'),
-          React.createElement(
-            Text,
-            { dimColor: true },
-            ` ${resources.length} ${resources.length === 1 ? 'resource' : 'resources'}`
-          )
-        ),
-        ...resourceElements
-      );
-    };
-
-    const instance = render(React.createElement(ResourcesComponent), {
-      stdout: process.stdout,
-      stderr: process.stderr,
-      stdin: process.stdin,
-      patchConsole: false,
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 100));
-    instance.unmount();
-  })();
+  resources.forEach((resource, index) => {
+    log.numberedItem(index + 1, resource.uri);
+    if (resource.name) {
+      log.labelValue('    Name:', resource.name);
+    }
+    if (resource.description) {
+      log.label(`    ${resource.description.split('\n')[0]}`);
+    }
+    if (resource.mimeType) {
+      log.labelValue('    Type:', resource.mimeType);
+    }
+    log.blank();
+  });
 }
 
 /**
- * Display prompts list using Ink.
+ * Display prompts list using plain console output.
+ * This avoids Ink taking control of stdin, which disables terminal history.
  */
-export function displayPrompts(prompts: PromptInfo[]): void {
-  const importDynamic = new Function('specifier', 'return import(specifier)');
-  void (async (): Promise<void> => {
-    const [ReactModule, inkModule] = await Promise.all([
-      importDynamic('react'),
-      importDynamic('ink'),
-    ]);
+export async function displayPrompts(prompts: PromptInfo[]): Promise<void> {
+  // Get version info for display
+  const versionDisplayString = await getVersionDisplayString();
 
-    const React = ReactModule.default || ReactModule;
-    const { Box, Text, render } = inkModule;
+  log.blank();
+  log.label(`Syrin ${versionDisplayString}`);
+  log.blank();
+  log.heading(
+    `Prompts: ${prompts.length} ${prompts.length === 1 ? 'prompt' : 'prompts'}`
+  );
+  log.blank();
 
-    // Get version info for display
-    const versionDisplayString = await getVersionDisplayString();
+  if (prompts.length === 0) {
+    log.label('  No prompts available');
+    log.blank();
+    return;
+  }
 
-    const PromptsComponent = (): React.ReactElement => {
-      if (prompts.length === 0) {
-        return React.createElement(
-          Box,
-          { flexDirection: 'column', paddingX: 1 },
-          React.createElement(
-            Box,
-            { marginBottom: 1 },
-            React.createElement(Text, { bold: true }, 'Prompts:')
-          ),
-          React.createElement(
-            Box,
-            { marginLeft: 2 },
-            React.createElement(
-              Text,
-              { dimColor: true },
-              '  No prompts available'
-            )
-          )
+  prompts.forEach((prompt, index) => {
+    log.numberedItem(index + 1, prompt.name);
+    if (prompt.description) {
+      log.label(`    ${prompt.description.split('\n')[0]}`);
+    }
+    if (prompt.arguments && prompt.arguments.length > 0) {
+      log.label('    Arguments:');
+      for (const arg of prompt.arguments) {
+        const requiredText = arg.required ? ' (required)' : '';
+        log.plain(
+          `      • ${log.styleText(arg.name, 'cyan')}${requiredText ? log.styleText(requiredText, 'yellow') : ''}`
         );
+        if (arg.description) {
+          log.label(`        ${arg.description.split('\n')[0]}`);
+        }
       }
-
-      const promptElements: React.ReactElement[] = [];
-
-      for (const prompt of prompts) {
-        promptElements.push(
-          React.createElement(
-            Box,
-            {
-              key: prompt.name,
-              flexDirection: 'column',
-              marginY: 1,
-            } as unknown as Record<string, unknown>,
-            React.createElement(
-              Box,
-              { marginBottom: 0.5 },
-              React.createElement(
-                Text,
-                { color: 'green', bold: true },
-                `  ✓ ${prompt.name}`
-              )
-            ),
-            prompt.description
-              ? React.createElement(
-                  Box,
-                  { marginLeft: 4, marginBottom: 0.5 },
-                  React.createElement(
-                    Text,
-                    { dimColor: true },
-                    prompt.description.split('\n')[0] // First line only
-                  )
-                )
-              : null,
-            prompt.arguments && prompt.arguments.length > 0
-              ? React.createElement(
-                  Box,
-                  { flexDirection: 'column', marginLeft: 4, marginTop: 0.5 },
-                  React.createElement(
-                    Box,
-                    { marginBottom: 0.5 },
-                    React.createElement(
-                      Text,
-                      { dimColor: true },
-                      '  Arguments:'
-                    )
-                  ),
-                  ...prompt.arguments.map(
-                    arg =>
-                      React.createElement(
-                        Box,
-                        { key: arg.name, marginLeft: 4, marginBottom: 0.25 },
-                        React.createElement(
-                          Text,
-                          {},
-                          `  • ${arg.name}${arg.required ? ' (required)' : ''}`
-                        ),
-                        arg.description
-                          ? React.createElement(
-                              Box,
-                              { marginLeft: 2, marginTop: 0.25 },
-                              React.createElement(
-                                Text,
-                                { dimColor: true },
-                                `  ${arg.description.split('\n')[0]}`
-                              )
-                            )
-                          : null
-                      ) as React.ReactElement
-                  )
-                )
-              : React.createElement(
-                  Box,
-                  { marginLeft: 4, marginTop: 0.5 },
-                  React.createElement(
-                    Text,
-                    { dimColor: true },
-                    '  No arguments'
-                  )
-                )
-          )
-        );
-      }
-
-      return React.createElement(
-        Box,
-        { flexDirection: 'column', paddingX: 1 },
-        // Version display
-        React.createElement(
-          Box,
-          { key: 'version', marginBottom: 1 },
-          React.createElement(
-            Text,
-            { dimColor: true },
-            `Syrin ${versionDisplayString}`
-          )
-        ),
-        React.createElement(Box, { key: 'version-spacer', marginBottom: 1 }),
-        React.createElement(
-          Box,
-          { marginBottom: 1 },
-          React.createElement(Text, { bold: true }, 'Prompts:'),
-          React.createElement(
-            Text,
-            { dimColor: true },
-            ` ${prompts.length} ${prompts.length === 1 ? 'prompt' : 'prompts'}`
-          )
-        ),
-        ...promptElements
-      );
-    };
-
-    const instance = render(React.createElement(PromptsComponent), {
-      stdout: process.stdout,
-      stderr: process.stderr,
-      stdin: process.stdin,
-      patchConsole: false,
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 100));
-    instance.unmount();
-  })();
+    } else {
+      log.label('    No arguments');
+    }
+    log.blank();
+  });
 }

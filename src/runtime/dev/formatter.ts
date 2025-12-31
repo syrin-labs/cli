@@ -8,6 +8,7 @@ import type { DevSessionState } from './types';
 import type { ToolCall } from '@/runtime/llm/types';
 import type { TransportType } from '@/config/types';
 import type { MCPURL, Command } from '@/types/ids';
+import { log } from '@/utils/logger';
 
 /**
  * Formatter options.
@@ -42,25 +43,31 @@ export class DevFormatter {
     llmProvider: string,
     toolCount: number
   ): void {
-    console.log(`\n${Icons.SUCCESS} Syrin Version: ${version}\n`);
+    log.blank();
+    log.success(`${Icons.SUCCESS} Syrin Version: ${version}`);
+    log.blank();
 
-    console.log(`${Labels.TRANSPORT_LAYER}: ${transport}`);
+    log.plain(`${Labels.TRANSPORT_LAYER}: ${transport}`);
 
     if (transport === 'http' && mcpUrl) {
-      console.log(`${Labels.MCP_URL}: ${mcpUrl} ${Icons.CHECK} (working)`);
+      log.plain(`${Labels.MCP_URL}: ${mcpUrl} ${Icons.CHECK} (working)`);
     } else if (transport === 'stdio' && command) {
-      console.log(`${Labels.COMMAND}: ${command} ${Icons.CHECK} (working)`);
+      log.plain(`${Labels.COMMAND}: ${command} ${Icons.CHECK} (working)`);
     }
 
-    console.log(`LLM: ${llmProvider}`);
-    console.log(`\nTotal Tools: ${toolCount}\n`);
+    log.plain(`LLM: ${llmProvider}`);
+    log.blank();
+    log.plain(`Total Tools: ${toolCount}`);
+    log.blank();
   }
 
   /**
    * Format and display user input.
    */
   displayUserInput(input: string): void {
-    console.log(`\n${Icons.SUCCESS} User > ${input}\n`);
+    log.blank();
+    log.success(`${Icons.SUCCESS} User > ${input}`);
+    log.blank();
   }
 
   /**
@@ -72,10 +79,10 @@ export class DevFormatter {
     }
 
     for (const toolCall of toolCalls) {
-      console.log(`Detected Tool: ${toolCall.name}`);
-      console.log('Detected Arguments:');
-      console.log(JSON.stringify(toolCall.arguments, null, 2));
-      console.log('');
+      log.plain(`Detected Tool: ${toolCall.name}`);
+      log.plain('Detected Arguments:');
+      log.plain(JSON.stringify(toolCall.arguments, null, 2));
+      log.blank();
     }
   }
 
@@ -91,9 +98,10 @@ export class DevFormatter {
       minute: '2-digit',
       second: '2-digit',
     });
-    console.log(`Calling Tool (${toolName})`);
-    console.log(`\nTool Logs (${toolName}):`);
-    console.log(`[${timestamp} > ${toolName}] Tool calling started!`);
+    log.plain(`Calling Tool (${toolName})`);
+    log.blank();
+    log.plain(`Tool Logs (${toolName}):`);
+    log.plain(`[${timestamp} > ${toolName}] Tool calling started!`);
   }
 
   /**
@@ -108,7 +116,7 @@ export class DevFormatter {
       minute: '2-digit',
       second: '2-digit',
     });
-    console.log(
+    log.plain(
       `[${timestamp} > ${toolName}] Tool calling ended! (${duration}ms)`
     );
   }
@@ -117,7 +125,8 @@ export class DevFormatter {
    * Format and display tool execution result.
    */
   displayToolResult(toolName: string, result: unknown): void {
-    console.log(`\nReturned Tool Response (${toolName}):`);
+    log.blank();
+    log.plain(`Returned Tool Response (${toolName}):`);
 
     let resultText: string;
     if (typeof result === 'string') {
@@ -143,31 +152,33 @@ export class DevFormatter {
         '\n... (truncated)';
     }
 
-    console.log(resultText);
-    console.log('');
+    log.plain(resultText);
+    log.blank();
   }
 
   /**
    * Format and display tool execution error.
    */
   displayToolError(toolName: string, error: string): void {
-    console.log(`\n${Icons.ERROR} Tool Execution Error (${toolName}):`);
-    console.log(error);
-    console.log('');
+    log.blank();
+    log.error(`Tool Execution Error (${toolName}):`);
+    log.plain(error);
+    log.blank();
   }
 
   /**
    * Format and display LLM response.
    */
   displayLLMResponse(llmProvider: string, response: string): void {
-    console.log(`\n${Icons.SUCCESS} LLM Response (${llmProvider}):`);
+    log.blank();
+    log.success(`${Icons.SUCCESS} LLM Response (${llmProvider}):`);
 
     // Split response into lines for better readability
     const lines = response.split('\n');
     for (const line of lines) {
-      console.log(line);
+      log.plain(line);
     }
-    console.log('');
+    log.blank();
   }
 
   /**
@@ -177,65 +188,77 @@ export class DevFormatter {
     const duration = Date.now() - state.startTime.getTime();
     const durationSeconds = (duration / 1000).toFixed(2);
 
-    console.log('\n' + '─'.repeat(60));
-    console.log('Session Summary:');
-    console.log(`  Duration: ${durationSeconds}s`);
-    console.log(`  Total Tool Calls: ${state.totalToolCalls}`);
-    console.log(`  Total LLM Calls: ${state.totalLLMCalls}`);
-    console.log('─'.repeat(60) + '\n');
+    log.blank();
+    log.plain('─'.repeat(60));
+    log.plain('Session Summary:');
+    log.plain(`  Duration: ${durationSeconds}s`);
+    log.plain(`  Total Tool Calls: ${state.totalToolCalls}`);
+    log.plain(`  Total LLM Calls: ${state.totalLLMCalls}`);
+    log.plain('─'.repeat(60));
+    log.blank();
   }
 
   /**
    * Format and display available tools list.
    */
   displayToolsList(tools: Array<{ name: string; description?: string }>): void {
-    console.log('\nAvailable Tools:');
-    console.log('─'.repeat(60));
+    log.blank();
+    log.plain('Available Tools:');
+    log.plain('─'.repeat(60));
 
     if (tools.length === 0) {
-      console.log(`  ${Icons.WARNING} No tools available`);
+      log.warning(`  ${Icons.WARNING} No tools available`);
       return;
     }
 
     for (const tool of tools) {
-      console.log(`  ${Icons.CHECK} ${tool.name}`);
+      log.plain(`  ${Icons.CHECK} ${tool.name}`);
       if (tool.description) {
-        console.log(`    ${tool.description}`);
+        log.plain(`    ${tool.description}`);
       }
     }
-    console.log('');
+    log.blank();
   }
 
   /**
    * Format and display welcome message.
    */
   displayWelcomeMessage(): void {
-    console.log(
-      `\n${Icons.SUCCESS} Syrin's Dev Mode Entered. Talk to the LLM Now!\n`
+    log.blank();
+    log.success(
+      `${Icons.SUCCESS} Syrin's Dev Mode Entered. Talk to the LLM Now!`
     );
+    log.blank();
   }
 
   /**
    * Format and display server log message.
    */
   displayServerLog(type: 'stdout' | 'stderr', message: string): void {
-    const prefix = type === 'stderr' ? Icons.ERROR : Icons.TIP;
     const label = type === 'stderr' ? '[Server Error]' : '[Server]';
-    console.log(`${prefix} ${label} ${message}`);
+    if (type === 'stderr') {
+      log.error(`${label} ${message}`);
+    } else {
+      log.info(`${label} ${message}`);
+    }
   }
 
   /**
    * Format and display error message.
    */
   displayError(message: string): void {
-    console.error(`\n${Icons.ERROR} ${message}\n`);
+    log.blank();
+    log.error(message);
+    log.blank();
   }
 
   /**
    * Format and display info message.
    */
   displayInfo(message: string): void {
-    console.log(`\n${Icons.TIP} ${message}\n`);
+    log.blank();
+    log.info(message);
+    log.blank();
   }
 
   /**

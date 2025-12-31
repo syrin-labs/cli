@@ -97,6 +97,7 @@ export async function executeInit(
       }
     } catch (error) {
       // Log but don't fail initialization if .gitignore update fails
+
       logger.warn('Failed to update .gitignore', {
         error: error instanceof Error ? error.message : String(error),
       });

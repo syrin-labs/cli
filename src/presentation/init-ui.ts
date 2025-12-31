@@ -4,20 +4,24 @@
  */
 
 import { Icons, Messages, Paths, Commands } from '@/constants';
+import { log } from '@/utils/logger';
 
 /**
  * Display the "already initialized" message.
  */
 export function displayAlreadyInitialized(): void {
-  console.log(`\n${Icons.WARNING}  ${Messages.INIT_ALREADY_INITIALIZED}\n`);
-  console.log(
-    `${Icons.FOLDER} ${Messages.INIT_CONFIG_FILE(Paths.CONFIG_PATH)}\n`
-  );
-  console.log(`${Icons.DOCUMENT} ${Messages.INIT_NEXT_STEPS_HEADER}`);
-  console.log(`   ${Messages.INIT_ALREADY_INIT_MSG(Paths.CONFIG_PATH)}`);
-  console.log(`   ${Messages.INIT_VERIFY_SETUP(Commands.DOCTOR)}\n`);
-  console.log(`${Icons.TIP} ${Messages.INIT_REINITIALIZE_TIP}`);
-  console.log(`   ${Messages.INIT_REINITIALIZE_INSTRUCTION(Commands.INIT)}\n`);
+  log.blank();
+  log.warning(`  ${Messages.INIT_ALREADY_INITIALIZED}`);
+  log.blank();
+  log.plain(`${Icons.FOLDER} ${Messages.INIT_CONFIG_FILE(Paths.CONFIG_PATH)}`);
+  log.blank();
+  log.plain(`${Icons.DOCUMENT} ${Messages.INIT_NEXT_STEPS_HEADER}`);
+  log.plain(`   ${Messages.INIT_ALREADY_INIT_MSG(Paths.CONFIG_PATH)}`);
+  log.plain(`   ${Messages.INIT_VERIFY_SETUP(Commands.DOCTOR)}`);
+  log.blank();
+  log.info(Messages.INIT_REINITIALIZE_TIP);
+  log.plain(`   ${Messages.INIT_REINITIALIZE_INSTRUCTION(Commands.INIT)}`);
+  log.blank();
 }
 
 /**
@@ -25,11 +29,15 @@ export function displayAlreadyInitialized(): void {
  * @param configPath - Path to the created config file
  */
 export function displayInitSuccess(configPath: string): void {
-  console.log(`\n${Icons.CHECK} ${Messages.INIT_SUCCESS}`);
-  console.log(`\n${Icons.FOLDER} Configuration file: ${configPath}`);
-  console.log(`\n${Icons.DOCUMENT} ${Messages.INIT_NEXT_STEPS_HEADER}`);
-  console.log(`   1. ${Messages.INIT_REVIEW_CONFIG(Paths.CONFIG_PATH)}`);
-  console.log(`   2. ${Messages.INIT_SETUP_ENV_VARS}`);
-  console.log(`   3. ${Messages.INIT_RUN_DOCTOR(Commands.DOCTOR)}`);
-  console.log(`   4. ${Messages.INIT_RUN_DEV(Commands.DEV)}\n`);
+  log.blank();
+  log.success(`${Icons.CHECK} ${Messages.INIT_SUCCESS}`);
+  log.blank();
+  log.plain(`${Icons.FOLDER} Configuration file: ${configPath}`);
+  log.blank();
+  log.plain(`${Icons.DOCUMENT} ${Messages.INIT_NEXT_STEPS_HEADER}`);
+  log.plain(`   1. ${Messages.INIT_REVIEW_CONFIG(Paths.CONFIG_PATH)}`);
+  log.plain(`   2. ${Messages.INIT_SETUP_ENV_VARS}`);
+  log.plain(`   3. ${Messages.INIT_RUN_DOCTOR(Commands.DOCTOR)}`);
+  log.plain(`   4. ${Messages.INIT_RUN_DEV(Commands.DEV)}`);
+  log.blank();
 }
