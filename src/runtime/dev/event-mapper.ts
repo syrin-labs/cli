@@ -372,9 +372,17 @@ export class DevEventMapper {
     const durationStr =
       duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(1)}s`;
 
+    let resultSection = '';
+    if (resultPreview.json) {
+      resultSection = `\n**Result**:\n\`\`\`json\n${resultPreview.json}\n\`\`\``;
+      if (resultPreview.truncated) {
+        resultSection += `\n${resultPreview.truncated}`;
+      }
+    }
+
     this.chatUI.addMessage(
       'system',
-      `✅ **Tool Response**: \`${toolName}\` completed (${durationStr})${resultPreview ? `\n**Result**:\n${resultPreview}` : ''}`
+      `✅ **Tool Response**: \`${toolName}\` completed (${durationStr})${resultSection}`
     );
 
     // Clean up mapping (but keep in executionOrder for indexing)
@@ -476,9 +484,9 @@ export class DevEventMapper {
   private formatResultPreview(
     result: unknown,
     toolIndex: number | null = null
-  ): string {
+  ): { json: string; truncated?: string } {
     if (result === null || result === undefined) {
-      return 'null';
+      return { json: 'null' };
     }
 
     try {
@@ -510,26 +518,29 @@ export class DevEventMapper {
         const preview = formattedJson.substring(0, truncateAt);
         const saveHint =
           toolIndex !== null
-            ? `\n\n💡 Result truncated. Use \`\`/save-json ${toolIndex}\`\` to save the full data to a file.`
-            : '\n\n💡 Result truncated. Use ``/save-json`` to save the full data to a file.';
+            ? `💡 Result truncated. Use \`/save-json ${toolIndex}\` to save the full data to a file.`
+            : '💡 Result truncated. Use `/save-json` to save the full data to a file.';
 
-        return `${preview}\n... (truncated)${saveHint}`;
+        return { json: `${preview}\n... (truncated)`, truncated: saveHint };
       }
 
-      return formattedJson;
+      return { json: formattedJson };
     } catch {
       try {
         const fallback = JSON.stringify(result);
         if (fallback.length > 500) {
           const saveHint =
             toolIndex !== null
-              ? `\n\n💡 Result truncated. Use \`\`/save-json ${toolIndex}\`\` to save the full data to a file.`
-              : '\n\n💡 Result truncated. Use ``/save-json`` to save the full data to a file.';
-          return fallback.substring(0, 500) + '\n... (truncated)' + saveHint;
+              ? `💡 Result truncated. Use \`/save-json ${toolIndex}\` to save the full data to a file.`
+              : '💡 Result truncated. Use `/save-json` to save the full data to a file.';
+          return {
+            json: fallback.substring(0, 500) + '\n... (truncated)',
+            truncated: saveHint,
+          };
         }
-        return fallback;
+        return { json: fallback };
       } catch {
-        return '[Unable to format result]';
+        return { json: '[Unable to format result]' };
       }
     }
   }

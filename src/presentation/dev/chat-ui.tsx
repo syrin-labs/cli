@@ -19,42 +19,17 @@
 */
 import * as fs from 'fs';
 import * as path from 'path';
+import type { ChatMessage, ChatUIOptions } from './chat-ui-types';
+import { wrapText } from './text-wrapper';
+import {
+  createHeader,
+  createInputPanel,
+  createMessageComponentFactory,
+  createMessagesList,
+} from './components';
 
-export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp?: Date;
-  // For large JSON data - store efficiently
-  largeData?: {
-    type: 'json';
-    rawData: string; // Stored as string to save memory
-    size: number; // Size in bytes
-    summary?: string; // Summary/metadata
-    expanded?: boolean; // Whether user has expanded it
-  };
-}
-
-export interface ChatUIOptions {
-  /** Agent name for the prompt */
-  agentName?: string;
-  /** LLM provider name (e.g., "OpenAI", "Claude", "Ollama") */
-  llmProviderName?: string;
-  /** Whether to show timestamps in messages */
-  showTimestamps?: boolean;
-  /** Initial messages to display */
-  initialMessages?: Array<{
-    role: 'user' | 'assistant' | 'system';
-    content: string;
-  }>;
-  /** Callback when user submits a message */
-  onMessage?: (message: string) => Promise<void>;
-  /** Callback when user exits */
-  onExit?: () => Promise<void>;
-  /** History file path for persisting command history */
-  historyFile?: string;
-  /** Maximum number of history entries to keep */
-  maxHistorySize?: number;
-}
+// Re-export types for backward compatibility
+export type { ChatMessage, ChatUIOptions } from './chat-ui-types';
 
 export class ChatUI {
   private options: ChatUIOptions;
@@ -511,7 +486,7 @@ export class ChatUI {
       // The useInput hook intercepts all input including Ctrl+C, so SIGINT won't fire
       // We handle Ctrl+C directly in the useInput callback
 
-      // Parse inline markdown (bold, italic, code)
+      // Parse inline markdown (bold, italic, code) - kept in main file due to React hooks
       const parseInlineMarkdown = useCallback(
         (
           text: string,
@@ -577,7 +552,6 @@ export class ChatUI {
               );
             }
             // Code `text` (single backtick - tool names, etc.)
-            // Always use cyan for backtick values to differentiate from labels
             else if (part.startsWith('`') && part.endsWith('`')) {
               const content = part.slice(1, -1);
               elements.push(
@@ -639,7 +613,6 @@ export class ChatUI {
 
           if (parsedRows.length === 0) return null;
 
-          // Skip separator row (second row if it's all dashes)
           const dataRows = parsedRows.filter(
             (row, idx) => idx !== 1 || !row.every(cell => /^-+$/.test(cell))
           );
@@ -652,7 +625,6 @@ export class ChatUI {
           return React.createElement(
             Box,
             { key: baseKey, flexDirection: 'column', marginY: 1 },
-            // Header row
             React.createElement(
               Box,
               { key: 'header', flexDirection: 'row', marginBottom: 0.5 },
@@ -673,13 +645,11 @@ export class ChatUI {
                   ) as React.ReactElement
               )
             ),
-            // Separator
             React.createElement(
               Box,
               { key: 'separator', marginY: 0.5 },
               React.createElement(Text, { dimColor: true }, '─'.repeat(60))
             ),
-            // Body rows
             ...bodyRows.map(
               (row, rowIdx) =>
                 React.createElement(
@@ -709,13 +679,9 @@ export class ChatUI {
       );
 
       // Markdown parser for formatting assistant/system messages
-      // Memoized version that caches parsed results
       const parseMarkdown = useCallback(
         (text: string, defaultColor?: string): React.ReactElement[] => {
-          // Create cache key
           const cacheKey = `${text}-${defaultColor || ''}`;
-
-          // Check cache first
           const cached = markdownCacheRef.current.get(cacheKey);
           if (cached) {
             return cached;
@@ -723,34 +689,29 @@ export class ChatUI {
 
           const elements: React.ReactElement[] = [];
           let elementKey = 0;
-
-          // Split by lines first to handle blocks
           const lines = text.split('\n');
-
           let i = 0;
+
           while (i < lines.length) {
             const line = lines[i] || '';
 
-            // Code block detection (```language or ```)
             if (line.trim().startsWith('```')) {
               const languageMatch = line.trim().match(/^```(\w+)?$/);
               const language = languageMatch?.[1] || '';
               const codeLines: string[] = [];
-              i++; // Skip opening line
+              i++;
 
-              // Collect code block content until closing ```
               while (i < lines.length) {
                 const codeLine = lines[i] || '';
                 if (codeLine.trim() === '```') {
-                  i++; // Skip closing line
+                  i++;
                   break;
                 }
                 codeLines.push(codeLine);
                 i++;
               }
 
-              // Render code block with distinct color (blue for JSON, white for others)
-              const codeColor = language === 'json' ? 'blue' : 'white';
+              const codeColor = language === 'json' ? 'green' : 'white';
               elements.push(
                 React.createElement(
                   Box,
@@ -763,10 +724,7 @@ export class ChatUI {
                   ...codeLines.map((codeLine, lineIdx) =>
                     React.createElement(
                       Text,
-                      {
-                        key: lineIdx,
-                        color: codeColor,
-                      },
+                      { key: lineIdx, color: codeColor },
                       codeLine as React.ReactNode
                     )
                   )
@@ -775,11 +733,9 @@ export class ChatUI {
               continue;
             }
 
-            // Table detection
             if (line.trim().startsWith('|') && line.includes('|')) {
               const tableRows: string[] = [line];
               i++;
-              // Collect all table rows
               while (i < lines.length) {
                 const nextLine = lines[i] || '';
                 if (nextLine.trim().startsWith('|') && nextLine.includes('|')) {
@@ -789,7 +745,6 @@ export class ChatUI {
                   break;
                 }
               }
-              // Parse and render table
               const tableElement = parseTable(
                 tableRows,
                 elementKey++,
@@ -801,7 +756,6 @@ export class ChatUI {
               continue;
             }
 
-            // Numbered list (1. item or 1) item)
             if (/^\s*\d+[.)]\s+/.test(line)) {
               const listItems: string[] = [];
               while (i < lines.length) {
@@ -857,7 +811,6 @@ export class ChatUI {
               continue;
             }
 
-            // Bulleted list (- item or * item)
             if (/^\s*[-*]\s+/.test(line)) {
               const listItems: string[] = [];
               while (i < lines.length) {
@@ -910,7 +863,6 @@ export class ChatUI {
               continue;
             }
 
-            // Regular paragraph
             if (line.trim()) {
               const inlineElements = parseInlineMarkdown(
                 line,
@@ -929,7 +881,6 @@ export class ChatUI {
                 )
               );
             } else {
-              // Empty line
               elements.push(
                 React.createElement(Box, {
                   key: elementKey++,
@@ -940,10 +891,7 @@ export class ChatUI {
             i++;
           }
 
-          // Cache the result
           markdownCacheRef.current.set(cacheKey, elements);
-
-          // Limit cache size to prevent memory issues (keep last 100 entries)
           if (markdownCacheRef.current.size > 100) {
             const firstKey = markdownCacheRef.current.keys().next().value;
             if (firstKey) {
@@ -956,27 +904,25 @@ export class ChatUI {
         [parseInlineMarkdown, parseTable]
       );
 
-      // Wrap text (for user messages only)
-      const wrapText = useCallback((text: string, width: number): string[] => {
-        const words = text.split(/\s+/);
-        const lines: string[] = [];
-        let currentLine = '';
+      // Wrap text using imported utility
+      const wrapTextFn = useCallback(
+        (text: string, width: number): string[] => {
+          return wrapText(text, width);
+        },
+        []
+      );
 
-        for (const word of words) {
-          if (currentLine.length + word.length + 1 <= width) {
-            currentLine += (currentLine ? ' ' : '') + word;
-          } else {
-            if (currentLine) lines.push(currentLine);
-            currentLine = word;
-          }
-        }
-        if (currentLine) lines.push(currentLine);
-        return lines.length > 0 ? lines : [''];
-      }, []);
-
-      // Memoized message component - only re-renders when message content changes
-      // Note: We create this as a function component that memo will wrap
-      const MessageComponentInner = (props: {
+      // Create message component using extracted factory
+      const createMessageComponent = createMessageComponentFactory(
+        React,
+        Box,
+        Text,
+        memo
+      );
+      const MessageComponent = createMessageComponent(
+        parseMarkdown,
+        wrapTextFn
+      ) as (props: {
         message: ChatMessage;
         index: number;
         options: ChatUIOptions;
@@ -985,142 +931,7 @@ export class ChatUI {
           defaultColor?: string
         ) => React.ReactElement[];
         wrapText: (text: string, width: number) => string[];
-      }): React.ReactElement => {
-        const { message, index, options, parseMarkdown, wrapText } = props;
-        const timestamp = options.showTimestamps
-          ? `[${message.timestamp?.toLocaleTimeString() || ''}] `
-          : '';
-
-        if (message.role === 'user') {
-          // User messages: minimalistic bordered rectangle with blue background
-          const wrappedLines = wrapText(message.content, 60);
-          return React.createElement(
-            Box,
-            {
-              key: index,
-              flexDirection: 'column',
-              alignItems: 'flex-end',
-              marginY: 1,
-            },
-            React.createElement(
-              Box,
-              {
-                flexDirection: 'column',
-                borderStyle: 'round',
-                borderColor: 'blue',
-                backgroundColor: 'blue',
-                paddingX: 1,
-                paddingY: 0.1,
-                marginRight: 1,
-              },
-              wrappedLines.map((line: string, lineIndex: number) =>
-                React.createElement(
-                  Text,
-                  { key: lineIndex, color: 'white' },
-                  timestamp + line
-                )
-              )
-            )
-          );
-        } else {
-          // Assistant and system messages: parse markdown (cached via parseMarkdown)
-          const markdownElements = parseMarkdown(
-            message.content,
-            message.role === 'system' ? 'yellow' : undefined
-          );
-
-          if (message.role === 'assistant') {
-            // LLM-generated messages: minimalistic bordered rectangle style
-            return React.createElement(
-              Box,
-              {
-                key: index,
-                flexDirection: 'column',
-                alignItems: 'flex-start',
-                marginY: 1,
-              },
-              React.createElement(
-                Box,
-                {
-                  flexDirection: 'row',
-                  marginBottom: 0.25,
-                  marginLeft: 1,
-                },
-                React.createElement(
-                  Text,
-                  { color: 'cyan', bold: true },
-                  `🤖 ${options.llmProviderName || 'AI'}: `
-                )
-              ),
-              React.createElement(
-                Box,
-                {
-                  flexDirection: 'column',
-                  borderStyle: 'round',
-                  borderColor: 'gray',
-                  paddingX: 1,
-                  paddingY: 0.5,
-                  marginLeft: 1,
-                },
-                ...markdownElements
-              )
-            );
-          } else {
-            // System messages: styled with bright yellow color to make them pop (no prefix)
-            return React.createElement(
-              Box,
-              {
-                key: index,
-                flexDirection: 'column',
-                marginY: 0.5,
-              },
-              React.createElement(
-                Box,
-                {
-                  flexDirection: 'column',
-                  paddingX: 1,
-                  paddingY: 0.5,
-                },
-                ...markdownElements
-              )
-            );
-          }
-        }
-      };
-
-      // Wrap with memo for performance
-      const MessageComponent = memo(
-        MessageComponentInner,
-        (
-          prevProps: {
-            message: ChatMessage;
-            index: number;
-            options: ChatUIOptions;
-            parseMarkdown: (
-              text: string,
-              defaultColor?: string
-            ) => React.ReactElement[];
-            wrapText: (text: string, width: number) => string[];
-          },
-          nextProps: {
-            message: ChatMessage;
-            index: number;
-            options: ChatUIOptions;
-            parseMarkdown: (
-              text: string,
-              defaultColor?: string
-            ) => React.ReactElement[];
-            wrapText: (text: string, width: number) => string[];
-          }
-        ) => {
-          // Custom comparison: only re-render if message content or role changed
-          return (
-            prevProps.message.content === nextProps.message.content &&
-            prevProps.message.role === nextProps.message.role &&
-            prevProps.index === nextProps.index
-          );
-        }
-      );
+      }) => React.ReactElement;
 
       // Render using React.createElement (can't use JSX here without importing React at top level)
 
@@ -1132,116 +943,38 @@ export class ChatUI {
           height: '100%',
         },
         // Header - distinct style with blue background and border
-        React.createElement(
-          Box,
-          {
-            width: '100%',
-            borderStyle: 'single',
-            borderColor: 'blue',
-          },
-          React.createElement(
-            Text,
-            { color: 'white', bold: true },
-            ' Syrin Dev Mode '
-          ),
-          React.createElement(
-            Text,
-            { color: 'white', dimColor: true },
-            '| Enter /exit or /quit to exit'
-          )
-        ),
+        createHeader(React, Box, Text) as React.ReactElement,
         // Messages area - scrollable, takes remaining space (allows terminal scrolling)
-        React.createElement(
+        createMessagesList(
+          React,
           Box,
-          {
-            flexDirection: 'column',
-            flexGrow: 1,
-            flexShrink: 1,
-            paddingX: 1,
-            minHeight: 0, // Allow shrinking below content size
-          },
-          ((): Array<React.ReactElement | null> => {
-            // Determine which messages to show (always show last N messages)
-            const visibleMessages = messages.slice(-maxVisibleMessages);
-            const hiddenCount = messages.length - visibleMessages.length;
-            const startIndex = Math.max(
-              0,
-              messages.length - maxVisibleMessages
-            );
-
-            return [
-              // Show message if there are hidden messages
-              hiddenCount > 0
-                ? React.createElement(
-                    Box,
-                    {
-                      key: 'viewport-info',
-                      marginY: 0.5,
-                      paddingX: 1,
-                    },
-                    React.createElement(
-                      Text,
-                      { color: 'yellow', dimColor: true },
-                      `... ${hiddenCount} earlier message${hiddenCount > 1 ? 's' : ''} hidden (showing last ${maxVisibleMessages} messages).`
-                    )
-                  )
-                : null,
-              // Render visible messages
-              ...visibleMessages.map(
-                (message: ChatMessage, localIndex: number) => {
-                  const globalIndex = startIndex + localIndex;
-                  return React.createElement(MessageComponent, {
-                    key: `${message.role}-${globalIndex}-${message.content.substring(0, 50)}`,
-                    message,
-                    index: globalIndex,
-                    options,
-                    parseMarkdown,
-                    wrapText,
-                  });
-                }
-              ),
-            ];
-          })()
-        ),
+          Text,
+          messages,
+          maxVisibleMessages,
+          MessageComponent as (props: {
+            message: ChatMessage;
+            index: number;
+            options: ChatUIOptions;
+            parseMarkdown: (text: string, defaultColor?: string) => unknown[];
+            wrapText: (text: string, width: number) => string[];
+          }) => unknown,
+          options,
+          parseMarkdown as (text: string, defaultColor?: string) => unknown[],
+          wrapTextFn
+        ) as React.ReactElement,
         // Input area - fixed at bottom, modern minimal design with border and black background
         // flexShrink: 0 ensures it never shrinks, keeping it always visible at bottom
-        React.createElement(
+        createInputPanel(
+          React,
           Box,
-          {
-            width: '100%',
-            flexShrink: 0,
-            flexGrow: 0,
-            borderStyle: 'round',
-            borderColor: 'gray',
-            backgroundColor: 'black',
-            paddingX: 1,
-            paddingY: 1,
-          },
-          React.createElement(
-            Box,
-            {
-              flexDirection: 'row',
-              alignItems: 'center',
-            },
-            React.createElement(
-              Text,
-              { color: 'white', dimColor: true },
-              `${options.agentName || 'You'} > `
-            ),
-            isProcessing
-              ? React.createElement(
-                  Text,
-                  { color: 'white', dimColor: true },
-                  'Processing...'
-                )
-              : React.createElement(TextInput, {
-                  value: input,
-                  onChange: setInput,
-                  onSubmit: handleSubmit,
-                  placeholder: 'Type your message...',
-                })
-          )
-        )
+          Text,
+          TextInput,
+          options,
+          input,
+          isProcessing,
+          setInput,
+          handleSubmit
+        ) as React.ReactElement
       );
     };
 
