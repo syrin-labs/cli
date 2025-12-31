@@ -8,6 +8,14 @@ import type { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/cl
 import type { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 /**
+ * Helper function to handle errors consistently across list functions.
+ */
+function handleListError(operation: string, error: unknown): never {
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  throw new Error(`Failed to list ${operation}: ${errorMessage}`);
+}
+
+/**
  * List all tools available from the MCP server.
  */
 export async function listTools(client: Client): Promise<{
@@ -25,9 +33,7 @@ export async function listTools(client: Client): Promise<{
       tools: response.tools || [],
     };
   } catch (error) {
-    throw new Error(
-      `Failed to list tools: ${error instanceof Error ? error.message : String(error)}`
-    );
+    handleListError('tools', error);
   }
 }
 
@@ -48,9 +54,7 @@ export async function listResources(client: Client): Promise<{
       resources: response.resources || [],
     };
   } catch (error) {
-    throw new Error(
-      `Failed to list resources: ${error instanceof Error ? error.message : String(error)}`
-    );
+    handleListError('resources', error);
   }
 }
 
@@ -75,9 +79,7 @@ export async function listPrompts(client: Client): Promise<{
       prompts: response.prompts || [],
     };
   } catch (error) {
-    throw new Error(
-      `Failed to list prompts: ${error instanceof Error ? error.message : String(error)}`
-    );
+    handleListError('prompts', error);
   }
 }
 

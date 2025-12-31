@@ -14,11 +14,25 @@ import { FileEventStore } from '@/events/store/file-store';
 import { DevSession } from '@/runtime/dev/session';
 import { ChatUI } from '@/presentation/dev/chat-ui';
 import { ConfigurationError } from '@/utils/errors';
+import { handleCommandError } from '@/cli/utils';
 import { logger } from '@/utils/logger';
-import { Icons, Paths } from '@/constants';
+import {
+  Messages,
+  Paths,
+  Icons,
+  TransportTypes,
+  FileExtensions,
+} from '@/constants';
 import { makeSessionID } from '@/types/factories';
 import { v4 as uuidv4 } from 'uuid';
 import type { SyrinConfig } from '@/config/types';
+import {
+  buildDevWelcomeMessages,
+  formatToolsList,
+  formatCommandHistory,
+  formatToolCallInfo,
+  formatToolResult,
+} from '@/presentation/dev-ui';
 
 /**
  * Resolve the server command to use based on config and run-script flag.
@@ -33,18 +47,16 @@ function resolveServerCommand(
   // If run-script flag is provided, spawn using config.script
   if (runScript) {
     if (!config.script) {
-      throw new ConfigurationError(
-        'script is required when using --run-script flag'
-      );
+      throw new ConfigurationError(Messages.TRANSPORT_SCRIPT_REQUIRED_RUN_FLAG);
     }
     return { command: config.script, shouldSpawn: true };
   }
 
   // No run-script flag provided
-  if (config.transport === 'stdio') {
+  if (config.transport === TransportTypes.STDIO) {
     // For stdio, always spawn using script
     if (!config.script) {
-      throw new ConfigurationError('script is required for stdio transport');
+      throw new ConfigurationError(Messages.TRANSPORT_SCRIPT_REQUIRED);
     }
     return { command: config.script, shouldSpawn: true };
   }
@@ -81,10 +93,8 @@ export async function executeDev(
     const config = loadConfig(projectRoot);
 
     // Validate transport configuration
-    if (config.transport === 'http' && !config.mcp_url) {
-      throw new ConfigurationError(
-        'MCP URL is required for HTTP transport. Set it in config.yaml.'
-      );
+    if (config.transport === TransportTypes.HTTP && !config.mcp_url) {
+      throw new ConfigurationError(Messages.TRANSPORT_URL_REQUIRED_CONFIG);
     }
 
     // Resolve server command based on transport and run-script flag
@@ -94,8 +104,8 @@ export async function executeDev(
     );
 
     // For stdio, server command is always required
-    if (config.transport === 'stdio' && !serverCommand) {
-      throw new ConfigurationError('script is required for stdio transport');
+    if (config.transport === TransportTypes.STDIO && !serverCommand) {
+      throw new ConfigurationError(Messages.TRANSPORT_SCRIPT_REQUIRED);
     }
 
     // Create session ID
@@ -109,7 +119,7 @@ export async function executeDev(
       // If it looks like a file path (ends with .jsonl), use its directory
       let eventsDir: string;
       if (options.eventFile) {
-        if (options.eventFile.endsWith('.jsonl')) {
+        if (options.eventFile.endsWith(FileExtensions.JSONL)) {
           // User provided a file path, use its directory
           eventsDir = path.dirname(options.eventFile);
         } else {
@@ -118,10 +128,13 @@ export async function executeDev(
         }
       } else {
         // Default to .syrin/events in project root
-        eventsDir = path.join(projectRoot, Paths.SYRIN_DIR, 'events');
+        eventsDir = path.join(projectRoot, Paths.EVENTS_DIR);
       }
       eventStore = new FileEventStore(eventsDir);
-      const eventFilePath = path.join(eventsDir, `${sessionId}.jsonl`);
+      const eventFilePath = path.join(
+        eventsDir,
+        `${sessionId}${FileExtensions.JSONL}`
+      );
       logger.info(`Events will be saved to: ${eventFilePath}`);
       console.log(
         `\n${Icons.TIP} Events are being saved to: ${eventFilePath}\n`
@@ -221,36 +234,17 @@ export async function executeDev(
     // Build initial info messages for chat UI (will scroll away when user starts typing)
     const displayCommand =
       shouldSpawn && serverCommand ? serverCommand : undefined;
-    const initialMessages: Array<{ role: 'system'; content: string }> = [
-      {
-        role: 'system',
-        content: `Welcome to Syrin Dev Mode!`,
-      },
-      {
-        role: 'system',
-        content: `Version: ${config.version} | LLM: ${llmProvider.getName()} | Tools: ${availableTools.length}`,
-      },
-    ];
-
-    if (config.transport === 'http' && config.mcp_url) {
-      initialMessages.push({
-        role: 'system',
-        content: `Transport: ${config.transport} | MCP URL: ${config.mcp_url} ✅`,
-      });
-    } else if (config.transport === 'stdio' && displayCommand) {
-      initialMessages.push({
-        role: 'system',
-        content: `Transport: ${config.transport} | Command: ${displayCommand} ✅`,
-      });
-    }
-
-    initialMessages.push({
-      role: 'system',
-      content: `Type your message below or /help for commands.`,
+    const initialMessages = buildDevWelcomeMessages({
+      version: config.version,
+      llmProvider: llmProvider.getName(),
+      toolCount: availableTools.length,
+      transport: config.transport,
+      mcpUrl: config.mcp_url,
+      command: displayCommand,
     });
 
     // Create Chat UI
-    const historyFile = path.join(projectRoot, Paths.SYRIN_DIR, '.dev-history');
+    const historyFile = path.join(projectRoot, Paths.DEV_HISTORY_FILE);
     const chatUI = new ChatUI({
       agentName: config.agent_name,
       llmProviderName: llmProvider.getName(),
@@ -262,19 +256,8 @@ export async function executeDev(
         // Handle special commands
         if (input === '/tools') {
           const tools = session.getAvailableTools();
-          let toolsList = 'Available Tools:\n';
-          if (tools.length === 0) {
-            toolsList += '  No tools available';
-          } else {
-            for (const tool of tools) {
-              toolsList += `  • ${tool.name}`;
-              if (tool.description) {
-                toolsList += `: ${tool.description}`;
-              }
-              toolsList += '\n';
-            }
-          }
-          chatUI.addMessage('system', toolsList.trim());
+          const toolsList = formatToolsList(tools);
+          chatUI.addMessage('system', toolsList);
           return;
         }
 
@@ -288,24 +271,17 @@ export async function executeDev(
                 .filter((line: string) => line.trim())
                 .slice(-100); // Show last 100 entries
 
-              if (historyLines.length === 0) {
-                chatUI.addMessage('system', 'No command history yet.');
-              } else {
-                let historyList = 'Command History (last 100 entries):\n';
-                historyLines.forEach((line: string, index: number) => {
-                  historyList += `  ${index + 1}. ${line}\n`;
-                });
-                chatUI.addMessage('system', historyList.trim());
-              }
+              const historyDisplay = formatCommandHistory(historyLines);
+              chatUI.addMessage('system', historyDisplay);
             } else {
-              chatUI.addMessage('system', 'No command history yet.');
+              chatUI.addMessage('system', Messages.DEV_NO_HISTORY);
             }
           } catch (error) {
             const errorMessage =
               error instanceof Error ? error.message : String(error);
             chatUI.addMessage(
               'system',
-              `Error reading history: ${errorMessage}`
+              Messages.DEV_ERROR_READING_HISTORY(errorMessage)
             );
             const err =
               error instanceof Error ? error : new Error(String(error));
@@ -329,16 +305,19 @@ export async function executeDev(
           const newToolCalls = stateAfter.toolCalls.slice(toolCallsBefore);
           for (const toolCall of newToolCalls) {
             // Display tool call info
-            const toolInfo = `🔧 Calling tool: ${toolCall.name}\nArguments: ${JSON.stringify(toolCall.arguments, null, 2)}`;
+            const toolInfo = formatToolCallInfo(
+              toolCall.name,
+              toolCall.arguments
+            );
             chatUI.addMessage('system', toolInfo);
 
             // Display tool result
             if (toolCall.result !== undefined) {
-              const resultText =
-                typeof toolCall.result === 'string'
-                  ? toolCall.result
-                  : JSON.stringify(toolCall.result, null, 2);
-              const resultInfo = `✅ Tool ${toolCall.name} completed${toolCall.duration ? ` (${toolCall.duration}ms)` : ''}\nResult: ${resultText}`;
+              const resultInfo = formatToolResult(
+                toolCall.name,
+                toolCall.result,
+                toolCall.duration
+              );
               chatUI.addMessage('system', resultInfo);
             }
           }
@@ -385,7 +364,7 @@ export async function executeDev(
         return; // Already handling exit
       }
       isExiting = true;
-      console.log('\n\nGoodbye! 👋');
+      console.log(Messages.DEV_GOODBYE);
       chatUI.stop();
       void (async (): Promise<void> => {
         try {
@@ -409,15 +388,6 @@ export async function executeDev(
     // Start Chat UI (header message is already set in options)
     await chatUI.start();
   } catch (error) {
-    if (error instanceof ConfigurationError) {
-      console.error(`\n${Icons.ERROR} ${error.message}\n`);
-      process.exit(1);
-    } else if (error instanceof Error) {
-      console.error(`\n${Icons.ERROR} ${error.message}\n`);
-      process.exit(1);
-    } else {
-      console.error(`\n${Icons.ERROR} Failed to start dev mode\n`);
-      process.exit(1);
-    }
+    handleCommandError(error, Messages.DEV_ERROR_START);
   }
 }

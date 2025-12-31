@@ -52,4 +52,92 @@ export const Messages = {
     'Add `mcp_url` to your config.yaml file when using http transport',
   CONFIG_ADD_SCRIPTS:
     'Add `scripts` section to your config.yaml with `dev` and `start` commands. For stdio transport, `scripts.dev` is required.',
+  CONFIG_ADD_SCRIPT_STDIO:
+    'Add script to your config.yaml file when using stdio transport',
+
+  // Transport/Connection Error Messages
+  TRANSPORT_URL_REQUIRED:
+    'MCP URL is required for HTTP transport. Set it in config.yaml or use --url option.',
+  TRANSPORT_SCRIPT_REQUIRED:
+    'Script is required for stdio transport. Set it in config.yaml or use --script option.',
+  TRANSPORT_SCRIPT_REQUIRED_RUN_FLAG:
+    'script is required when using --run-script flag',
+  TRANSPORT_URL_REQUIRED_CONFIG:
+    'MCP URL is required for HTTP transport. Set it in config.yaml.',
+  CONNECTION_FAILED: (mcpUrl: string, source: string) =>
+    `Cannot connect to MCP server at ${mcpUrl}${source}.\n` +
+    `\n` +
+    `The server appears to be not running or unreachable.\n` +
+    `\n` +
+    `To fix this:\n` +
+    `  1. Make sure the MCP server is running\n` +
+    `  2. Verify the URL is correct: ${mcpUrl}\n` +
+    `  3. Check if the server is listening on the expected port\n`,
+  CONNECTION_TIMEOUT_HTTP: (mcpUrl: string) =>
+    `Connection to MCP server at ${mcpUrl} timed out.\n` +
+    `The server may be slow to respond or not running.`,
+  CONNECTION_FAILED_STDIO: (mcpCommand: string) =>
+    `Failed to start MCP server process: ${mcpCommand}\n` +
+    `\n` +
+    `The script may be incorrect or the executable not found.\n` +
+    `Verify the script path in config.yaml or use --script option.`,
+  CONNECTION_TIMEOUT_STDIO:
+    `Connection to MCP server via stdio timed out.\n` +
+    `The server process may have failed to start or is not responding.`,
+
+  // Dev Command Messages
+  DEV_WELCOME: 'Welcome to Syrin Dev Mode!',
+  DEV_VERSION_INFO: (version: string, llm: string, tools: number) =>
+    `Version: ${version} | LLM: ${llm} | Tools: ${tools}`,
+  DEV_TRANSPORT_HTTP: (transport: string, url: string) =>
+    `Transport: ${transport} | MCP URL: ${url} ✅`,
+  DEV_TRANSPORT_STDIO: (transport: string, command: string) =>
+    `Transport: ${transport} | Command: ${command} ✅`,
+  DEV_HELP_MESSAGE: 'Type your message below or /help for commands.',
+  DEV_TOOLS_HEADER: 'Available Tools:',
+  DEV_NO_TOOLS: '  No tools available',
+  DEV_HISTORY_HEADER: 'Command History (last 100 entries):',
+  DEV_NO_HISTORY: 'No command history yet.',
+  DEV_ERROR_READING_HISTORY: (error: string) =>
+    `Error reading history: ${error}`,
+  DEV_TOOL_CALLING: (name: string) => `🔧 Calling tool: ${name}`,
+  DEV_TOOL_COMPLETED: (name: string, duration?: number) =>
+    `✅ Tool ${name} completed${duration ? ` (${duration}ms)` : ''}`,
+  DEV_ERROR_START: 'Failed to start dev mode',
+  DEV_GOODBYE: '\n\nGoodbye! 👋',
+
+  // Doctor Command Messages
+  DOCTOR_SCRIPT_MISSING: 'script is missing',
+  DOCTOR_COMMAND_NOT_FOUND: (command: string) =>
+    `Command "${command}" not found in PATH`,
+  DOCTOR_COMMAND_INSTALL: (command: string) =>
+    `Make sure "${command}" is installed and available in your PATH`,
+  DOCTOR_SCRIPT_WORKING: 'working',
+  DOCTOR_SCRIPT_INFO: (script: string) => `Script: ${script}`,
+  DOCTOR_MCP_URL_INFO: (url: string) => `MCP URL: ${String(url)}`,
+
+  // List Command Messages
+  LIST_INVALID_TYPE: (type: string) => `Invalid list type: ${type}`,
+  LIST_VALID_TYPES: 'Valid types are: tools, resources, prompts',
+  LIST_ERROR_FAILED: (type: string) => `Failed to list ${type}`,
+  LIST_SOURCE_CONFIG: ' (from config.yaml)',
+  LIST_SOURCE_CLI_URL: ' (from --url)',
+
+  // Prompt Validation Messages
+  PROMPT_PROJECT_NAME_REQUIRED: 'Project name is required',
+  PROMPT_PROJECT_NAME_INVALID:
+    'Project name can only contain letters, numbers, and hyphens',
+  PROMPT_AGENT_NAME_REQUIRED: 'Agent name is required',
+  PROMPT_MCP_URL_REQUIRED: 'MCP server URL is required for http transport',
+  PROMPT_URL_INVALID: 'Invalid URL format',
+  PROMPT_SCRIPT_REQUIRED: 'Script command is required',
+  PROMPT_LLM_PROVIDER_REQUIRED: 'At least one LLM provider must be selected',
+  PROMPT_OPENAI_API_KEY_REQUIRED: 'OpenAI API key is required',
+  PROMPT_OPENAI_MODEL_REQUIRED: 'OpenAI model name is required',
+  PROMPT_CLAUDE_API_KEY_REQUIRED: 'Claude API key is required',
+  PROMPT_CLAUDE_MODEL_REQUIRED: 'Claude model name is required',
+  PROMPT_OLLAMA_MODEL_REQUIRED: 'Ollama model name is required',
+
+  // CLI Error Messages
+  CLI_START_FAILED: 'Failed to start CLI',
 } as const;

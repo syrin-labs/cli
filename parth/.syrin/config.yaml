@@ -56,13 +56,13 @@ llm:
     MODEL_NAME: 'OPENAI_MODEL_NAME'
 
     # Set as default LLM provider
-    default: false
+    default: true
 
   # Claude Provider (uncomment to enable)
   claude:
     API_KEY: 'CLAUDE_API_KEY'
     MODEL_NAME: 'CLAUDE_MODEL_NAME'
-    default: true
+    default: false
 
   # Local LLM Provider (Ollama) - uncomment to enable
   ollama:

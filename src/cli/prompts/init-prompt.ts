@@ -13,6 +13,14 @@ import {
   makeModelName,
   makeScriptCommand,
 } from '@/types/factories';
+import {
+  Messages,
+  TransportTypes,
+  LLMProviders,
+  LLMProviderDisplayNames,
+  Defaults,
+  EnvVars,
+} from '@/constants';
 
 /**
  * Interface for inquirer answers.
@@ -53,10 +61,10 @@ export async function promptInitOptions(
       default: defaultProjectName,
       validate: (input: string): boolean | string => {
         if (!input.trim()) {
-          return 'Project name is required';
+          return Messages.PROMPT_PROJECT_NAME_REQUIRED;
         }
         if (!/^[a-z0-9-]+$/i.test(input)) {
-          return 'Project name can only contain letters, numbers, and hyphens';
+          return Messages.PROMPT_PROJECT_NAME_INVALID;
         }
         return true;
       },
@@ -65,10 +73,12 @@ export async function promptInitOptions(
       type: 'input',
       name: 'agentName',
       message: 'Agent name:',
-      default: defaults?.agentName ? String(defaults.agentName) : 'Agent',
+      default: defaults?.agentName
+        ? String(defaults.agentName)
+        : Defaults.AGENT_NAME,
       validate: (input: string): boolean | string => {
         if (!input.trim()) {
-          return 'Agent name is required';
+          return Messages.PROMPT_AGENT_NAME_REQUIRED;
         }
         return true;
       },
@@ -78,36 +88,37 @@ export async function promptInitOptions(
       name: 'transport',
       message: 'Transport type:',
       choices: [
-        { name: 'stdio - Spawn MCP server as a subprocess', value: 'stdio' },
         {
-          name: 'http - Connect to a running MCP server via HTTP',
-          value: 'http',
+          name: `${TransportTypes.STDIO} - Spawn MCP server as a subprocess`,
+          value: TransportTypes.STDIO,
+        },
+        {
+          name: `${TransportTypes.HTTP} - Connect to a running MCP server via HTTP`,
+          value: TransportTypes.HTTP,
         },
       ],
-      default: defaults?.transport || 'stdio',
+      default: defaults?.transport || Defaults.TRANSPORT,
     },
     {
       type: 'input',
       name: 'mcpUrl',
       message: 'MCP server URL:',
-      default: defaults?.mcpUrl
-        ? String(defaults.mcpUrl)
-        : 'http://localhost:8000/mcp',
+      default: defaults?.mcpUrl ? String(defaults.mcpUrl) : Defaults.MCP_URL,
       when: (answers: Partial<InitAnswers>): boolean =>
-        answers?.transport === 'http',
+        answers?.transport === TransportTypes.HTTP,
       validate: (
         input: string,
         answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers?.transport === 'http') {
+        if (answers?.transport === TransportTypes.HTTP) {
           if (!input.trim()) {
-            return 'MCP server URL is required for http transport';
+            return Messages.PROMPT_MCP_URL_REQUIRED;
           }
           try {
             new URL(input);
             return true;
           } catch {
-            return 'Invalid URL format';
+            return Messages.PROMPT_URL_INVALID;
           }
         }
         return true;
@@ -120,7 +131,7 @@ export async function promptInitOptions(
       default: defaults?.script ? String(defaults.script) : 'python3 server.py',
       validate: (input: string): boolean | string => {
         if (!input.trim()) {
-          return 'Script command is required';
+          return Messages.PROMPT_SCRIPT_REQUIRED;
         }
         return true;
       },
@@ -130,16 +141,26 @@ export async function promptInitOptions(
       name: 'llmProviders',
       message: 'Select LLM providers to configure:',
       choices: [
-        { name: 'OpenAI', value: 'openai', checked: true },
-        { name: 'Claude (Anthropic)', value: 'claude' },
-        { name: 'Ollama', value: 'ollama' },
+        {
+          name: LLMProviderDisplayNames.OPENAI,
+          value: LLMProviders.OPENAI,
+          checked: true,
+        },
+        {
+          name: LLMProviderDisplayNames.CLAUDE,
+          value: LLMProviders.CLAUDE,
+        },
+        {
+          name: LLMProviderDisplayNames.OLLAMA,
+          value: LLMProviders.OLLAMA,
+        },
       ],
       default: defaults?.llmProviders
         ? Object.keys(defaults.llmProviders)
-        : ['openai'],
+        : [LLMProviders.OPENAI],
       validate: (input: string[]): boolean | string => {
         if (input.length === 0) {
-          return 'At least one LLM provider must be selected';
+          return Messages.PROMPT_LLM_PROVIDER_REQUIRED;
         }
         return true;
       },
@@ -148,14 +169,17 @@ export async function promptInitOptions(
       type: 'input',
       name: 'openaiApiKey',
       message: 'OpenAI API Key (env var name or direct value):',
-      default: 'OPENAI_API_KEY',
+      default: EnvVars.OPENAI_API_KEY,
       when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes('openai') ?? false,
+        answers.llmProviders?.includes(LLMProviders.OPENAI) ?? false,
       validate: (
         input: string,
         answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers?.llmProviders?.includes('openai') && !input.trim()) {
+        if (
+          answers?.llmProviders?.includes(LLMProviders.OPENAI) &&
+          !input.trim()
+        ) {
           return 'OpenAI API key is required';
         }
         return true;
@@ -165,15 +189,18 @@ export async function promptInitOptions(
       type: 'input',
       name: 'openaiModel',
       message: 'OpenAI Model Name (env var name or direct value):',
-      default: 'OPENAI_MODEL_NAME',
+      default: EnvVars.OPENAI_MODEL_NAME,
       when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes('openai') ?? false,
+        answers.llmProviders?.includes(LLMProviders.OPENAI) ?? false,
       validate: (
         input: string,
         answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers?.llmProviders?.includes('openai') && !input.trim()) {
-          return 'OpenAI model name is required';
+        if (
+          answers?.llmProviders?.includes(LLMProviders.OPENAI) &&
+          !input.trim()
+        ) {
+          return Messages.PROMPT_OPENAI_MODEL_REQUIRED;
         }
         return true;
       },
@@ -182,15 +209,18 @@ export async function promptInitOptions(
       type: 'input',
       name: 'claudeApiKey',
       message: 'Claude API Key (env var name or direct value):',
-      default: 'CLAUDE_API_KEY',
+      default: EnvVars.CLAUDE_API_KEY,
       when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes('claude') ?? false,
+        answers.llmProviders?.includes(LLMProviders.CLAUDE) ?? false,
       validate: (
         input: string,
         answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers?.llmProviders?.includes('claude') && !input.trim()) {
-          return 'Claude API key is required';
+        if (
+          answers?.llmProviders?.includes(LLMProviders.CLAUDE) &&
+          !input.trim()
+        ) {
+          return Messages.PROMPT_CLAUDE_API_KEY_REQUIRED;
         }
         return true;
       },
@@ -199,15 +229,18 @@ export async function promptInitOptions(
       type: 'input',
       name: 'claudeModel',
       message: 'Claude Model Name (env var name or direct value):',
-      default: 'CLAUDE_MODEL_NAME',
+      default: EnvVars.CLAUDE_MODEL_NAME,
       when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes('claude') ?? false,
+        answers.llmProviders?.includes(LLMProviders.CLAUDE) ?? false,
       validate: (
         input: string,
         answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers?.llmProviders?.includes('claude') && !input.trim()) {
-          return 'Claude model name is required';
+        if (
+          answers?.llmProviders?.includes(LLMProviders.CLAUDE) &&
+          !input.trim()
+        ) {
+          return Messages.PROMPT_CLAUDE_MODEL_REQUIRED;
         }
         return true;
       },
@@ -216,15 +249,18 @@ export async function promptInitOptions(
       type: 'input',
       name: 'ollamaModelName',
       message: 'Ollama Model Name (e.g., "llama2", "mistral", "codellama"):',
-      default: 'OLLAMA_MODEL_NAME',
+      default: EnvVars.OLLAMA_MODEL_NAME,
       when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes('ollama') ?? false,
+        answers.llmProviders?.includes(LLMProviders.OLLAMA) ?? false,
       validate: (
         input: string,
         answers?: Partial<InitAnswers>
       ): boolean | string => {
-        if (answers?.llmProviders?.includes('ollama') && !input.trim()) {
-          return 'Ollama model name is required';
+        if (
+          answers?.llmProviders?.includes(LLMProviders.OLLAMA) &&
+          !input.trim()
+        ) {
+          return Messages.PROMPT_OLLAMA_MODEL_REQUIRED;
         }
         return true;
       },
@@ -292,13 +328,13 @@ export function getDefaultInitOptions(projectRoot: string): InitOptions {
 
   return {
     projectName: makeProjectName(defaultProjectNameStr),
-    agentName: makeAgentName('Agent'),
-    transport: 'stdio',
-    script: makeScriptCommand('python3 server.py'),
+    agentName: makeAgentName(Defaults.AGENT_NAME),
+    transport: Defaults.TRANSPORT,
+    script: makeScriptCommand(Defaults.SCRIPT_COMMAND),
     llmProviders: {
       openai: {
-        apiKey: makeAPIKey('OPENAI_API_KEY'),
-        modelName: makeModelName('OPENAI_MODEL_NAME'),
+        apiKey: makeAPIKey(EnvVars.OPENAI_API_KEY),
+        modelName: makeModelName(EnvVars.OPENAI_MODEL_NAME),
         default: true,
       },
     },

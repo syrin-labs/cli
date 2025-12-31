@@ -1,6 +1,28 @@
 import type { EventEnvelope } from '@/events/types';
 
 /**
+ * Normalize an unknown error value to an Error instance.
+ * This ensures consistent error handling across the codebase.
+ *
+ * @param error - Unknown error value (Error, string, or other)
+ * @returns Error instance
+ */
+export function normalizeError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+/**
+ * Extract error message from unknown error value.
+ * Returns a string representation of the error.
+ *
+ * @param error - Unknown error value
+ * @returns Error message string
+ */
+export function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
  * Base error class for all Syrin errors.
  * All errors should extend this class to maintain consistency.
  */

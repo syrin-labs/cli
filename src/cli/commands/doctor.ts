@@ -9,10 +9,9 @@ import {
   checkCommandExists,
   extractCommandName,
 } from '@/config/env-checker';
-import { ConfigurationError } from '@/utils/errors';
-import { logger } from '@/utils/logger';
+import { handleCommandError } from '@/cli/utils';
 import type { SyrinConfig } from '@/config/types';
-import { Icons, Messages } from '@/constants';
+import { Messages, TransportTypes, Defaults, LLMProviders } from '@/constants';
 import { displayDoctorReport } from '@/presentation/doctor-ui';
 
 interface CheckResult {
@@ -41,7 +40,7 @@ interface DoctorReport {
  * Check transport configuration.
  */
 function checkTransport(config: SyrinConfig): CheckResult {
-  if (config.transport === 'http') {
+  if (config.transport === TransportTypes.HTTP) {
     if (!config.mcp_url) {
       return {
         isValid: false,
@@ -51,15 +50,15 @@ function checkTransport(config: SyrinConfig): CheckResult {
     }
     return {
       isValid: true,
-      message: `MCP URL: ${String(config.mcp_url)}`,
+      message: Messages.DOCTOR_MCP_URL_INFO(String(config.mcp_url)),
     };
   } else {
     // stdio transport
     if (!config.script) {
       return {
         isValid: false,
-        message: 'script is missing',
-        fix: 'Add script to your config.yaml file when using stdio transport',
+        message: Messages.DOCTOR_SCRIPT_MISSING,
+        fix: Messages.CONFIG_ADD_SCRIPT_STDIO,
       };
     }
     const commandName = extractCommandName(String(config.script));
@@ -67,13 +66,13 @@ function checkTransport(config: SyrinConfig): CheckResult {
     if (!commandExists) {
       return {
         isValid: false,
-        message: `Command "${commandName}" not found in PATH`,
-        fix: `Make sure "${commandName}" is installed and available in your PATH`,
+        message: Messages.DOCTOR_COMMAND_NOT_FOUND(commandName),
+        fix: Messages.DOCTOR_COMMAND_INSTALL(commandName),
       };
     }
     return {
       isValid: true,
-      message: `Script: ${String(config.script)}`,
+      message: Messages.DOCTOR_SCRIPT_INFO(String(config.script)),
     };
   }
 }
@@ -108,17 +107,19 @@ function checkScript(config: SyrinConfig): CheckResult | null {
   if (shellBuiltIns.includes(commandName)) {
     return {
       isValid: true, // Assume valid if it uses shell built-ins (will be executed in shell)
-      message: 'working',
+      message: Defaults.WORKING,
     };
   }
 
   const commandExists = checkCommandExists(commandName);
   return {
     isValid: commandExists,
-    message: commandExists ? 'working' : `Command "${commandName}" not found`,
+    message: commandExists
+      ? Defaults.WORKING
+      : Messages.DOCTOR_COMMAND_NOT_FOUND(commandName),
     fix: commandExists
       ? undefined
-      : `Make sure "${commandName}" is installed and available in your PATH`,
+      : Messages.DOCTOR_COMMAND_INSTALL(commandName),
   };
 }
 
@@ -181,12 +182,12 @@ function checkLocalLLMProviders(
   const checks: DoctorReport['localLlmChecks'] = [];
 
   for (const [providerName] of Object.entries(config.llm)) {
-    if (providerName === 'ollama') {
+    if (providerName === LLMProviders.OLLAMA) {
       checks.push({
         provider: providerName,
         check: {
           isValid: true,
-          message: 'working',
+          message: Defaults.WORKING,
         },
       });
     }
@@ -238,14 +239,6 @@ export function executeDoctor(projectRoot: string = process.cwd()): void {
       process.exit(1);
     }
   } catch (error) {
-    if (error instanceof ConfigurationError) {
-      console.error(`\n${Icons.ERROR} ${error.message}\n`);
-      process.exit(1);
-    }
-
-    const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('Doctor command failed', err);
-    console.error(`\n${Icons.ERROR} ${Messages.ERROR_UNEXPECTED}\n`);
-    process.exit(1);
+    handleCommandError(error);
   }
 }

@@ -12,7 +12,7 @@ import { executeDev } from '@/cli/commands/dev';
 import { logger } from '@/utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
-import { Icons } from '@/constants';
+import { Icons, Messages, ListTypes } from '@/constants';
 
 const program = new Command();
 
@@ -156,8 +156,8 @@ export function setupCLI(): void {
     .description('List tools, resources, or prompts from an MCP server')
     .argument(
       '[type]',
-      'Type to list: tools, resources, or prompts (default: tools)',
-      'tools'
+      `Type to list: ${ListTypes.TOOLS}, ${ListTypes.RESOURCES}, or ${ListTypes.PROMPTS} (default: ${ListTypes.TOOLS})`,
+      ListTypes.TOOLS
     )
     .option(
       '--transport <type>',
@@ -186,10 +186,19 @@ export function setupCLI(): void {
         }
       ) => {
         try {
-          const listType = type as 'tools' | 'resources' | 'prompts';
-          if (!['tools', 'resources', 'prompts'].includes(listType)) {
-            console.error(`\n${Icons.ERROR} Invalid list type: ${type}`);
-            console.error('Valid types are: tools, resources, prompts\n');
+          const listType = type as
+            | typeof ListTypes.TOOLS
+            | typeof ListTypes.RESOURCES
+            | typeof ListTypes.PROMPTS;
+          if (
+            ![ListTypes.TOOLS, ListTypes.RESOURCES, ListTypes.PROMPTS].includes(
+              listType as typeof ListTypes.TOOLS
+            )
+          ) {
+            console.error(
+              `\n${Icons.ERROR} ${Messages.LIST_INVALID_TYPE(type)}`
+            );
+            console.error(`${Messages.LIST_VALID_TYPES}\n`);
             process.exit(1);
           }
 
@@ -274,7 +283,7 @@ export function run(): void {
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('CLI setup failed', err);
-    console.error('Failed to start CLI');
+    console.error(Messages.CLI_START_FAILED);
     process.exit(1);
   }
 }

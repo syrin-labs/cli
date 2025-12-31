@@ -14,4 +14,15 @@ export const Paths = {
   CONFIG_PATH: '.syrin/config.yaml',
   /** Full path to env file (relative to project root) */
   ENV_PATH: '.env',
+  /** Events directory (relative to project root) */
+  EVENTS_DIR: '.syrin/events',
+  /** Dev history file (relative to project root) */
+  DEV_HISTORY_FILE: '.syrin/.dev-history',
+} as const;
+
+/**
+ * File extension constants.
+ */
+export const FileExtensions = {
+  JSONL: '.jsonl',
 } as const;

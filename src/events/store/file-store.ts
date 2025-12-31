@@ -3,6 +3,7 @@ import * as path from 'path';
 import type { EventEnvelope } from '@/events/types';
 import type { EventStore } from '@/events/store';
 import type { SessionID } from '@/types/ids';
+import { Paths, FileExtensions } from '@/constants';
 
 /**
  * File-based event store implementation.
@@ -13,7 +14,7 @@ export class FileEventStore implements EventStore {
   private readonly eventsDir: string;
   private writeStreams: Map<SessionID, fs.FileHandle> = new Map();
 
-  constructor(eventsDir: string = '.syrin/events') {
+  constructor(eventsDir: string = Paths.EVENTS_DIR) {
     this.eventsDir = eventsDir;
   }
 
@@ -36,7 +37,7 @@ export class FileEventStore implements EventStore {
    * Get the file path for a session's events.
    */
   private getEventFilePath(sessionId: SessionID): string {
-    return path.join(this.eventsDir, `${sessionId}.jsonl`);
+    return path.join(this.eventsDir, `${sessionId}${FileExtensions.JSONL}`);
   }
 
   /**
@@ -117,8 +118,10 @@ export class FileEventStore implements EventStore {
       const files = await fs.readdir(this.eventsDir);
 
       return files
-        .filter((file: string) => file.endsWith('.jsonl'))
-        .map((file: string) => file.replace('.jsonl', '') as SessionID);
+        .filter((file: string) => file.endsWith(FileExtensions.JSONL))
+        .map(
+          (file: string) => file.replace(FileExtensions.JSONL, '') as SessionID
+        );
     } catch (error: unknown) {
       const err = error as NodeJS.ErrnoException;
       if (err.code === 'ENOENT') {

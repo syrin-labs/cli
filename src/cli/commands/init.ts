@@ -12,8 +12,12 @@ import {
 import { ConfigurationError } from '@/utils/errors';
 import { logger } from '@/utils/logger';
 import type { InitOptions } from '@/config/types';
-import { Icons, Messages, Paths, Commands } from '@/constants';
+import { Messages, Paths } from '@/constants';
 import { ensureGitignorePattern } from '@/utils/gitignore';
+import {
+  displayAlreadyInitialized,
+  displayInitSuccess,
+} from '@/presentation/init-ui';
 
 export interface InitCommandOptions {
   /** Skip interactive prompts, use defaults */
@@ -34,18 +38,7 @@ export async function executeInit(
 
   // Check if project is already initialized
   if (isProjectInitialized(projectRoot)) {
-    console.log(`\n${Icons.WARNING}  ${Messages.INIT_ALREADY_INITIALIZED}\n`);
-    console.log(
-      `${Icons.FOLDER} ${Messages.INIT_CONFIG_FILE(Paths.CONFIG_PATH)}\n`
-    );
-    console.log(`${Icons.DOCUMENT} ${Messages.INIT_NEXT_STEPS_HEADER}`);
-    console.log(`   ${Messages.INIT_ALREADY_INIT_MSG(Paths.CONFIG_PATH)}`);
-    console.log(`   ${Messages.INIT_VERIFY_SETUP(Commands.DOCTOR)}\n`);
-    console.log(`${Icons.TIP} ${Messages.INIT_REINITIALIZE_TIP}`);
-    console.log(
-      `   ${Messages.INIT_REINITIALIZE_INSTRUCTION(Commands.INIT)}\n`
-    );
-
+    displayAlreadyInitialized();
     // Exit gracefully without showing error stack
     return;
   }
@@ -87,15 +80,15 @@ export async function executeInit(
     try {
       const eventsPatternAdded = await ensureGitignorePattern(
         projectRoot,
-        '.syrin/events'
+        Paths.EVENTS_DIR
       );
       if (eventsPatternAdded) {
-        logger.info('Added .syrin/events to .gitignore');
+        logger.info(`Added ${Paths.EVENTS_DIR} to .gitignore`);
       }
 
       const historyPatternAdded = await ensureGitignorePattern(
         projectRoot,
-        '.syrin/.dev-history'
+        Paths.DEV_HISTORY_FILE
       );
       if (historyPatternAdded) {
         logger.info('Added .syrin/.dev-history to .gitignore');
@@ -108,13 +101,7 @@ export async function executeInit(
     }
 
     // Display success message
-    console.log(`\n${Icons.CHECK} ${Messages.INIT_SUCCESS}`);
-    console.log(`\n${Icons.FOLDER} Configuration file: ${configPath}`);
-    console.log(`\n${Icons.DOCUMENT} ${Messages.INIT_NEXT_STEPS_HEADER}`);
-    console.log(`   1. ${Messages.INIT_REVIEW_CONFIG(Paths.CONFIG_PATH)}`);
-    console.log(`   2. ${Messages.INIT_SETUP_ENV_VARS}`);
-    console.log(`   3. ${Messages.INIT_RUN_DOCTOR(Commands.DOCTOR)}`);
-    console.log(`   4. ${Messages.INIT_RUN_DEV(Commands.DEV)}\n`);
+    displayInitSuccess(configPath);
   } catch (error) {
     const configError =
       error instanceof ConfigurationError
