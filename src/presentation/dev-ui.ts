@@ -6,6 +6,7 @@
 import { Messages, TransportTypes } from '@/constants';
 import { checkVersion, getCurrentVersion } from '@/utils/version-checker';
 import {
+  estimateObjectSize,
   formatJSONWithPagination,
   getJSONSummary,
 } from '@/utils/json-formatter';
@@ -311,38 +312,4 @@ export function formatToolResult(
       return `${completed}\nResult (${sizeDisplay}${structureInfo}):\n\nPreview (first ${previewLines} lines, ${remaining} more):\n${preview}\n\n[... ${remaining} more lines ...]`;
     }
   }
-}
-
-/**
- * Estimate object size without full stringification (much faster for large objects).
- */
-function estimateObjectSize(obj: unknown): number {
-  if (obj === null || obj === undefined) return 4; // "null"
-  if (typeof obj === 'string') return obj.length + 2; // quotes
-  if (typeof obj === 'number') return 10; // average number length
-  if (typeof obj === 'boolean') return 5; // "true"/"false"
-  if (Array.isArray(obj)) {
-    // Estimate: brackets + commas + items
-    let size = 2; // brackets
-    for (let i = 0; i < Math.min(obj.length, 100); i++) {
-      // Sample first 100 items
-      size += estimateObjectSize(obj[i]) + 1; // +1 for comma
-    }
-    if (obj.length > 100) {
-      // Extrapolate for remaining items
-      const avgItemSize = size / Math.min(obj.length, 100);
-      size += (obj.length - 100) * avgItemSize;
-    }
-    return size;
-  }
-  if (typeof obj === 'object') {
-    const keys = Object.keys(obj as Record<string, unknown>);
-    let size = 2; // braces
-    for (const key of keys) {
-      size += key.length + 3; // key + quotes + colon
-      size += estimateObjectSize((obj as Record<string, unknown>)[key]) + 1; // +1 for comma
-    }
-    return size;
-  }
-  return 10; // fallback estimate
 }

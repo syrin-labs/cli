@@ -403,7 +403,7 @@ export function getJSONSummary(data: unknown): {
 /**
  * Estimate object size without full stringification (much faster for large objects).
  */
-function estimateObjectSize(obj: unknown): number {
+export function estimateObjectSize(obj: unknown): number {
   if (obj === null || obj === undefined) return 4; // "null"
   if (typeof obj === 'string') return obj.length + 2; // quotes
   if (typeof obj === 'number') return 10; // average number length

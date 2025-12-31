@@ -285,6 +285,8 @@ export async function executeDev(
     const historyFile = path.join(projectRoot, Paths.DEV_HISTORY_FILE);
     // Bind the method to avoid closure type inference issues
     const addToHistory = session.addUserMessageToHistory.bind(session);
+    // Track session active state to prevent setImmediate callbacks from running after UI stops
+    let sessionActive = true;
     const chatUI = new ChatUI({
       agentName: config.agent_name,
       llmProviderName: llmProvider.getName(),
@@ -487,6 +489,10 @@ export async function executeDev(
 
                 // Format result asynchronously and add as follow-up message
                 setImmediate(() => {
+                  // Check if session is still active before proceeding
+                  if (!sessionActive) {
+                    return;
+                  }
                   try {
                     const result = session.getToolResult(toolCall);
                     const resultInfo = formatToolResult(
@@ -494,6 +500,10 @@ export async function executeDev(
                       result,
                       toolCall.duration
                     );
+                    // Check again before adding message (session might have stopped during formatting)
+                    if (!sessionActive) {
+                      return;
+                    }
                     // Add formatted result as continuation
                     chatUI.addMessage('system', resultInfo);
                   } catch (error) {
@@ -519,12 +529,20 @@ export async function executeDev(
                 );
 
                 setImmediate(() => {
+                  // Check if session is still active before proceeding
+                  if (!sessionActive) {
+                    return;
+                  }
                   try {
                     const resultInfo = formatToolResult(
                       toolCall.name,
                       toolCall.result,
                       toolCall.duration
                     );
+                    // Check again before adding message (session might have stopped during formatting)
+                    if (!sessionActive) {
+                      return;
+                    }
                     // Add formatted result
                     chatUI.addMessage('system', resultInfo);
                   } catch (error) {
@@ -569,6 +587,8 @@ export async function executeDev(
         }
       },
       onExit: async (): Promise<void> => {
+        // Mark session as inactive to prevent pending setImmediate callbacks
+        sessionActive = false;
         // Cleanup on exit
         try {
           await session.complete();
@@ -594,6 +614,8 @@ export async function executeDev(
       }
       isExiting = true;
       log.plain(Messages.DEV_GOODBYE);
+      // Mark session as inactive to prevent pending setImmediate callbacks
+      sessionActive = false;
       chatUI.stop();
       void (async (): Promise<void> => {
         try {
