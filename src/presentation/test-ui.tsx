@@ -194,21 +194,19 @@ export async function displayTestResults(
   }
 
   // Capabilities
-  if (
-    details?.capabilities &&
-    Object.keys(details.capabilities).filter(
-      key =>
-        details.capabilities?.[key] !== undefined &&
-        details.capabilities?.[key] !== null &&
-        details.capabilities?.[key] !== false
-    ).length > 0
-  ) {
-    const capabilityCount = Object.keys(details.capabilities).filter(
-      key =>
-        details.capabilities?.[key] !== undefined &&
-        details.capabilities?.[key] !== null &&
-        details.capabilities?.[key] !== false
-    ).length;
+  const getValidCapabilityKeys = (
+    caps: Record<string, unknown> | undefined
+  ): string[] => {
+    if (!caps) return [];
+    return Object.keys(caps).filter(key => {
+      const val = caps[key];
+      return val !== undefined && val !== null && val !== false;
+    });
+  };
+
+  const validCapabilityKeys = getValidCapabilityKeys(details?.capabilities);
+  if (details?.capabilities && validCapabilityKeys.length > 0) {
+    const capabilityCount = validCapabilityKeys.length;
     log.blank();
     log.heading(`  Server Capabilities (${capabilityCount}):`);
     log.label(
@@ -216,10 +214,7 @@ export async function displayTestResults(
     );
 
     const capabilities = details.capabilities;
-    const capabilityNames = Object.keys(capabilities).filter(key => {
-      const val = capabilities[key];
-      return val !== undefined && val !== null && val !== false;
-    });
+    const capabilityNames = validCapabilityKeys;
 
     for (const capabilityName of capabilityNames) {
       const capability = capabilities[capabilityName];

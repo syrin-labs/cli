@@ -48,7 +48,9 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
   const allValid =
     transportCheck.isValid &&
     (scriptCheck === null || scriptCheck.isValid) &&
-    llmChecks.every(l => l.apiKeyCheck.isValid && l.modelCheck.isValid);
+    llmChecks.every(l => l.apiKeyCheck.isValid && l.modelCheck.isValid) &&
+    (localLlmChecks === undefined ||
+      localLlmChecks.every(l => l.check.isValid));
 
   // Get version info for display
   const versionDisplayString = await getVersionDisplayString('@ankan-ai/syrin');
