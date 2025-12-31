@@ -30,6 +30,7 @@ import type {
 import { makePromptID } from '@/types/factories';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '@/utils/logger';
+import { DataManager } from './data-manager';
 
 /**
  * Dev Mode Session implementation.
@@ -38,6 +39,9 @@ export class DevSession {
   private state: DevSessionState;
   private availableTools: ToolDefinition[] = [];
   private currentPromptId: string | null = null;
+  private dataManager: DataManager;
+  private readonly MAX_HISTORY_LENGTH = 50; // Max messages in LLM context
+  private readonly MAX_MESSAGE_SIZE = 10 * 1024; // 10KB per message
 
   constructor(private readonly config: DevSessionConfig) {
     this.state = {
@@ -47,6 +51,7 @@ export class DevSession {
       totalLLMCalls: 0,
       startTime: new Date(),
     };
+    this.dataManager = new DataManager(config.projectRoot);
   }
 
   /**
@@ -218,18 +223,40 @@ export class DevSession {
 
   /**
    * Build LLM context from conversation history and available tools.
+   * Truncates history to prevent context from growing too large.
    */
   private buildLLMContext(): {
     messages: LLMMessage[];
     tools?: ToolDefinition[];
     systemPrompt?: string;
   } {
-    const messages = [...this.state.conversationHistory];
+    // Get recent conversation history (truncate if too long)
+    let messages = [...this.state.conversationHistory];
+
+    if (messages.length > this.MAX_HISTORY_LENGTH) {
+      // Keep most recent messages
+      messages = messages.slice(-this.MAX_HISTORY_LENGTH);
+    }
+
+    // Truncate individual messages if too large
+    messages = messages.map(msg => {
+      if (msg.content.length > this.MAX_MESSAGE_SIZE) {
+        return {
+          ...msg,
+          content:
+            msg.content.substring(0, this.MAX_MESSAGE_SIZE) +
+            '\n[... truncated, see tool result files for full data]',
+        };
+      }
+      return msg;
+    });
 
     // Build system prompt
     const systemPrompt = `You are ${this.config.config.agent_name}, an AI assistant with access to tools.
 You can use the available tools to help the user. When you need to use a tool, make a tool call.
-After tool execution, you will receive the results and can provide a final response to the user.`;
+After tool execution, you will receive the results and can provide a final response to the user.
+Note: Large tool results may be stored externally and referenced by ID. If you see a data reference ID, 
+you can request the full data if needed.`;
 
     return {
       messages,
@@ -342,6 +369,9 @@ After tool execution, you will receive the results and can provide a final respo
 
       const duration = Date.now() - startTime;
 
+      // Calculate result size
+      const resultSize = Buffer.byteLength(JSON.stringify(toolResult), 'utf8');
+
       // Track tool call
       const toolCallInfo: ToolCallInfo = {
         id: toolCall.id,
@@ -352,25 +382,61 @@ After tool execution, you will receive the results and can provide a final respo
         duration,
       };
 
+      // Externalize large results
+      if (DataManager.shouldExternalize(resultSize) && !toolError) {
+        const dataId = this.dataManager.store(toolResult, toolCall.name);
+        toolCallInfo.resultReference = dataId;
+        // Clear result from memory (keep reference only)
+        delete toolCallInfo.result;
+
+        // Add truncated message to conversation history
+        const sizeDisplay = DataManager.formatSize(resultSize);
+        this.state.conversationHistory.push({
+          role: 'assistant',
+          content: `Tool ${toolCall.name} executed. Large result (${sizeDisplay}) stored externally. Reference: ${dataId}`,
+        });
+
+        // Store reference in results for LLM (will need to load if needed)
+        results.push({
+          tool_name: toolCall.name,
+          arguments: toolCall.arguments,
+          result: {
+            _dataReference: dataId,
+            _message: `Large result (${sizeDisplay}) stored externally. Use reference ${dataId} to load.`,
+          },
+          duration_ms: duration,
+        });
+      } else {
+        // Small result: store normally
+        results.push({
+          tool_name: toolCall.name,
+          arguments: toolCall.arguments,
+          result: toolResult,
+          duration_ms: duration,
+        });
+
+        // Add tool result to conversation history (truncate if needed)
+        const resultText =
+          typeof toolResult === 'string'
+            ? toolResult
+            : JSON.stringify(toolResult, null, 2);
+
+        // Truncate if too large
+        const truncatedResult =
+          resultText.length > this.MAX_MESSAGE_SIZE
+            ? resultText.substring(0, this.MAX_MESSAGE_SIZE) +
+              '\n[... truncated, result too large]'
+            : resultText;
+
+        this.state.conversationHistory.push({
+          role: 'assistant',
+          content: `Tool ${toolCall.name} executed${toolError ? ` with error: ${toolError}` : ''}. Result: ${truncatedResult}`,
+        });
+      }
+
+      // Always add toolCallInfo to state (with or without result)
       this.state.toolCalls.push(toolCallInfo);
       this.state.totalToolCalls++;
-
-      results.push({
-        tool_name: toolCall.name,
-        arguments: toolCall.arguments,
-        result: toolResult,
-        duration_ms: duration,
-      });
-
-      // Add tool result to conversation history
-      const resultText =
-        typeof toolResult === 'string'
-          ? toolResult
-          : JSON.stringify(toolResult, null, 2);
-      this.state.conversationHistory.push({
-        role: 'assistant',
-        content: `Tool ${toolCall.name} executed${toolError ? ` with error: ${toolError}` : ''}. Result: ${resultText}`,
-      });
     }
 
     return results;
@@ -530,5 +596,22 @@ After tool execution, you will receive the results and can provide a final respo
    */
   clearHistory(): void {
     this.state.conversationHistory = [];
+  }
+
+  /**
+   * Get tool result (loads from file if large data was externalized).
+   */
+  getToolResult(toolCallInfo: ToolCallInfo): unknown {
+    if (toolCallInfo.resultReference) {
+      return this.dataManager.load(toolCallInfo.resultReference);
+    }
+    return toolCallInfo.result;
+  }
+
+  /**
+   * Get the data manager instance.
+   */
+  getDataManager(): DataManager {
+    return this.dataManager;
   }
 }

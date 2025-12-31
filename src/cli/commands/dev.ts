@@ -13,6 +13,49 @@ import { MemoryEventStore } from '@/events/store/memory-store';
 import { FileEventStore } from '@/events/store/file-store';
 import { DevSession } from '@/runtime/dev/session';
 import { ChatUI } from '@/presentation/dev/chat-ui';
+import { DataManager } from '@/runtime/dev/data-manager';
+import type { ToolCallInfo } from '@/runtime/dev/types';
+
+/**
+ * Quickly estimate result size without full JSON stringification.
+ * Uses sampling for large objects to avoid blocking.
+ */
+function estimateResultSize(result: unknown): number {
+  if (typeof result === 'string') {
+    return Buffer.byteLength(result, 'utf8');
+  }
+
+  try {
+    // For objects/arrays, use a quick sample-based estimate
+    if (Array.isArray(result)) {
+      if (result.length === 0) return 100;
+      // Sample first 3 items to estimate average size
+      const sample = result.slice(0, Math.min(3, result.length));
+      const sampleSize = Buffer.byteLength(JSON.stringify(sample), 'utf8');
+      const avgItemSize = sampleSize / sample.length;
+      return Math.floor(avgItemSize * result.length);
+    }
+
+    if (typeof result === 'object' && result !== null) {
+      const keys = Object.keys(result);
+      if (keys.length === 0) return 100;
+      // Sample first 3 keys
+      const sampleKeys = keys.slice(0, Math.min(3, keys.length));
+      const sample = Object.fromEntries(
+        sampleKeys.map(k => [k, (result as Record<string, unknown>)[k]])
+      );
+      const sampleSize = Buffer.byteLength(JSON.stringify(sample), 'utf8');
+      const avgKeySize = sampleSize / sampleKeys.length;
+      return Math.floor(avgKeySize * keys.length);
+    }
+
+    // Primitives: use JSON.stringify (fast for primitives)
+    return Buffer.byteLength(JSON.stringify(result), 'utf8');
+  } catch {
+    // Fallback: rough estimate
+    return 1000;
+  }
+}
 import { ConfigurationError } from '@/utils/errors';
 import { handleCommandError } from '@/cli/utils';
 import { logger, log } from '@/utils/logger';
@@ -220,6 +263,7 @@ export async function executeDev(
       mcpClientManager,
       eventEmitter,
       executionMode: options.exec || false,
+      projectRoot,
     });
 
     // Initialize session
@@ -322,26 +366,47 @@ export async function executeDev(
               toolCallToSave = toolCalls[toolCalls.length - 1];
             }
 
-            if (!toolCallToSave || toolCallToSave.result === undefined) {
+            if (!toolCallToSave) {
               chatUI.addMessage('system', 'No tool result available to save.');
               return;
             }
 
-            const { saveJSONToFile, getFileSize } =
-              await import('@/utils/json-file-saver');
-            // Save to .syrin/data directory
-            const dataDir = path.join(projectRoot, '.syrin', 'data');
-            const filePath = saveJSONToFile(
-              toolCallToSave.result,
-              toolCallToSave.name,
-              dataDir
-            );
-            const fileSize = getFileSize(filePath);
+            // Check if result is available (either direct or via reference)
+            if (!toolCallToSave.result && !toolCallToSave.resultReference) {
+              chatUI.addMessage('system', 'No tool result available to save.');
+              return;
+            }
 
-            chatUI.addMessage(
-              'system',
-              `✅ JSON saved to file:\n   ${filePath}\n   Size: ${fileSize}\n   Tool: ${toolCallToSave.name}\n\n💡 You can open this file with: cat "${filePath}" | jq .`
-            );
+            try {
+              // Get the result (load from file if externalized)
+              const result = session.getToolResult(toolCallToSave);
+
+              const { saveJSONToFile, getFileSize } =
+                await import('@/utils/json-file-saver');
+              // Save to .syrin/data directory
+              const dataDir = path.join(projectRoot, '.syrin', 'data');
+              const filePath = saveJSONToFile(
+                result,
+                toolCallToSave.name,
+                dataDir
+              );
+              const fileSize = getFileSize(filePath);
+
+              chatUI.addMessage(
+                'system',
+                `✅ JSON saved to file:\n   ${filePath}\n   Size: ${fileSize}\n   Tool: ${toolCallToSave.name}\n\n💡 You can open this file with: cat "${filePath}" | jq .`
+              );
+            } catch (error) {
+              const errorMessage =
+                error instanceof Error ? error.message : String(error);
+              chatUI.addMessage(
+                'system',
+                `❌ Error loading tool result: ${errorMessage}`
+              );
+              const err =
+                error instanceof Error ? error : new Error(String(error));
+              logger.error('Error loading tool result for save', err);
+            }
           } catch (error) {
             const errorMessage =
               error instanceof Error ? error.message : String(error);
@@ -397,7 +462,8 @@ export async function executeDev(
           const stateAfter = session.getState();
 
           // Display any new tool calls that were executed
-          const newToolCalls = stateAfter.toolCalls.slice(toolCallsBefore);
+          const newToolCalls: ToolCallInfo[] =
+            stateAfter.toolCalls.slice(toolCallsBefore);
           for (const toolCall of newToolCalls) {
             // Display tool call info
             const toolInfo = formatToolCallInfo(
@@ -407,39 +473,80 @@ export async function executeDev(
             chatUI.addMessage('system', toolInfo);
 
             // Display tool result
-            if (toolCall.result !== undefined) {
-              const resultInfo = formatToolResult(
-                toolCall.name,
-                toolCall.result,
-                toolCall.duration
-              );
-
-              // Store large JSON data for potential saving
-              const resultSize = Buffer.byteLength(
-                JSON.stringify(toolCall.result),
-                'utf8'
-              );
-              if (resultSize > 100 * 1024) {
-                // Store reference to large data
-                const messageWithData = {
-                  role: 'system' as const,
-                  content: resultInfo,
-                  largeData: {
-                    type: 'json' as const,
-                    rawData: JSON.stringify(toolCall.result),
-                    size: resultSize,
-                    toolName: toolCall.name,
-                    toolResult: toolCall.result,
-                  },
-                };
-                // Add message with large data reference
-                chatUI.addMessageWithData(
-                  messageWithData.role,
-                  messageWithData.content,
-                  messageWithData.largeData
+            if (toolCall.resultReference) {
+              // Large data was externalized - show reference message
+              const dataManager = session.getDataManager();
+              const ref = dataManager.getReference(toolCall.resultReference);
+              if (ref) {
+                const sizeDisplay = DataManager.formatSize(ref.size);
+                const durationMs = toolCall.duration || 0;
+                chatUI.addMessage(
+                  'system',
+                  `Tool ${toolCall.name} completed (${durationMs}ms).\nResult (${sizeDisplay}) stored externally.\n💡 Use /save-json to export the full data to a file.`
                 );
+
+                // Format result asynchronously and add as follow-up message
+                setImmediate(() => {
+                  try {
+                    const result = session.getToolResult(toolCall);
+                    const resultInfo = formatToolResult(
+                      toolCall.name,
+                      result,
+                      toolCall.duration
+                    );
+                    // Add formatted result as continuation
+                    chatUI.addMessage('system', resultInfo);
+                  } catch (error) {
+                    const err =
+                      error instanceof Error ? error : new Error(String(error));
+                    logger.error('Error loading tool result', err);
+                  }
+                });
+              }
+            } else if (toolCall.result !== undefined) {
+              // Always format asynchronously to prevent UI blocking
+              // Estimate size quickly without full stringification
+              const resultSize = estimateResultSize(toolCall.result);
+              const sizeDisplay = DataManager.formatSize(resultSize);
+              const durationMs = toolCall.duration || 0;
+
+              // Show placeholder immediately for any non-trivial result
+              if (resultSize > 5 * 1024) {
+                // > 5KB: Show placeholder, format async
+                chatUI.addMessage(
+                  'system',
+                  `Tool ${toolCall.name} completed (${durationMs}ms).\nResult (${sizeDisplay}) - formatting...`
+                );
+
+                setImmediate(() => {
+                  try {
+                    const resultInfo = formatToolResult(
+                      toolCall.name,
+                      toolCall.result,
+                      toolCall.duration
+                    );
+                    // Add formatted result
+                    chatUI.addMessage('system', resultInfo);
+                  } catch (error) {
+                    const err =
+                      error instanceof Error ? error : new Error(String(error));
+                    logger.error('Error formatting tool result', err);
+                  }
+                });
               } else {
-                chatUI.addMessage('system', resultInfo);
+                // Very small (< 5KB): format immediately (fast enough)
+                try {
+                  const resultInfo = formatToolResult(
+                    toolCall.name,
+                    toolCall.result,
+                    toolCall.duration
+                  );
+                  chatUI.addMessage('system', resultInfo);
+                } catch (error) {
+                  const err =
+                    error instanceof Error ? error : new Error(String(error));
+                  logger.error('Error formatting tool result', err);
+                }
               }
             }
           }

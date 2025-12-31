@@ -226,18 +226,52 @@ export function formatToolResult(
   }
 
   // Size-based formatting strategy (only for < 500KB)
+  // Show collapsed summary by default for better performance
   if (sizeBytes < 100 * 1024) {
-    // Small JSON (< 100KB): Show full with tree formatting
+    // Small JSON (< 100KB): Show collapsed summary with option to expand
     try {
-      const treeFormatted = formatJSONWithPagination(parsedData, {
-        maxDepth: 5,
-        maxArrayItems: 100,
-        itemsPerPage: 50,
-      });
-      return `${completed}\nResult (${sizeDisplay}):\n${treeFormatted}`;
+      // Get a quick summary without full formatting
+      let summaryText = '';
+      if (Array.isArray(parsedData)) {
+        summaryText = `Array with ${parsedData.length} items`;
+        if (parsedData.length > 0) {
+          summaryText += ` (showing first 3)`;
+          const preview = parsedData.slice(0, 3);
+          const previewStr = JSON.stringify(preview, null, 2).substring(0, 500);
+          summaryText += `:\n${previewStr}${parsedData.length > 3 ? '\n... (use /save-json to see full data)' : ''}`;
+        }
+      } else if (
+        typeof parsedData === 'object' &&
+        parsedData !== null &&
+        !Array.isArray(parsedData)
+      ) {
+        const keys = Object.keys(parsedData as Record<string, unknown>);
+        summaryText = `Object with ${keys.length} keys`;
+        if (keys.length > 0) {
+          summaryText += ` (showing first 5)`;
+          const previewKeys = keys.slice(0, 5);
+          const preview = Object.fromEntries(
+            previewKeys.map(k => [
+              k,
+              (parsedData as Record<string, unknown>)[k],
+            ])
+          );
+          const previewStr = JSON.stringify(preview, null, 2).substring(0, 500);
+          summaryText += `:\n${previewStr}${keys.length > 5 ? '\n... (use /save-json to see full data)' : ''}`;
+        }
+      } else {
+        // Primitive or small value: show directly
+        summaryText = JSON.stringify(parsedData, null, 2).substring(0, 1000);
+      }
+
+      return `${completed}\nResult (${sizeDisplay}):\n${summaryText}\n\n💡 Use /save-json to export the full data to a file.`;
     } catch {
-      // Fallback to plain JSON if tree formatting fails
-      return `${completed}\nResult (${sizeDisplay}):\n${resultText}`;
+      // Fallback to plain JSON if formatting fails
+      const fallbackText =
+        typeof parsedData === 'string'
+          ? parsedData.substring(0, 1000)
+          : JSON.stringify(parsedData, null, 2).substring(0, 1000);
+      return `${completed}\nResult (${sizeDisplay}):\n${fallbackText}${sizeBytes > 1000 ? '\n... (use /save-json to see full data)' : ''}`;
     }
   } else {
     // Medium JSON (100KB - 500KB): Show tree with pagination

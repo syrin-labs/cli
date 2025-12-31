@@ -22,6 +22,8 @@ export interface DevSessionConfig {
   eventEmitter: EventEmitter;
   /** Execution mode (true = execute, false = preview) */
   executionMode: boolean;
+  /** Project root directory */
+  projectRoot: string;
 }
 
 /**
@@ -32,6 +34,8 @@ export interface ToolCallInfo {
   name: string;
   arguments: Record<string, unknown>;
   result?: unknown;
+  /** Reference ID for large data stored externally */
+  resultReference?: string;
   timestamp: Date;
   duration?: number;
 }
