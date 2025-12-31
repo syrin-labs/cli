@@ -140,4 +140,30 @@ export const Messages = {
 
   // CLI Error Messages
   CLI_START_FAILED: 'Failed to start CLI',
+
+  // Update/Rollback Messages
+  UPDATE_CHECKING: 'Checking for updates...',
+  UPDATE_CURRENT_VERSION: (version: string) => `Current version: ${version}`,
+  UPDATE_LATEST_VERSION: (version: string) => `Latest version: ${version}`,
+  UPDATE_ALREADY_LATEST: (version: string) =>
+    `Already on latest version: ${version}`,
+  UPDATE_IN_PROGRESS: (packageName: string) => `Updating ${packageName}...`,
+  UPDATE_SUCCESS: (version: string) => `Successfully updated to ${version}`,
+  UPDATE_FAILED: 'Update failed',
+  UPDATE_ERROR: (error: string) => `Error updating: ${error}`,
+  UPDATE_PERMISSION_HINT: (command: string) =>
+    `Permission denied. Try running: ${command}`,
+
+  ROLLBACK_IN_PROGRESS: (version: string, packageName: string) =>
+    `Rolling back ${packageName} to ${version}...`,
+  ROLLBACK_SUCCESS: (version: string) =>
+    `Successfully rolled back to ${version}`,
+  ROLLBACK_FAILED: 'Rollback failed',
+  ROLLBACK_ERROR: (error: string) => `Error rolling back: ${error}`,
+  ROLLBACK_INVALID_VERSION: (version: string) =>
+    `Invalid version format: ${version}. Expected format: 1.0.0 or v1.0.0`,
+  ROLLBACK_VERSION_NOT_FOUND: (version: string) =>
+    `Version ${version} not found on npm registry`,
+  ROLLBACK_CONFIRM: (currentVersion: string, targetVersion: string) =>
+    `Are you sure you want to rollback from ${currentVersion} to ${targetVersion}?`,
 } as const;

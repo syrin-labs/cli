@@ -18,6 +18,7 @@ import {
   displayAlreadyInitialized,
   displayInitSuccess,
 } from '@/presentation/init-ui';
+import { showVersionBanner } from '@/cli/utils/version-banner';
 
 export interface InitCommandOptions {
   /** Skip interactive prompts, use defaults */
@@ -33,6 +34,7 @@ export interface InitCommandOptions {
 export async function executeInit(
   options: InitCommandOptions = {}
 ): Promise<void> {
+  await showVersionBanner();
   const projectRoot = options.projectRoot || process.cwd();
   const configDir = path.join(projectRoot, Paths.SYRIN_DIR);
 

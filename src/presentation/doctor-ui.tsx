@@ -7,6 +7,8 @@
    @typescript-eslint/no-implied-eval
 */
 
+import { checkVersion, getCurrentVersion } from '@/utils/version-checker';
+
 /**
  * Presentation layer for doctor command UI.
  * Provides modern, minimalistic display for configuration validation results.
@@ -55,6 +57,14 @@ export function displayDoctorReport(report: DoctorReport): void {
     const React = ReactModule.default || ReactModule;
     const { Box, Text, render } = inkModule;
 
+    // Get version info for display
+    const currentVersion = getCurrentVersion();
+    const versionInfo = await checkVersion('@ankan-ai/syrin');
+    const versionDisplayString =
+      versionInfo.isLatest || !versionInfo.latest
+        ? `v${currentVersion} (latest)`
+        : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
+
     const DoctorReportComponent = (): React.ReactElement => {
       const { config, transportCheck, scriptCheck, llmChecks, localLlmChecks } =
         report;
@@ -87,7 +97,7 @@ export function displayDoctorReport(report: DoctorReport): void {
             React.createElement(
               Text,
               { dimColor: true },
-              `Version: v${String(config.version)}`
+              `Version: ${versionDisplayString}`
             )
           )
         )

@@ -14,6 +14,7 @@
 */
 import type { MCPConnectionResult } from '@/runtime/mcp/types';
 import type { TransportType } from '@/config/types';
+import { checkVersion, getCurrentVersion } from '@/utils/version-checker';
 
 export interface TestResultsUIOptions {
   /** Connection test result to display */
@@ -87,6 +88,14 @@ export async function displayTestResults(
   const { Box, Text, render } = inkModule;
 
   const { result, transport } = options;
+
+  // Get version info for display
+  const currentVersion = getCurrentVersion();
+  const versionInfo = await checkVersion('@ankan-ai/syrin');
+  const versionDisplayString =
+    versionInfo.isLatest || !versionInfo.latest
+      ? `v${currentVersion} (latest)`
+      : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
 
   // Create the component
   const TestResultsComponent = (): React.ReactElement => {
@@ -192,6 +201,17 @@ export async function displayTestResults(
     return React.createElement(
       Box,
       { flexDirection: 'column', paddingX: 1 },
+      // Version display
+      React.createElement(
+        Box,
+        { key: 'version', marginBottom: 1 },
+        React.createElement(
+          Text,
+          { dimColor: true },
+          `Syrin ${versionDisplayString}`
+        )
+      ),
+      React.createElement(Box, { key: 'version-spacer', marginBottom: 1 }),
       // Header
       React.createElement(
         Box,

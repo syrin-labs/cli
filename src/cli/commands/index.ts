@@ -7,3 +7,5 @@ export * from './doctor';
 export * from './test';
 export * from './list';
 export * from './dev';
+export * from './update';
+export * from './rollback';

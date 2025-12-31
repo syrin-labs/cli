@@ -4,18 +4,27 @@
  */
 
 import { Messages, TransportTypes } from '@/constants';
+import { checkVersion, getCurrentVersion } from '@/utils/version-checker';
 
 /**
  * Build initial welcome messages for dev mode.
  */
-export function buildDevWelcomeMessages(options: {
+export async function buildDevWelcomeMessages(options: {
   version: string;
   llmProvider: string;
   toolCount: number;
   transport: string;
   mcpUrl?: string;
   command?: string;
-}): Array<{ role: 'system'; content: string }> {
+}): Promise<Array<{ role: 'system'; content: string }>> {
+  // Get version info for display
+  const currentVersion = getCurrentVersion();
+  const versionInfo = await checkVersion('@ankan-ai/syrin');
+  const versionDisplayString =
+    versionInfo.isLatest || !versionInfo.latest
+      ? `v${currentVersion} (latest)`
+      : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
+
   const messages: Array<{ role: 'system'; content: string }> = [
     {
       role: 'system',
@@ -23,11 +32,7 @@ export function buildDevWelcomeMessages(options: {
     },
     {
       role: 'system',
-      content: Messages.DEV_VERSION_INFO(
-        options.version,
-        options.llmProvider,
-        options.toolCount
-      ),
+      content: `Version: ${versionDisplayString} | LLM: ${options.llmProvider} | Tools: ${options.toolCount}`,
     },
   ];
 

@@ -80,12 +80,15 @@ export interface DevCommandOptions {
   runScript?: boolean;
 }
 
+import { showVersionBanner } from '@/cli/utils/version-banner';
+
 /**
  * Execute the dev command.
  */
 export async function executeDev(
   options: DevCommandOptions = {}
 ): Promise<void> {
+  await showVersionBanner();
   const projectRoot = options.projectRoot || process.cwd();
 
   try {
@@ -234,7 +237,7 @@ export async function executeDev(
     // Build initial info messages for chat UI (will scroll away when user starts typing)
     const displayCommand =
       shouldSpawn && serverCommand ? serverCommand : undefined;
-    const initialMessages = buildDevWelcomeMessages({
+    const initialMessages = await buildDevWelcomeMessages({
       version: config.version,
       llmProvider: llmProvider.getName(),
       toolCount: availableTools.length,

@@ -9,10 +9,11 @@ import { executeDoctor } from '@/cli/commands/doctor';
 import { executeTest } from '@/cli/commands/test';
 import { executeList } from '@/cli/commands/list';
 import { executeDev } from '@/cli/commands/dev';
+import { executeUpdate } from '@/cli/commands/update';
+import { executeRollback } from '@/cli/commands/rollback';
 import { logger } from '@/utils/logger';
-import * as fs from 'fs';
-import * as path from 'path';
 import { Icons, Messages, ListTypes } from '@/constants';
+import { getCurrentVersion } from '@/utils/version-checker';
 
 const program = new Command();
 
@@ -20,17 +21,13 @@ const program = new Command();
  * Initialize the CLI program.
  */
 export function setupCLI(): void {
-  // Load package.json for version
-  const packageJsonPath = path.join(__dirname, '../../package.json');
-  const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
-  const packageJson = JSON.parse(packageJsonContent) as {
-    version?: string;
-  };
+  // Get current version
+  const currentVersion = getCurrentVersion();
 
   program
     .name('syrin')
     .description('Syrin - Runtime intelligence system for MCP servers')
-    .version(packageJson.version || '1.0.0');
+    .version(currentVersion, '-v, --version', 'Display version number');
 
   // init command
   program
@@ -72,12 +69,11 @@ export function setupCLI(): void {
       '--project-root <path>',
       'Project root directory (defaults to current directory)'
     )
-    .action((options: { projectRoot?: string }) => {
+    .action(async (options: { projectRoot?: string }) => {
       try {
-        executeDoctor(options.projectRoot);
+        await executeDoctor(options.projectRoot);
       } catch (error) {
-        // Error handling is done in executeDoctor
-        // This catch is just for safety
+        // Error handling is done in executeDoctor, this is a safety net
         if (error instanceof Error) {
           logger.error('Doctor command failed', error);
         }
@@ -269,6 +265,37 @@ export function setupCLI(): void {
         }
       }
     );
+
+  // update command
+  program
+    .command('update')
+    .description('Update Syrin to the latest version')
+    .action(async () => {
+      try {
+        await executeUpdate();
+      } catch (error) {
+        // Error handling is done in executeUpdate
+        if (error instanceof Error) {
+          logger.error('Update command failed', error);
+        }
+      }
+    });
+
+  // rollback command
+  program
+    .command('rollback')
+    .description('Rollback Syrin to a previous version')
+    .argument('<version>', 'Version to rollback to (e.g., 1.0.0 or v1.0.0)')
+    .action(async (version: string) => {
+      try {
+        await executeRollback({ version });
+      } catch (error) {
+        // Error handling is done in executeRollback
+        if (error instanceof Error) {
+          logger.error('Rollback command failed', error);
+        }
+      }
+    });
 
   // Parse command line arguments
   program.parse();

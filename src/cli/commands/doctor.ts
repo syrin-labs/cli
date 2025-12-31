@@ -10,6 +10,7 @@ import {
   extractCommandName,
 } from '@/config/env-checker';
 import { handleCommandError } from '@/cli/utils';
+import { showVersionBanner } from '@/cli/utils/version-banner';
 import type { SyrinConfig } from '@/config/types';
 import { Messages, TransportTypes, Defaults, LLMProviders } from '@/constants';
 import { displayDoctorReport } from '@/presentation/doctor-ui';
@@ -216,7 +217,10 @@ function generateReport(
  * Execute the doctor command.
  * @param projectRoot - Project root directory (defaults to current working directory)
  */
-export function executeDoctor(projectRoot: string = process.cwd()): void {
+export async function executeDoctor(
+  projectRoot: string = process.cwd()
+): Promise<void> {
+  await showVersionBanner();
   try {
     // Load configuration
     const config = loadConfig(projectRoot);

@@ -7,6 +7,8 @@
    @typescript-eslint/no-implied-eval
 */
 
+import { checkVersion, getCurrentVersion } from '@/utils/version-checker';
+
 /**
  * Presentation layer for list command UI components.
  * Provides minimalistic, easy-to-read displays for tools, resources, and prompts.
@@ -87,6 +89,14 @@ export function displayTools(tools: ToolInfo[]): void {
 
     const React = ReactModule.default || ReactModule;
     const { Box, Text, render } = inkModule;
+
+    // Get version info for display
+    const currentVersion = getCurrentVersion();
+    const versionInfo = await checkVersion('@ankan-ai/syrin');
+    const versionDisplayString =
+      versionInfo.isLatest || !versionInfo.latest
+        ? `v${currentVersion} (latest)`
+        : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
 
     const ToolsComponent = (): React.ReactElement => {
       if (tools.length === 0) {
@@ -209,6 +219,17 @@ export function displayTools(tools: ToolInfo[]): void {
       return React.createElement(
         Box,
         { flexDirection: 'column', paddingX: 1 },
+        // Version display
+        React.createElement(
+          Box,
+          { key: 'version', marginBottom: 1 },
+          React.createElement(
+            Text,
+            { dimColor: true },
+            `Syrin ${versionDisplayString}`
+          )
+        ),
+        React.createElement(Box, { key: 'version-spacer', marginBottom: 1 }),
         React.createElement(
           Box,
           { marginBottom: 1 },
@@ -248,6 +269,14 @@ export function displayResources(resources: ResourceInfo[]): void {
 
     const React = ReactModule.default || ReactModule;
     const { Box, Text, render } = inkModule;
+
+    // Get version info for display
+    const currentVersion = getCurrentVersion();
+    const versionInfo = await checkVersion('@ankan-ai/syrin');
+    const versionDisplayString =
+      versionInfo.isLatest || !versionInfo.latest
+        ? `v${currentVersion} (latest)`
+        : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
 
     const ResourcesComponent = (): React.ReactElement => {
       if (resources.length === 0) {
@@ -328,6 +357,17 @@ export function displayResources(resources: ResourceInfo[]): void {
       return React.createElement(
         Box,
         { flexDirection: 'column', paddingX: 1 },
+        // Version display
+        React.createElement(
+          Box,
+          { key: 'version', marginBottom: 1 },
+          React.createElement(
+            Text,
+            { dimColor: true },
+            `Syrin ${versionDisplayString}`
+          )
+        ),
+        React.createElement(Box, { key: 'version-spacer', marginBottom: 1 }),
         React.createElement(
           Box,
           { marginBottom: 1 },
@@ -367,6 +407,14 @@ export function displayPrompts(prompts: PromptInfo[]): void {
 
     const React = ReactModule.default || ReactModule;
     const { Box, Text, render } = inkModule;
+
+    // Get version info for display
+    const currentVersion = getCurrentVersion();
+    const versionInfo = await checkVersion('@ankan-ai/syrin');
+    const versionDisplayString =
+      versionInfo.isLatest || !versionInfo.latest
+        ? `v${currentVersion} (latest)`
+        : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
 
     const PromptsComponent = (): React.ReactElement => {
       if (prompts.length === 0) {
@@ -474,6 +522,17 @@ export function displayPrompts(prompts: PromptInfo[]): void {
       return React.createElement(
         Box,
         { flexDirection: 'column', paddingX: 1 },
+        // Version display
+        React.createElement(
+          Box,
+          { key: 'version', marginBottom: 1 },
+          React.createElement(
+            Text,
+            { dimColor: true },
+            `Syrin ${versionDisplayString}`
+          )
+        ),
+        React.createElement(Box, { key: 'version-spacer', marginBottom: 1 }),
         React.createElement(
           Box,
           { marginBottom: 1 },
