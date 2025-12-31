@@ -134,7 +134,7 @@ function checkLLMProviders(
   const checks: DoctorReport['llmChecks'] = [];
 
   for (const [providerName, providerConfig] of Object.entries(config.llm)) {
-    if (providerName === 'ollama') {
+    if (providerName === LLMProviders.OLLAMA) {
       // Ollama provider - skip API key checks (only MODEL_NAME is needed)
       continue;
     }
@@ -220,8 +220,8 @@ function generateReport(
 export async function executeDoctor(
   projectRoot: string = process.cwd()
 ): Promise<void> {
-  await showVersionBanner();
   try {
+    await showVersionBanner();
     // Load configuration
     const config = loadConfig(projectRoot);
 
@@ -229,7 +229,7 @@ export async function executeDoctor(
     const report = generateReport(config, projectRoot);
 
     // Display report using Ink UI
-    displayDoctorReport(report);
+    await displayDoctorReport(report);
 
     // Exit with appropriate code
     const allValid =

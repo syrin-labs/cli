@@ -14,7 +14,7 @@
 */
 import type { MCPConnectionResult } from '@/runtime/mcp/types';
 import type { TransportType } from '@/config/types';
-import { checkVersion, getCurrentVersion } from '@/utils/version-checker';
+import { getVersionDisplayString } from '@/utils/version-display';
 
 export interface TestResultsUIOptions {
   /** Connection test result to display */
@@ -90,12 +90,7 @@ export async function displayTestResults(
   const { result, transport } = options;
 
   // Get version info for display
-  const currentVersion = getCurrentVersion();
-  const versionInfo = await checkVersion('@ankan-ai/syrin');
-  const versionDisplayString =
-    versionInfo.isLatest || !versionInfo.latest
-      ? `v${currentVersion} (latest)`
-      : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
+  const versionDisplayString = await getVersionDisplayString();
 
   // Create the component
   const TestResultsComponent = (): React.ReactElement => {

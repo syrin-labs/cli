@@ -74,9 +74,9 @@ export async function executeRollback(
 
     // Compare versions to warn about rolling back
     const comparison = compareVersions(currentVersion, normalizedVersion);
-    if (comparison < 0) {
+    if (comparison > 0) {
       console.log(
-        `${Icons.WARNING} Warning: Rolling back to an older version (${currentVersion} -> v${normalizedVersion})\n`
+        `${Icons.WARNING} Warning: Rolling back to an older version (v${currentVersion} -> v${normalizedVersion})\n`
       );
     }
 

@@ -12,7 +12,7 @@ import { executeDev } from '@/cli/commands/dev';
 import { executeUpdate } from '@/cli/commands/update';
 import { executeRollback } from '@/cli/commands/rollback';
 import { logger } from '@/utils/logger';
-import { Icons, Messages, ListTypes } from '@/constants';
+import { Icons, Messages, ListTypes, ListType } from '@/constants';
 import { getCurrentVersion } from '@/utils/version-checker';
 
 const program = new Command();
@@ -45,18 +45,20 @@ export function setupCLI(): void {
           projectRoot: options.projectRoot,
         });
       } catch (error) {
-        // Only show error if it's not a graceful exit (already initialized)
-        // The executeInit function handles the "already initialized" case gracefully
-        if (error instanceof Error && error.message !== 'ALREADY_INITIALIZED') {
-          logger.error('Init command failed', error);
-          console.error(`\n${Icons.ERROR} Error: ${error.message}\n`);
-          process.exit(1);
-        }
-        // If it's not the graceful exit case, re-throw for proper error handling
+        // Handle ALREADY_INITIALIZED case first with early return
         if (error instanceof Error && error.message === 'ALREADY_INITIALIZED') {
           // Already handled in executeInit, just exit
           return;
         }
+
+        // Handle other Error cases
+        if (error instanceof Error) {
+          logger.error('Init command failed', error);
+          console.error(`\n${Icons.ERROR} Error: ${error.message}\n`);
+          process.exit(1);
+        }
+
+        // Re-throw non-Error values
         throw error;
       }
     });
@@ -182,13 +184,10 @@ export function setupCLI(): void {
         }
       ) => {
         try {
-          const listType = type as
-            | typeof ListTypes.TOOLS
-            | typeof ListTypes.RESOURCES
-            | typeof ListTypes.PROMPTS;
+          const listType = type as ListType;
           if (
             ![ListTypes.TOOLS, ListTypes.RESOURCES, ListTypes.PROMPTS].includes(
-              listType as typeof ListTypes.TOOLS
+              listType
             )
           ) {
             console.error(

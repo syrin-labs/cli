@@ -7,7 +7,7 @@
    @typescript-eslint/no-implied-eval
 */
 
-import { checkVersion, getCurrentVersion } from '@/utils/version-checker';
+import { getVersionDisplayString } from '@/utils/version-display';
 
 /**
  * Presentation layer for list command UI components.
@@ -91,12 +91,7 @@ export function displayTools(tools: ToolInfo[]): void {
     const { Box, Text, render } = inkModule;
 
     // Get version info for display
-    const currentVersion = getCurrentVersion();
-    const versionInfo = await checkVersion('@ankan-ai/syrin');
-    const versionDisplayString =
-      versionInfo.isLatest || !versionInfo.latest
-        ? `v${currentVersion} (latest)`
-        : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
+    const versionDisplayString = await getVersionDisplayString();
 
     const ToolsComponent = (): React.ReactElement => {
       if (tools.length === 0) {
@@ -271,12 +266,7 @@ export function displayResources(resources: ResourceInfo[]): void {
     const { Box, Text, render } = inkModule;
 
     // Get version info for display
-    const currentVersion = getCurrentVersion();
-    const versionInfo = await checkVersion('@ankan-ai/syrin');
-    const versionDisplayString =
-      versionInfo.isLatest || !versionInfo.latest
-        ? `v${currentVersion} (latest)`
-        : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
+    const versionDisplayString = await getVersionDisplayString();
 
     const ResourcesComponent = (): React.ReactElement => {
       if (resources.length === 0) {
@@ -409,12 +399,7 @@ export function displayPrompts(prompts: PromptInfo[]): void {
     const { Box, Text, render } = inkModule;
 
     // Get version info for display
-    const currentVersion = getCurrentVersion();
-    const versionInfo = await checkVersion('@ankan-ai/syrin');
-    const versionDisplayString =
-      versionInfo.isLatest || !versionInfo.latest
-        ? `v${currentVersion} (latest)`
-        : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
+    const versionDisplayString = await getVersionDisplayString();
 
     const PromptsComponent = (): React.ReactElement => {
       if (prompts.length === 0) {

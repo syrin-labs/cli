@@ -7,7 +7,7 @@
    @typescript-eslint/no-implied-eval
 */
 
-import { checkVersion, getCurrentVersion } from '@/utils/version-checker';
+import { getVersionDisplayString } from '@/utils/version-display';
 
 /**
  * Presentation layer for doctor command UI.
@@ -46,9 +46,9 @@ interface DoctorReport {
 /**
  * Display doctor report using Ink.
  */
-export function displayDoctorReport(report: DoctorReport): void {
+export async function displayDoctorReport(report: DoctorReport): Promise<void> {
   const importDynamic = new Function('specifier', 'return import(specifier)');
-  void (async (): Promise<void> => {
+  await (async (): Promise<void> => {
     const [ReactModule, inkModule] = await Promise.all([
       importDynamic('react'),
       importDynamic('ink'),
@@ -58,12 +58,8 @@ export function displayDoctorReport(report: DoctorReport): void {
     const { Box, Text, render } = inkModule;
 
     // Get version info for display
-    const currentVersion = getCurrentVersion();
-    const versionInfo = await checkVersion('@ankan-ai/syrin');
     const versionDisplayString =
-      versionInfo.isLatest || !versionInfo.latest
-        ? `v${currentVersion} (latest)`
-        : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
+      await getVersionDisplayString('@ankan-ai/syrin');
 
     const DoctorReportComponent = (): React.ReactElement => {
       const { config, transportCheck, scriptCheck, llmChecks, localLlmChecks } =

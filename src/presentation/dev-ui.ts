@@ -18,7 +18,7 @@ export async function buildDevWelcomeMessages(options: {
   command?: string;
 }): Promise<Array<{ role: 'system'; content: string }>> {
   // Get version info for display
-  const currentVersion = getCurrentVersion();
+  const currentVersion = options.version ?? getCurrentVersion();
   const versionInfo = await checkVersion('@ankan-ai/syrin');
   const versionDisplayString =
     versionInfo.isLatest || !versionInfo.latest
@@ -64,7 +64,7 @@ export function formatToolsList(
 ): string {
   let toolsList = `${Messages.DEV_TOOLS_HEADER}\n`;
   if (tools.length === 0) {
-    toolsList += `  ${Messages.DEV_NO_TOOLS}`;
+    toolsList += `${Messages.DEV_NO_TOOLS}`;
   } else {
     for (const tool of tools) {
       toolsList += `  • ${tool.name}`;

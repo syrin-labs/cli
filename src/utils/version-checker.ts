@@ -49,33 +49,53 @@ export async function fetchPackageInfo(
 ): Promise<RegistryPackageInfo> {
   return new Promise((resolve, reject) => {
     const url = `https://registry.npmjs.org/${packageName}`;
+    const TIMEOUT_MS = 5000; // 5 seconds
 
-    https
-      .get(url, res => {
-        let data = '';
-
-        res.on('data', chunk => {
-          data += chunk;
-        });
-
-        res.on('end', () => {
-          try {
-            const packageInfo = JSON.parse(data) as RegistryPackageInfo;
-            resolve(packageInfo);
-          } catch (error) {
-            reject(
-              new Error(
-                `Failed to parse npm registry response: ${String(error)}`
-              )
-            );
-          }
-        });
-      })
-      .on('error', error => {
+    const request = https.get(url, res => {
+      // Validate status code before processing response
+      if (res.statusCode !== 200) {
+        request.destroy();
         reject(
-          new Error(`Failed to fetch from npm registry: ${error.message}`)
+          new Error(
+            `npm registry request failed with status ${res.statusCode} ${res.statusMessage || 'Unknown'}`
+          )
+        );
+        return;
+      }
+
+      let data = '';
+
+      res.on('data', chunk => {
+        data += chunk;
+      });
+
+      res.on('end', () => {
+        try {
+          const packageInfo = JSON.parse(data) as RegistryPackageInfo;
+          resolve(packageInfo);
+        } catch (error) {
+          reject(
+            new Error(`Failed to parse npm registry response: ${String(error)}`)
+          );
+        }
+      });
+    });
+
+    // Handle request errors
+    request.on('error', error => {
+      request.destroy();
+      reject(new Error(`Failed to fetch from npm registry: ${error.message}`));
+    });
+
+    // Set socket timeout to prevent hanging requests
+    request.on('socket', socket => {
+      socket.setTimeout(TIMEOUT_MS, () => {
+        request.destroy();
+        reject(
+          new Error(`npm registry request timed out after ${TIMEOUT_MS}ms`)
         );
       });
+    });
   });
 }
 
@@ -100,8 +120,12 @@ export async function getLatestVersion(
  */
 export function compareVersions(v1: string, v2: string): number {
   // Remove 'v' prefix if present
-  const cleanV1 = v1.replace(/^v/, '');
-  const cleanV2 = v2.replace(/^v/, '');
+  let cleanV1 = v1.replace(/^v/, '');
+  let cleanV2 = v2.replace(/^v/, '');
+
+  // Strip prerelease and build metadata (remove everything from first '-' or '+' onward)
+  cleanV1 = cleanV1.split(/[-+]/)[0]!;
+  cleanV2 = cleanV2.split(/[-+]/)[0]!;
 
   const parts1 = cleanV1.split('.').map(Number);
   const parts2 = cleanV2.split('.').map(Number);
