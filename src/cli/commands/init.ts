@@ -95,6 +95,14 @@ export async function executeInit(
       if (historyPatternAdded) {
         logger.info('Added .syrin/.dev-history to .gitignore');
       }
+
+      const dataPatternAdded = await ensureGitignorePattern(
+        projectRoot,
+        Paths.DATA_DIR
+      );
+      if (dataPatternAdded) {
+        logger.info(`Added ${Paths.DATA_DIR} to .gitignore`);
+      }
     } catch (error) {
       // Log but don't fail initialization if .gitignore update fails
 

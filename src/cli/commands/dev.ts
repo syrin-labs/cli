@@ -74,15 +74,12 @@ export interface DevCommandOptions {
   runScript?: boolean;
 }
 
-import { showVersionBanner } from '@/cli/utils/version-banner';
-
 /**
  * Execute the dev command.
  */
 export async function executeDev(
   options: DevCommandOptions = {}
 ): Promise<void> {
-  await showVersionBanner();
   const projectRoot = options.projectRoot || process.cwd();
 
   try {
@@ -258,6 +255,101 @@ export async function executeDev(
           return;
         }
 
+        if (input.startsWith('/save-json')) {
+          // Save tool result JSON to file
+          // Usage: /save-json [tool-name-or-index]
+          // If no argument, saves the last tool result
+          const parts = input.split(/\s+/);
+          const toolIdentifier = parts[1]; // Optional: tool name or index
+
+          try {
+            const sessionState = session.getState();
+            const toolCalls = sessionState.toolCalls;
+
+            if (toolCalls.length === 0) {
+              chatUI.addMessage(
+                'system',
+                'No tool calls found. Run a tool first to save its result.'
+              );
+              return;
+            }
+
+            // Find the tool call to save
+            let toolCallToSave: (typeof toolCalls)[number] | undefined;
+
+            if (toolIdentifier) {
+              // Try to find by index first
+              const index = parseInt(toolIdentifier, 10);
+              if (!isNaN(index) && index > 0 && index <= toolCalls.length) {
+                // 1-indexed for user convenience
+                toolCallToSave = toolCalls[index - 1];
+              } else {
+                // Try to find by name (case-insensitive, partial match)
+                const matchingCalls = toolCalls.filter(tc =>
+                  tc.name.toLowerCase().includes(toolIdentifier.toLowerCase())
+                );
+                if (matchingCalls.length === 0) {
+                  chatUI.addMessage(
+                    'system',
+                    `No tool found matching "${toolIdentifier}". Use /save-json without arguments to save the last result, or use a tool index (1-${toolCalls.length}).`
+                  );
+                  return;
+                } else if (matchingCalls.length > 1) {
+                  // Multiple matches - show list
+                  const toolList = matchingCalls
+                    .map(
+                      tc =>
+                        `  ${toolCalls.indexOf(tc) + 1}. ${tc.name} (${tc.timestamp.toLocaleTimeString()})`
+                    )
+                    .join('\n');
+                  chatUI.addMessage(
+                    'system',
+                    `Multiple tools found matching "${toolIdentifier}":\n${toolList}\n\nUse /save-json <index> to save a specific one.`
+                  );
+                  return;
+                } else {
+                  toolCallToSave = matchingCalls[0];
+                }
+              }
+            } else {
+              // No identifier - use last tool call
+              toolCallToSave = toolCalls[toolCalls.length - 1];
+            }
+
+            if (!toolCallToSave || toolCallToSave.result === undefined) {
+              chatUI.addMessage('system', 'No tool result available to save.');
+              return;
+            }
+
+            const { saveJSONToFile, getFileSize } =
+              await import('@/utils/json-file-saver');
+            // Save to .syrin/data directory
+            const dataDir = path.join(projectRoot, '.syrin', 'data');
+            const filePath = saveJSONToFile(
+              toolCallToSave.result,
+              toolCallToSave.name,
+              dataDir
+            );
+            const fileSize = getFileSize(filePath);
+
+            chatUI.addMessage(
+              'system',
+              `✅ JSON saved to file:\n   ${filePath}\n   Size: ${fileSize}\n   Tool: ${toolCallToSave.name}\n\n💡 You can open this file with: cat "${filePath}" | jq .`
+            );
+          } catch (error) {
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
+            chatUI.addMessage(
+              'system',
+              `❌ Error saving JSON: ${errorMessage}`
+            );
+            const err =
+              error instanceof Error ? error : new Error(String(error));
+            logger.error('Error saving JSON to file', err);
+          }
+          return;
+        }
+
         if (input === '/history') {
           // Read history from .syrin/.dev-history file
           try {
@@ -315,7 +407,34 @@ export async function executeDev(
                 toolCall.result,
                 toolCall.duration
               );
-              chatUI.addMessage('system', resultInfo);
+
+              // Store large JSON data for potential saving
+              const resultSize = Buffer.byteLength(
+                JSON.stringify(toolCall.result),
+                'utf8'
+              );
+              if (resultSize > 100 * 1024) {
+                // Store reference to large data
+                const messageWithData = {
+                  role: 'system' as const,
+                  content: resultInfo,
+                  largeData: {
+                    type: 'json' as const,
+                    rawData: JSON.stringify(toolCall.result),
+                    size: resultSize,
+                    toolName: toolCall.name,
+                    toolResult: toolCall.result,
+                  },
+                };
+                // Add message with large data reference
+                chatUI.addMessageWithData(
+                  messageWithData.role,
+                  messageWithData.content,
+                  messageWithData.largeData
+                );
+              } else {
+                chatUI.addMessage('system', resultInfo);
+              }
             }
           }
 

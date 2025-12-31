@@ -10,9 +10,9 @@ export const Defaults = {
   /** Default LLM provider */
   LLM_PROVIDER: 'openai',
   /** Default agent name */
-  AGENT_NAME: 'Agent',
+  AGENT_NAME: 'Syrin',
   /** Default script command */
-  SCRIPT_COMMAND: 'python3 server.py',
+  SCRIPT_COMMAND: 'npm run start',
   /** Default working status message */
   WORKING: 'working',
 } as const;

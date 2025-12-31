@@ -12,3 +12,6 @@ bun.lock
 # Syrin event files
 .syrin/events
 .syrin/.dev-history
+
+# OpenMemory - IDE/Assistant specific rules
+.cursor/rules/openmemory.mdc

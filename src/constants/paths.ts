@@ -18,6 +18,8 @@ export const Paths = {
   EVENTS_DIR: '.syrin/events',
   /** Dev history file (relative to project root) */
   DEV_HISTORY_FILE: '.syrin/.dev-history',
+  /** Data directory for JSON exports (relative to project root) */
+  DATA_DIR: '.syrin/data',
 } as const;
 
 /**

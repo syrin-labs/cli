@@ -24,6 +24,14 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp?: Date;
+  // For large JSON data - store efficiently
+  largeData?: {
+    type: 'json';
+    rawData: string; // Stored as string to save memory
+    size: number; // Size in bytes
+    summary?: string; // Summary/metadata
+    expanded?: boolean; // Whether user has expanded it
+  };
 }
 
 export interface ChatUIOptions {
@@ -55,19 +63,30 @@ export class ChatUI {
     waitUntilExit: () => Promise<void>;
   } | null = null;
   private addMessageRef: React.MutableRefObject<
-    (role: 'user' | 'assistant' | 'system', content: string) => void
+    (
+      role: 'user' | 'assistant' | 'system',
+      content: string,
+      largeData?: ChatMessage['largeData']
+    ) => void
   >;
   private updateLastAssistantMessageRef: React.MutableRefObject<
     (content: string) => void
   >;
   private getMessagesRef: React.MutableRefObject<() => ChatMessage[]>;
   private clearMessagesRef: React.MutableRefObject<() => void>;
+  private getLastLargeDataMessageRef: React.MutableRefObject<
+    () => ChatMessage | null
+  >;
 
   constructor(options: ChatUIOptions) {
     this.options = options;
     // Initialize refs as mutable ref objects (will be populated when component mounts)
     this.addMessageRef = { current: () => {} } as React.MutableRefObject<
-      (role: 'user' | 'assistant' | 'system', content: string) => void
+      (
+        role: 'user' | 'assistant' | 'system',
+        content: string,
+        largeData?: ChatMessage['largeData']
+      ) => void
     >;
     this.updateLastAssistantMessageRef = {
       current: () => {},
@@ -78,6 +97,9 @@ export class ChatUI {
     this.clearMessagesRef = {
       current: () => {},
     } as React.MutableRefObject<() => void>;
+    this.getLastLargeDataMessageRef = {
+      current: () => null,
+    } as React.MutableRefObject<() => ChatMessage | null>;
   }
 
   async start(): Promise<void> {
@@ -96,7 +118,7 @@ export class ChatUI {
 
     const React = ReactModule.default || ReactModule;
 
-    const { useState, useEffect, useCallback, useRef } = React;
+    const { useState, useEffect, useCallback, useRef, memo } = React;
 
     const { Box, Text, useApp, useInput, render } = inkModule;
 
@@ -131,6 +153,13 @@ export class ChatUI {
         useState as (initial: boolean) => [boolean, (value: boolean) => void]
       )(false);
       const maxHistorySize = options.maxHistorySize || 1000;
+
+      // Viewport limiting: only show last N messages for performance
+      const maxVisibleMessages = 50; // Show last 50 messages by default
+      const [showAllMessages, setShowAllMessages] = (
+        useState as (initial: boolean) => [boolean, (value: boolean) => void]
+      )(false);
+      // Note: showAllMessages is used in command handlers (setShowAllMessages)
       const inputHistoryRef = (
         useRef as (initial: string[]) => { current: string[] }
       )([]);
@@ -140,6 +169,13 @@ export class ChatUI {
       const currentInputRef = (
         useRef as (initial: string) => { current: string }
       )('');
+
+      // Cache for parsed markdown to avoid re-parsing on every render
+      const markdownCacheRef = (
+        useRef as (initial: Map<string, React.ReactElement[]>) => {
+          current: Map<string, React.ReactElement[]>;
+        }
+      )(new Map<string, React.ReactElement[]>());
 
       // Load history from file on mount
 
@@ -192,20 +228,23 @@ export class ChatUI {
         }
       }, []); // Only run on mount
 
-      // Expose methods via refs
-
-      useEffect(() => {
-        addMessageRef.current = (
+      // Expose methods via refs - use useCallback for stable references
+      const addMessage = useCallback(
+        (
           role: 'user' | 'assistant' | 'system',
-          content: string
+          content: string,
+          largeData?: ChatMessage['largeData']
         ): void => {
           setMessages((prev: ChatMessage[]) => [
             ...prev,
-            { role, content, timestamp: new Date() },
+            { role, content, timestamp: new Date(), largeData },
           ]);
-        };
+        },
+        []
+      );
 
-        updateLastAssistantMessageRef.current = (content: string): void => {
+      const updateLastAssistantMessage = useCallback(
+        (content: string): void => {
           setMessages((prev: ChatMessage[]) => {
             const newMessages = [...prev];
             const lastIndex = newMessages.length - 1;
@@ -227,16 +266,49 @@ export class ChatUI {
             }
             return newMessages;
           });
-        };
+        },
+        []
+      );
 
-        getMessagesRef.current = (): ChatMessage[] => {
-          return messages;
-        };
+      const getMessages = useCallback((): ChatMessage[] => {
+        return messages;
+      }, [messages]);
 
-        clearMessagesRef.current = (): void => {
-          setMessages([]);
-        };
-      });
+      const getLastLargeDataMessage = useCallback((): ChatMessage | null => {
+        for (let i = messages.length - 1; i >= 0; i--) {
+          const msg = messages[i];
+          if (msg && msg.largeData) {
+            return msg;
+          }
+        }
+        return null;
+      }, [messages]);
+
+      const clearMessages = useCallback((): void => {
+        setMessages([]);
+      }, []);
+
+      // Expose getLastLargeDataMessage via ref
+      const getLastLargeDataMessageRef = (
+        useRef as (initial: () => ChatMessage | null) => {
+          current: () => ChatMessage | null;
+        }
+      )(() => null);
+
+      // Update refs only when callbacks change (which is stable due to useCallback)
+      useEffect(() => {
+        addMessageRef.current = addMessage;
+        updateLastAssistantMessageRef.current = updateLastAssistantMessage;
+        getMessagesRef.current = getMessages;
+        clearMessagesRef.current = clearMessages;
+        getLastLargeDataMessageRef.current = getLastLargeDataMessage;
+      }, [
+        addMessage,
+        updateLastAssistantMessage,
+        getMessages,
+        clearMessages,
+        getLastLargeDataMessage,
+      ]);
 
       // Handle special commands
       // Returns true if the command was handled, false if it should be passed to onMessage
@@ -265,11 +337,37 @@ export class ChatUI {
                   role: 'system',
                   content:
                     'Available commands:\n' +
-                    '  /help       - Show this help message\n' +
-                    '  /clear      - Clear the chat history\n' +
-                    '  /tools      - List available MCP tools\n' +
-                    '  /history    - Show command history\n' +
-                    '  /exit, /quit - Exit the chat',
+                    '  /help         - Show this help message\n' +
+                    '  /clear        - Clear the chat history\n' +
+                    '  /tools        - List available MCP tools\n' +
+                    '  /history      - Show command history\n' +
+                    '  /show-all     - Show all messages (default: last 50)\n' +
+                    '  /show-recent  - Show only recent messages\n' +
+                    '  /save-json [tool-name-or-index] - Save tool result JSON to file\n' +
+                    '                (no arg = last result, number = by index, name = by name)\n' +
+                    '  /exit, /quit  - Exit the chat',
+                  timestamp: new Date(),
+                },
+              ]);
+              return true;
+            case '/show-all':
+              setShowAllMessages(true);
+              setMessages((prev: ChatMessage[]) => [
+                ...prev,
+                {
+                  role: 'system',
+                  content: `Showing all ${messages.length} messages.`,
+                  timestamp: new Date(),
+                },
+              ]);
+              return true;
+            case '/show-recent':
+              setShowAllMessages(false);
+              setMessages((prev: ChatMessage[]) => [
+                ...prev,
+                {
+                  role: 'system',
+                  content: `Showing last ${Math.min(maxVisibleMessages, messages.length)} messages.`,
                   timestamp: new Date(),
                 },
               ]);
@@ -596,8 +694,18 @@ export class ChatUI {
       );
 
       // Markdown parser for formatting assistant/system messages
+      // Memoized version that caches parsed results
       const parseMarkdown = useCallback(
         (text: string, defaultColor?: string): React.ReactElement[] => {
+          // Create cache key
+          const cacheKey = `${text}-${defaultColor || ''}`;
+
+          // Check cache first
+          const cached = markdownCacheRef.current.get(cacheKey);
+          if (cached) {
+            return cached;
+          }
+
           const elements: React.ReactElement[] = [];
           let elementKey = 0;
 
@@ -773,6 +881,17 @@ export class ChatUI {
             i++;
           }
 
+          // Cache the result
+          markdownCacheRef.current.set(cacheKey, elements);
+
+          // Limit cache size to prevent memory issues (keep last 100 entries)
+          if (markdownCacheRef.current.size > 100) {
+            const firstKey = markdownCacheRef.current.keys().next().value;
+            if (firstKey) {
+              markdownCacheRef.current.delete(firstKey);
+            }
+          }
+
           return elements;
         },
         [parseInlineMarkdown, parseTable]
@@ -796,6 +915,141 @@ export class ChatUI {
         return lines.length > 0 ? lines : [''];
       }, []);
 
+      // Memoized message component - only re-renders when message content changes
+      // Note: We create this as a function component that memo will wrap
+      const MessageComponentInner = (props: {
+        message: ChatMessage;
+        index: number;
+        options: ChatUIOptions;
+        parseMarkdown: (
+          text: string,
+          defaultColor?: string
+        ) => React.ReactElement[];
+        wrapText: (text: string, width: number) => string[];
+      }): React.ReactElement => {
+        const { message, index, options, parseMarkdown, wrapText } = props;
+        const timestamp = options.showTimestamps
+          ? `[${message.timestamp?.toLocaleTimeString() || ''}] `
+          : '';
+
+        if (message.role === 'user') {
+          // User messages: simple text wrapping, no markdown
+          const wrappedLines = wrapText(message.content, 60);
+          return React.createElement(
+            Box,
+            {
+              key: index,
+              flexDirection: 'column',
+              alignItems: 'flex-end',
+              marginY: 1,
+            },
+            wrappedLines.map((line: string, lineIndex: number) =>
+              React.createElement(
+                Box,
+                { key: lineIndex, backgroundColor: 'blue', paddingX: 1 },
+                React.createElement(Text, { color: 'white' }, timestamp + line)
+              )
+            )
+          );
+        } else {
+          // Assistant and system messages: parse markdown (cached via parseMarkdown)
+          const markdownElements = parseMarkdown(
+            message.content,
+            message.role === 'system' ? 'yellow' : undefined
+          );
+
+          if (message.role === 'assistant') {
+            // LLM-generated messages: styled with subtle dark background for easy reading
+            return React.createElement(
+              Box,
+              {
+                key: index,
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                marginY: 1,
+              },
+              React.createElement(
+                Box,
+                {
+                  flexDirection: 'row',
+                  marginBottom: 0.25,
+                  marginLeft: 1,
+                },
+                React.createElement(
+                  Text,
+                  { color: 'cyan', bold: true },
+                  `🤖 ${options.llmProviderName || 'AI'}: `
+                )
+              ),
+              React.createElement(
+                Box,
+                {
+                  flexDirection: 'column',
+                  backgroundColor: 'black',
+                  paddingX: 1,
+                  paddingY: 0.5,
+                  marginLeft: 1,
+                },
+                ...markdownElements
+              )
+            );
+          } else {
+            // System messages: styled with bright yellow color to make them pop (no prefix)
+            return React.createElement(
+              Box,
+              {
+                key: index,
+                flexDirection: 'column',
+                marginY: 0.5,
+              },
+              React.createElement(
+                Box,
+                {
+                  flexDirection: 'column',
+                  paddingX: 1,
+                  paddingY: 0.5,
+                },
+                ...markdownElements
+              )
+            );
+          }
+        }
+      };
+
+      // Wrap with memo for performance
+      const MessageComponent = memo(
+        MessageComponentInner,
+        (
+          prevProps: {
+            message: ChatMessage;
+            index: number;
+            options: ChatUIOptions;
+            parseMarkdown: (
+              text: string,
+              defaultColor?: string
+            ) => React.ReactElement[];
+            wrapText: (text: string, width: number) => string[];
+          },
+          nextProps: {
+            message: ChatMessage;
+            index: number;
+            options: ChatUIOptions;
+            parseMarkdown: (
+              text: string,
+              defaultColor?: string
+            ) => React.ReactElement[];
+            wrapText: (text: string, width: number) => string[];
+          }
+        ) => {
+          // Custom comparison: only re-render if message content or role changed
+          return (
+            prevProps.message.content === nextProps.message.content &&
+            prevProps.message.role === nextProps.message.role &&
+            prevProps.index === nextProps.index
+          );
+        }
+      );
+
       // Render using React.createElement (can't use JSX here without importing React at top level)
 
       return React.createElement(
@@ -811,102 +1065,53 @@ export class ChatUI {
             ' Syrin Dev Mode | Enter /exit or /quit to exit '
           )
         ),
-        // Messages area
+        // Messages area - using memoized components with viewport limiting
         React.createElement(
           Box,
           { flexDirection: 'column', flexGrow: 1, paddingX: 1 },
-          messages.map((message: ChatMessage, index: number) => {
-            const timestamp = options.showTimestamps
-              ? `[${message.timestamp?.toLocaleTimeString() || ''}] `
-              : '';
+          ((): Array<React.ReactElement | null> => {
+            // Determine which messages to show
+            const visibleMessages = showAllMessages
+              ? messages
+              : messages.slice(-maxVisibleMessages);
+            const hiddenCount = messages.length - visibleMessages.length;
+            const startIndex = showAllMessages
+              ? 0
+              : Math.max(0, messages.length - maxVisibleMessages);
 
-            if (message.role === 'user') {
-              // User messages: simple text wrapping, no markdown
-              const wrappedLines = wrapText(message.content, 60);
-              return React.createElement(
-                Box,
-                {
-                  key: index,
-                  flexDirection: 'column',
-                  alignItems: 'flex-end',
-                  marginY: 1,
-                },
-                wrappedLines.map((line: string, lineIndex: number) =>
-                  React.createElement(
-                    Box,
-                    { key: lineIndex, backgroundColor: 'blue', paddingX: 1 },
-                    React.createElement(
-                      Text,
-                      { color: 'white' },
-                      timestamp + line
-                    )
-                  )
-                )
-              );
-            } else {
-              // Assistant and system messages: parse markdown
-              if (message.role === 'assistant') {
-                // LLM-generated messages: styled with subtle dark background for easy reading
-                const markdownElements = parseMarkdown(message.content);
-                return React.createElement(
-                  Box,
-                  {
-                    key: index,
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    marginY: 1,
-                  },
-                  React.createElement(
+            return [
+              // Show message if there are hidden messages
+              hiddenCount > 0
+                ? React.createElement(
                     Box,
                     {
-                      flexDirection: 'row',
-                      marginBottom: 0.25,
-                      marginLeft: 1,
+                      key: 'viewport-info',
+                      marginY: 0.5,
+                      paddingX: 1,
                     },
                     React.createElement(
                       Text,
-                      { color: 'cyan', bold: true },
-                      `🤖 ${options.llmProviderName || 'AI'}: `
+                      { color: 'yellow', dimColor: true },
+                      `... ${hiddenCount} earlier message${hiddenCount > 1 ? 's' : ''} hidden. Type /show-all to view all messages.`
                     )
-                  ),
-                  React.createElement(
-                    Box,
-                    {
-                      flexDirection: 'column',
-                      backgroundColor: 'black',
-                      paddingX: 1,
-                      paddingY: 0.5,
-                      marginLeft: 1,
-                    },
-                    ...markdownElements
                   )
-                );
-              } else {
-                // System messages: styled with bright yellow color to make them pop (no prefix)
-                const markdownElements = parseMarkdown(
-                  message.content,
-                  'yellow'
-                );
-                return React.createElement(
-                  Box,
-                  {
-                    key: index,
-                    flexDirection: 'column',
-                    marginY: 0.5,
-                  },
-                  React.createElement(
-                    Box,
-                    {
-                      flexDirection: 'column',
-                      paddingX: 1,
-                      paddingY: 0.5,
-                    },
-                    ...markdownElements
-                  )
-                );
-              }
-            }
-          })
+                : null,
+              // Render visible messages
+              ...visibleMessages.map(
+                (message: ChatMessage, localIndex: number) => {
+                  const globalIndex = startIndex + localIndex;
+                  return React.createElement(MessageComponent, {
+                    key: `${message.role}-${globalIndex}-${message.content.substring(0, 50)}`,
+                    message,
+                    index: globalIndex,
+                    options,
+                    parseMarkdown,
+                    wrapText,
+                  });
+                }
+              ),
+            ];
+          })()
         ),
         // Input area
         React.createElement(
@@ -944,6 +1149,24 @@ export class ChatUI {
    */
   addMessage(role: 'user' | 'assistant' | 'system', content: string): void {
     this.addMessageRef.current(role, content);
+  }
+
+  /**
+   * Add a message with large data reference.
+   */
+  addMessageWithData(
+    role: 'user' | 'assistant' | 'system',
+    content: string,
+    largeData: ChatMessage['largeData']
+  ): void {
+    this.addMessageRef.current(role, content, largeData);
+  }
+
+  /**
+   * Get the last message with large data.
+   */
+  getLastLargeDataMessage(): ChatMessage | null {
+    return this.getLastLargeDataMessageRef.current();
   }
 
   /**

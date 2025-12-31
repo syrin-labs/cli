@@ -19,6 +19,9 @@
 - 🚀 **Dev Mode** - Interactive development environment for testing MCP tools with LLMs
 - 🔒 **Safe Execution** - Preview mode by default to prevent accidental tool execution
 - 📊 **Event Tracking** - Save and analyze events for debugging and monitoring
+- 🌳 **JSON Tree View** - Visual tree formatting for large JSON responses with pagination
+- 💾 **File Export** - Save large tool results to files for external analysis
+- ⚡ **Performance Optimized** - Efficient rendering with memoization and viewport limiting
 
 ## Demo
 
@@ -301,13 +304,41 @@ syrin dev --exec --llm claude --save-events
 - **Command History**: Access previous commands with `/history`
 - **Tool Listing**: View available tools with `/tools`
 - **Event Tracking**: Save all events for later analysis
+- **Large JSON Handling**: Automatic tree view formatting and pagination for large tool results
+- **Performance Optimized**: Efficient rendering with memoization and viewport limiting
+- **File Export**: Save large JSON results to external files for analysis
 
 #### Special Commands in Dev Mode
 
 - `/tools` - List all available tools
 - `/history` - Show command history
 - `/help` - Show help information
+- `/save-json` - Save last tool result JSON to file (for large data)
+- `/show-all` - Show all messages (default: last 50)
+- `/show-recent` - Show only recent messages (last 50)
+- `/clear` - Clear the chat history
+- `/exit` or `/quit` - Exit dev mode
 - `Ctrl+C` - Exit dev mode
+
+#### Large JSON Handling
+
+Dev mode automatically handles large JSON responses from MCP tools:
+
+- **Tree View**: JSON is displayed in a visual tree structure for easy navigation
+- **Pagination**: Large arrays are paginated to prevent terminal overflow
+- **Size-Based Formatting**:
+  - Small (< 100KB): Full tree view
+  - Medium (100KB-1MB): Tree with pagination
+  - Large (> 1MB): Structure overview only
+- **File Saving**: Use `/save-json` to export large results to a file for external analysis
+- **Memory Efficient**: Large data is stored efficiently without impacting performance
+
+#### Performance Features
+
+- **Viewport Limiting**: Only last 50 messages shown by default (use `/show-all` to see all)
+- **Memoization**: Parsed markdown and messages are cached for fast rendering
+- **Optimized Rendering**: Only changed messages re-render, keeping UI responsive
+- **Smooth Scrolling**: Efficient message list rendering even with many messages
 
 #### Transport Behavior
 
