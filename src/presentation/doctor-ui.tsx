@@ -10,6 +10,7 @@ interface CheckResult {
   isValid: boolean;
   message: string;
   fix?: string;
+  value?: string; // Actual value (for API keys and model names)
 }
 
 interface DoctorReport {
@@ -32,6 +33,7 @@ interface DoctorReport {
   localLlmChecks?: Array<{
     provider: string;
     check: CheckResult;
+    modelName?: string; // Model name for local LLM providers
   }>;
 }
 
@@ -112,6 +114,15 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
     log.blank();
   }
 
+  /**
+   * Mask API key to show only first few characters.
+   */
+  function maskApiKey(apiKey: string | undefined): string {
+    if (!apiKey) return '';
+    if (apiKey.length <= 4) return '****';
+    return `${apiKey.substring(0, 4)}*****`;
+  }
+
   // LLM Providers Section
   if (llmChecks.length > 0) {
     log.heading('LLM Providers');
@@ -124,7 +135,10 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
       log.plain(`  ${log.styleText(providerName, 'bold')}${defaultMark}`);
 
       // API Key
-      const apiKeyLabel = `    API Key: [${llm.apiKeyCheck.message}]`;
+      const apiKeyValue = llm.apiKeyCheck.value
+        ? ` (${maskApiKey(llm.apiKeyCheck.value)})`
+        : '';
+      const apiKeyLabel = `    API Key: [${llm.apiKeyCheck.message}]${apiKeyValue}`;
       if (llm.apiKeyCheck.isValid) {
         log.plain(`${apiKeyLabel} ${log.tick()}`);
       } else {
@@ -135,7 +149,10 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
       }
 
       // Model
-      const modelLabel = `    Model: [${llm.modelCheck.message}]`;
+      const modelValue = llm.modelCheck.value
+        ? ` (${llm.modelCheck.value})`
+        : '';
+      const modelLabel = `    Model: [${llm.modelCheck.message}]${modelValue}`;
       if (llm.modelCheck.isValid) {
         log.plain(`${modelLabel} ${log.tick()}`);
       } else {
@@ -152,10 +169,18 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
   if (localLlmChecks && localLlmChecks.length > 0) {
     log.heading('Local LLM Providers');
     for (const llm of localLlmChecks) {
-      if (llm.check.isValid) {
-        log.plain(`  ${llm.provider} ${log.tick()}`);
+      log.plain(`  ${llm.provider}`);
+      if (llm.modelName) {
+        const modelLabel = `    Model: ${llm.modelName}`;
+        if (llm.check.isValid) {
+          log.plain(`${modelLabel} ${log.tick()}`);
+        } else {
+          log.plain(`${modelLabel} ${log.cross()}`);
+        }
+      } else if (llm.check.isValid) {
+        log.plain(`    ${log.tick()}`);
       } else {
-        log.plain(`  ${llm.provider} ${log.cross()}`);
+        log.plain(`    ${log.cross()}`);
       }
     }
     log.blank();
@@ -166,7 +191,7 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
     log.success('All checks passed');
     log.blank();
   } else {
-    log.warning('⚠  Some issues found');
+    log.warning('Some issues found');
     log.blank();
   }
 }

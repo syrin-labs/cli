@@ -18,6 +18,7 @@ interface CheckResult {
   isValid: boolean;
   message: string;
   fix?: string;
+  value?: string; // Actual value (for API keys and model names)
 }
 
 interface DoctorReport {
@@ -33,6 +34,7 @@ interface DoctorReport {
   localLlmChecks?: Array<{
     provider: string;
     check: CheckResult;
+    modelName?: string; // Model name for local LLM providers
   }>;
 }
 
@@ -154,6 +156,7 @@ function checkLLMProviders(
       apiKeyCheck: {
         isValid: apiKeyCheck.isSet,
         message: apiKeyVar, // Always show the env var name
+        value: apiKeyCheck.value, // Actual API key value (for masking)
         fix: apiKeyCheck.isSet
           ? undefined
           : apiKeyCheck.errorMessage ||
@@ -162,6 +165,7 @@ function checkLLMProviders(
       modelCheck: {
         isValid: modelCheck.isSet,
         message: modelVar, // Always show the env var name
+        value: modelCheck.value, // Actual model name value
         fix: modelCheck.isSet
           ? undefined
           : modelCheck.errorMessage || Messages.ENV_SET_INSTRUCTIONS(modelVar),
@@ -177,18 +181,26 @@ function checkLLMProviders(
  * Check local LLM providers.
  */
 function checkLocalLLMProviders(
-  config: SyrinConfig
+  config: SyrinConfig,
+  projectRoot: string
 ): DoctorReport['localLlmChecks'] {
   const checks: DoctorReport['localLlmChecks'] = [];
 
-  for (const [providerName] of Object.entries(config.llm)) {
+  for (const [providerName, providerConfig] of Object.entries(config.llm)) {
     if (providerName === LLMProviders.OLLAMA) {
+      // Get model name for Ollama
+      const modelVar = providerConfig.MODEL_NAME
+        ? String(providerConfig.MODEL_NAME)
+        : '';
+      const modelCheck = checkEnvVar(modelVar, projectRoot);
+
       checks.push({
         provider: providerName,
         check: {
-          isValid: true,
+          isValid: modelCheck.isSet,
           message: Defaults.WORKING,
         },
+        modelName: modelCheck.value, // Actual model name
       });
     }
   }
@@ -208,7 +220,7 @@ function generateReport(
     transportCheck: checkTransport(config),
     scriptCheck: checkScript(config),
     llmChecks: checkLLMProviders(config, projectRoot),
-    localLlmChecks: checkLocalLLMProviders(config),
+    localLlmChecks: checkLocalLLMProviders(config, projectRoot),
   };
 }
 

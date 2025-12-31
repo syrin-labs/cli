@@ -66,6 +66,5 @@ llm:
 
   # Local LLM Provider (Ollama) - uncomment to enable
   ollama:
-    provider: 'ollama'
     MODEL_NAME: 'LLAMA_MODEL_NAME'
     default: false

@@ -24,7 +24,9 @@ export function handleCommandError(
   defaultMessage: string = Messages.ERROR_UNEXPECTED
 ): never {
   if (error instanceof ConfigurationError) {
-    logger.error('Command failed', error);
+    // For user-facing errors, don't show verbose structured logs
+    // The structured logger will only output in debug mode (set via setLevel)
+    // For now, we skip structured logging for user-facing errors to keep output clean
     log.blank();
     log.error(error.message);
     log.blank();
@@ -32,6 +34,7 @@ export function handleCommandError(
   }
 
   const err = normalizeError(error);
+  // Only log to structured logger (won't output unless debug mode is enabled)
   logger.error('Command failed', err);
   const message = getErrorMessage(error) || defaultMessage;
   log.blank();

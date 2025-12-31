@@ -119,6 +119,56 @@ export type ConfigSchemaType = z.infer<typeof ConfigSchema>;
  * @returns Validated configuration with opaque types
  * @throws {ConfigurationError} If validation fails
  */
+/**
+ * Format Zod validation errors into user-friendly messages.
+ */
+function formatValidationError(error: z.ZodError): string {
+  const issues = error.issues;
+  if (issues.length === 0) {
+    return 'Configuration validation failed';
+  }
+
+  const messages: string[] = [];
+  for (const issue of issues) {
+    const path = issue.path.length > 0 ? issue.path.join('.') : 'configuration';
+    let message = `\n  • ${path}: ${issue.message}`;
+
+    // Add helpful hints for common errors
+    if (issue.code === 'invalid_type') {
+      // Type guard for invalid_type issues
+      const invalidTypeIssue = issue as z.ZodIssue & {
+        expected: string;
+        received: string;
+      };
+      if (invalidTypeIssue.received === 'undefined') {
+        message += `\n    → Fix: Add "${path}" to your config.yaml file`;
+      } else {
+        message += `\n    → Expected: ${invalidTypeIssue.expected}, but received: ${invalidTypeIssue.received}`;
+      }
+    } else if (issue.code === 'too_small') {
+      // Type guard for too_small issues
+      const tooSmallIssue = issue as z.ZodIssue & {
+        type?: string;
+      };
+      if (tooSmallIssue.type === 'string') {
+        message += `\n    → Fix: "${path}" cannot be empty`;
+      }
+    }
+
+    // Check for URL validation errors in the message
+    if (
+      issue.message.toLowerCase().includes('url') ||
+      issue.message.toLowerCase().includes('invalid url')
+    ) {
+      message += `\n    → Fix: Provide a valid URL for "${path}"`;
+    }
+
+    messages.push(message);
+  }
+
+  return `Configuration validation failed:${messages.join('')}\n\n💡 Tip: Run \`syrin doctor\` after fixing your config.yaml to verify the setup.`;
+}
+
 export function validateConfig(config: unknown): SyrinConfig {
   try {
     const parsed = ConfigSchema.parse(config);
@@ -150,18 +200,9 @@ export function validateConfig(config: unknown): SyrinConfig {
     return validated;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.issues
-        .map(issue => {
-          const path = issue.path.length > 0 ? issue.path.join('.') : 'root';
-          return `${path}: ${issue.message}`;
-        })
-        .join('\n');
-      throw new ConfigurationError(
-        `Configuration validation failed:\n${errorMessages}`,
-        {
-          context: { errors: error.issues },
-        }
-      );
+      throw new ConfigurationError(formatValidationError(error), {
+        context: { errors: error.issues },
+      });
     }
     throw error;
   }
