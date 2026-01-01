@@ -144,11 +144,11 @@ export function compareVersions(v1: string, v2: string): number {
 }
 
 /**
- * Check Syrin version information including update availability.
+ * Internal helper to check version information including update availability.
  */
-export async function checkSyrinVersion(): Promise<VersionInfo> {
+async function checkVersionInternal(packageName: string): Promise<VersionInfo> {
   const current = getCurrentVersion();
-  const latest = await getLatestVersion(PACKAGE_NAME);
+  const latest = await getLatestVersion(packageName);
 
   if (!latest) {
     // If we can't fetch latest version, assume current is latest
@@ -172,34 +172,19 @@ export async function checkSyrinVersion(): Promise<VersionInfo> {
 }
 
 /**
+ * Check Syrin version information including update availability.
+ */
+export async function checkSyrinVersion(): Promise<VersionInfo> {
+  return checkVersionInternal(PACKAGE_NAME);
+}
+
+/**
  * Check version information including update availability.
- * @deprecated Use checkSyrinVersion() instead. This function is kept for backward compatibility.
  */
 export async function checkVersion(
   packageName: string = PACKAGE_NAME
 ): Promise<VersionInfo> {
-  const current = getCurrentVersion();
-  const latest = await getLatestVersion(packageName);
-
-  if (!latest) {
-    // If we can't fetch latest version, assume current is latest
-    return {
-      current,
-      isLatest: true,
-      updateAvailable: false,
-    };
-  }
-
-  const comparison = compareVersions(current, latest);
-  const isLatest = comparison >= 0;
-  const updateAvailable = comparison < 0;
-
-  return {
-    current,
-    latest,
-    isLatest,
-    updateAvailable,
-  };
+  return checkVersionInternal(packageName);
 }
 
 /**
