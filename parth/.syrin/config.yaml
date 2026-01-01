@@ -5,34 +5,34 @@
 
 # Configuration Version
 # The version of this configuration schema.
-version: "1.0.0"
+version: '1.0.0'
 
 # Project Configuration
 # ---------------------
 # Project name: A unique identifier for your MCP server project
-project_name: "parth"
+project_name: 'parth'
 
 # Agent name: The name of your AI agent that will interact with the MCP server
-agent_name: "Parth"
+agent_name: 'Parth'
 
 # Transport Configuration
 # -----------------------
 # Transport type: How Syrin communicates with your MCP server
 #   - "stdio": Communicate via standard input/output (spawns the MCP server process)
 #   - "http":  Communicate via HTTP (connects to a running MCP server)
-transport: "http"
+transport: 'http'
 
 # MCP Server URL (required for http transport)
 # The HTTP endpoint where your MCP server is running
 # Example: "http://localhost:8000/mcp"
-mcp_url: "http://localhost:8000/mcp"
+mcp_url: 'http://localhost:8000/mcp'
 
 # Script Configuration
 # --------------------
 # Command to run your MCP server
 # For stdio transport, this is required
 # Use --run-script flag in dev mode to spawn the server internally
-script: "python3 server.py"
+script: 'python3 server.py'
 
 # LLM Provider Configuration
 # ---------------------------
@@ -48,23 +48,23 @@ llm:
     # API key: Set as environment variable name or direct value
     # Example: "OPENAI_API_KEY" (reads from process.env.OPENAI_API_KEY)
     # Or: "sk-..." (direct value, not recommended)
-    API_KEY: "OPENAI_API_KEY"
+    API_KEY: 'OPENAI_API_KEY'
 
     # Model name: Set as environment variable name or direct value
     # Example: "OPENAI_MODEL_NAME" (reads from process.env.OPENAI_MODEL_NAME)
     # Or: "gpt-4" (direct value)
-    MODEL_NAME: "OPENAI_MODEL_NAME"
+    MODEL_NAME: 'OPENAI_MODEL_NAME'
 
     # Set as default LLM provider
     default: true
 
   # Claude Provider (uncomment to enable)
-  # claude:
-  #   API_KEY: "CLAUDE_API_KEY"
-  #   MODEL_NAME: "CLAUDE_MODEL_NAME"
-  #   default: false
+  claude:
+    API_KEY: 'CLAUDE_API_KEY'
+    MODEL_NAME: 'CLAUDE_MODEL_NAME'
+    default: false
 
   # Ollama Provider - uncomment to enable
-  # ollama:
-  #   MODEL_NAME: "OLLAMA_MODEL_NAME"  # or "llama2", "mistral", etc.
-  #   default: false
+  ollama:
+    MODEL_NAME: 'OLLAMA_MODEL_NAME' # or "llama2", "mistral", etc.
+    default: false

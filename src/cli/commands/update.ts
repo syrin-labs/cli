@@ -8,6 +8,7 @@ import { updatePackage, detectInstallType } from '@/utils/package-manager';
 import { handleCommandError } from '@/cli/utils';
 import { Messages } from '@/constants';
 import { Icons } from '@/constants';
+import { SYRIN_LINKS } from '@/constants/links';
 import { log } from '@/utils/logger';
 
 const PACKAGE_NAME = '@ankan-ai/syrin';
@@ -62,7 +63,7 @@ export async function executeUpdate(): Promise<void> {
       log.info(
         'If your config.yaml structure changed, check the migration guide.'
       );
-      log.plain(`   Documentation: https://github.com/ankan-labs/syrin`);
+      log.plain(`   Documentation: ${SYRIN_LINKS.DOCS}`);
       log.blank();
     } else {
       const errorMessage = result.error || Messages.UPDATE_FAILED;

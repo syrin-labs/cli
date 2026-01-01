@@ -92,6 +92,7 @@ export abstract class BaseMCPClientManager {
     );
 
     // Emit transport message sent event
+    // Construct request body from source variables to ensure consistency
     const requestMessage = JSON.stringify({
       method: 'tools/call',
       params: {
@@ -100,6 +101,8 @@ export abstract class BaseMCPClientManager {
       },
     });
 
+    // Derive tool_name and tool_arguments from the same source variables
+    // used to construct request_body to guarantee consistency
     await this.eventEmitter.emit<TransportMessageSentPayload>(
       TransportEventType.TRANSPORT_MESSAGE_SENT,
       {

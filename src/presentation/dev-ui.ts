@@ -12,19 +12,15 @@ import {
 
 /**
  * Build initial welcome messages for dev mode.
+ * Returns empty array - welcome banner now handles all welcome info.
  */
-export function buildDevWelcomeMessages(_options: {
-  version: string;
-  llmProvider: string;
-  toolCount: number;
-  transport: string;
-  mcpUrl?: string;
-  command?: string;
-}): Promise<Array<{ role: 'system'; content: string }>> {
+export function buildDevWelcomeMessages(): Array<{
+  role: 'system';
+  content: string;
+}> {
   // Return empty array - welcome banner now handles all welcome info
   // Old welcome messages are no longer needed as they're displayed in the persistent banner
-  const messages: Array<{ role: 'system'; content: string }> = [];
-  return Promise.resolve(messages);
+  return [];
 }
 
 /**

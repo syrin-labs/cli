@@ -228,14 +228,7 @@ export async function executeDev(
     // Build initial info messages for chat UI (will scroll away when user starts typing)
     const displayCommand =
       shouldSpawn && serverCommand ? serverCommand : undefined;
-    const initialMessages = await buildDevWelcomeMessages({
-      version: config.version,
-      llmProvider: llmProvider.getName(),
-      toolCount: availableTools.length,
-      transport: config.transport,
-      mcpUrl: config.mcp_url,
-      command: displayCommand,
-    });
+    const initialMessages = buildDevWelcomeMessages();
 
     // Get version info for welcome banner - use same approach as other commands
     const { checkVersion, formatVersionWithUpdate } =

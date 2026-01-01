@@ -3,6 +3,8 @@
  * Creates a persistent welcome banner that displays Syrin branding and info.
  */
 
+import { SYRIN_LINKS } from '@/constants/links';
+
 export interface WelcomeBannerOptions {
   versionDisplay: string; // Formatted version string from formatVersionWithUpdate
   llmProvider: string;
@@ -49,10 +51,9 @@ export function createWelcomeBanner(
   // Version display - already formatted by formatVersionWithUpdate in dev.ts
   const versionDisplay = options.versionDisplay;
 
-  // Links
-  const npmLink = 'https://www.npmjs.com/package/@ankan-ai/syrin';
-  const githubLink = 'https://github.com/ankan-labs/syrin';
-  const docsLink = githubLink + '#readme';
+  // Gradient effect: cyan -> blue -> magenta -> cyan -> blue -> magenta
+  // Allocated once and reused in map to avoid reallocation on every iteration
+  const gradientColors = ['cyan', 'blue', 'magenta', 'cyan', 'blue', 'magenta'];
 
   return createElement(
     Box,
@@ -97,15 +98,6 @@ export function createWelcomeBanner(
               alignItems: 'flex-start',
             },
             ...syrinAscii.map((line, index) => {
-              // Gradient effect: cyan -> blue -> magenta -> cyan -> blue -> magenta
-              const gradientColors = [
-                'cyan',
-                'blue',
-                'magenta',
-                'cyan',
-                'blue',
-                'magenta',
-              ];
               const color =
                 gradientColors[index % gradientColors.length] || 'cyan';
               // Trim the line to remove any trailing spaces that could cause alignment issues
@@ -234,7 +226,7 @@ export function createWelcomeBanner(
                 width: '100%',
               },
               createElement(Text, { color: 'yellow' }, '📚 Docs:        '),
-              createElement(Text, { color: 'cyan' }, docsLink)
+              createElement(Text, { color: 'cyan' }, SYRIN_LINKS.DOCS)
             ),
             createElement(
               Box,
@@ -244,7 +236,7 @@ export function createWelcomeBanner(
                 width: '100%',
               },
               createElement(Text, { color: 'yellow' }, '📦 NPM:         '),
-              createElement(Text, { color: 'cyan' }, npmLink)
+              createElement(Text, { color: 'cyan' }, SYRIN_LINKS.NPM)
             ),
             createElement(
               Box,
@@ -254,7 +246,7 @@ export function createWelcomeBanner(
                 width: '100%',
               },
               createElement(Text, { color: 'yellow' }, '🐙 GitHub:      '),
-              createElement(Text, { color: 'cyan' }, githubLink)
+              createElement(Text, { color: 'cyan' }, SYRIN_LINKS.GITHUB)
             ),
             // Help message
             createElement(

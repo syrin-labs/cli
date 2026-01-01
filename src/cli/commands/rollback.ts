@@ -17,6 +17,7 @@ import {
 import { handleCommandError } from '@/cli/utils';
 import { Messages } from '@/constants';
 import { Icons } from '@/constants';
+import { SYRIN_LINKS } from '@/constants/links';
 import { ConfigurationError } from '@/utils/errors';
 import { log } from '@/utils/logger';
 
@@ -104,7 +105,7 @@ export async function executeRollback(
 
       // Show helpful message about config compatibility
       log.info('Make sure your config.yaml is compatible with this version.');
-      log.plain(`   Documentation: https://github.com/ankan-labs/syrin`);
+      log.plain(`   Documentation: ${SYRIN_LINKS.DOCS}`);
       log.blank();
     } else {
       const errorMessage = result.error || Messages.ROLLBACK_FAILED;
