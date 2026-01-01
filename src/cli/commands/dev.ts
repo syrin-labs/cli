@@ -264,6 +264,46 @@ export async function executeDev(
       },
       historyFile,
       maxHistorySize: 1000,
+      getSessionState: (): {
+        totalToolCalls: number;
+        toolCalls: Array<{ name: string; timestamp: Date }>;
+        startTime: Date;
+      } => {
+        const state = session.getState();
+        return {
+          totalToolCalls: state.totalToolCalls,
+          toolCalls: state.toolCalls.map(tc => ({
+            name: tc.name,
+            timestamp: tc.timestamp,
+          })),
+          startTime: state.startTime,
+        };
+      },
+      llmProvider: {
+        chat: async (request: {
+          messages: Array<{ role: string; content: string }>;
+          temperature?: number;
+          maxTokens?: number;
+        }): Promise<{ content: string }> => {
+          // Convert minimal request to LLMRequest format
+          const llmRequest = {
+            messages: request.messages.map(msg => ({
+              role: msg.role as 'user' | 'assistant' | 'system',
+              content: msg.content,
+            })),
+            temperature: request.temperature,
+            maxTokens: request.maxTokens,
+          };
+          const response = await llmProvider.chat(llmRequest);
+          // Convert LLMResponse to minimal format
+          return {
+            content:
+              typeof response.content === 'string'
+                ? response.content
+                : JSON.stringify(response.content),
+          };
+        },
+      },
       onMessage: async (input: string): Promise<void> => {
         // Add user input to session conversation history (even for special commands)
         // This ensures all commands are saved in chat history

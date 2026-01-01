@@ -28,6 +28,7 @@ import {
   createMessageComponent,
   createMessagesList,
 } from './components';
+import { generateGoodbyeMessage } from './goodbye-messages';
 
 // Re-export types for backward compatibility
 export type { ChatMessage, ChatUIOptions } from './chat-ui-types';
@@ -306,6 +307,63 @@ export class ChatUI {
         getLastLargeDataMessage,
       ]);
 
+      // Helper to show goodbye message and exit
+      const showGoodbyeAndExit = useCallback(async (): Promise<void> => {
+        try {
+          // Get session state if available
+          const sessionState = options.getSessionState?.();
+          if (sessionState) {
+            // Generate goodbye message
+            // Map toolCalls to match DevSessionState format
+            const fullSessionState = {
+              totalToolCalls: sessionState.totalToolCalls,
+              toolCalls: sessionState.toolCalls.map(tc => ({
+                id: '',
+                name: tc.name,
+                arguments: {},
+                timestamp: tc.timestamp,
+              })),
+              startTime: sessionState.startTime,
+              conversationHistory: [],
+              totalLLMCalls: 0,
+            };
+            const goodbyeMessage = await generateGoodbyeMessage(
+              (options.llmProvider as unknown as {
+                chat: (request: {
+                  messages: Array<{ role: string; content: string }>;
+                  temperature?: number;
+                  maxTokens?: number;
+                }) => Promise<{ content: string }>;
+              }) || null,
+              fullSessionState
+            );
+
+            // Add goodbye message to chat
+            setMessages((prev: ChatMessage[]) => [
+              ...prev,
+              {
+                role: 'assistant',
+                content: goodbyeMessage,
+                timestamp: new Date(),
+              },
+            ]);
+
+            // Wait a bit for message to be displayed
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        } catch (error) {
+          // Ignore errors during goodbye message generation
+          console.error('Error generating goodbye message:', error);
+        }
+
+        try {
+          await options.onExit?.();
+        } catch {
+          // Ignore errors during exit
+        }
+        exit();
+      }, [options, exit, setMessages]);
+
       // Handle special commands
       // Returns true if the command was handled, false if it should be passed to onMessage
       const handleSpecialCommand = useCallback(
@@ -316,12 +374,8 @@ export class ChatUI {
           switch (cmd) {
             case '/exit':
             case '/quit':
-              try {
-                await options.onExit?.();
-              } catch {
-                // Ignore errors during exit
-              }
-              exit();
+              // Show goodbye and exit (user message already added by handleSubmit)
+              await showGoodbyeAndExit();
               return true;
             case '/clear':
               setMessages([]);
@@ -349,7 +403,7 @@ export class ChatUI {
               return false;
           }
         },
-        [options, exit]
+        [options, showGoodbyeAndExit]
       );
 
       // Handle input submission
@@ -427,12 +481,13 @@ export class ChatUI {
         (_char: string, key: { ctrl?: boolean; escape?: boolean }) => {
           if ((key.ctrl && _char === 'c') || _char === '\x03' || key.escape) {
             void (async (): Promise<void> => {
-              try {
-                await options.onExit?.();
-              } catch {
-                // Ignore errors during exit
-              }
-              exit();
+              // Add user message showing they pressed Ctrl+C
+              setMessages((prev: ChatMessage[]) => [
+                ...prev,
+                { role: 'user', content: '/exit', timestamp: new Date() },
+              ]);
+              // Show goodbye and exit
+              await showGoodbyeAndExit();
             })();
           }
         },

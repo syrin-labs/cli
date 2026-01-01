@@ -42,6 +42,20 @@ export interface ChatUIOptions {
   onMessage?: (message: string) => Promise<void>;
   /** Callback when user exits */
   onExit?: () => Promise<void>;
+  /** Callback to get session state for goodbye messages */
+  getSessionState?: () => {
+    totalToolCalls: number;
+    toolCalls: Array<{ name: string; timestamp: Date }>;
+    startTime: Date;
+  };
+  /** LLM provider for generating goodbye messages */
+  llmProvider?: {
+    chat: (request: {
+      messages: Array<{ role: string; content: string }>;
+      temperature?: number;
+      maxTokens?: number;
+    }) => Promise<{ content: string }>;
+  } | null;
   /** History file path for persisting command history */
   historyFile?: string;
   /** Maximum number of history entries to keep */
