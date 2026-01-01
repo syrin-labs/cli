@@ -53,7 +53,7 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
       localLlmChecks.every(l => l.check.isValid));
 
   // Get version info for display
-  const versionDisplayString = await getVersionDisplayString('@ankan-ai/syrin');
+  const versionDisplayString = await getVersionDisplayString();
 
   // Header
   log.blank();

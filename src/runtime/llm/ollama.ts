@@ -153,9 +153,7 @@ class OllamaProcessManager {
         throw error;
       }
       throw new ConfigurationError(
-        `Failed to start Ollama service: ${
-          error instanceof Error ? error.message : String(error)
-        }`
+        `Failed to start Ollama service: ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }

@@ -3,15 +3,14 @@
  * Updates Syrin to the latest version.
  */
 
-import { checkVersion, getCurrentVersion } from '@/utils/version-checker';
+import { checkSyrinVersion, getCurrentVersion } from '@/utils/version-checker';
 import { updatePackage, detectInstallType } from '@/utils/package-manager';
 import { handleCommandError } from '@/cli/utils';
 import { Messages } from '@/constants';
 import { Icons } from '@/constants';
 import { SYRIN_LINKS } from '@/constants/links';
 import { log } from '@/utils/logger';
-
-const PACKAGE_NAME = '@ankan-ai/syrin';
+import { PACKAGE_NAME } from '@/constants/app';
 
 /**
  * Execute the update command.
@@ -24,7 +23,7 @@ export async function executeUpdate(): Promise<void> {
     log.blank();
 
     // Check for latest version
-    const versionInfo = await checkVersion(PACKAGE_NAME);
+    const versionInfo = await checkSyrinVersion();
 
     if (!versionInfo.latest) {
       log.warning(

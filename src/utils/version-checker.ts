@@ -6,6 +6,7 @@
 import * as https from 'https';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PACKAGE_NAME } from '@/constants/app';
 
 export interface VersionInfo {
   current: string;
@@ -45,7 +46,7 @@ export function getCurrentVersion(): string {
  * Fetch package information from npm registry.
  */
 export async function fetchPackageInfo(
-  packageName: string = '@ankan-ai/syrin'
+  packageName: string = PACKAGE_NAME
 ): Promise<RegistryPackageInfo> {
   return new Promise((resolve, reject) => {
     const url = `https://registry.npmjs.org/${packageName}`;
@@ -103,7 +104,7 @@ export async function fetchPackageInfo(
  * Get the latest version from npm registry.
  */
 export async function getLatestVersion(
-  packageName: string = '@ankan-ai/syrin'
+  packageName: string = PACKAGE_NAME
 ): Promise<string | undefined> {
   try {
     const packageInfo = await fetchPackageInfo(packageName);
@@ -143,10 +144,39 @@ export function compareVersions(v1: string, v2: string): number {
 }
 
 /**
+ * Check Syrin version information including update availability.
+ */
+export async function checkSyrinVersion(): Promise<VersionInfo> {
+  const current = getCurrentVersion();
+  const latest = await getLatestVersion(PACKAGE_NAME);
+
+  if (!latest) {
+    // If we can't fetch latest version, assume current is latest
+    return {
+      current,
+      isLatest: true,
+      updateAvailable: false,
+    };
+  }
+
+  const comparison = compareVersions(current, latest);
+  const isLatest = comparison >= 0;
+  const updateAvailable = comparison < 0;
+
+  return {
+    current,
+    latest,
+    isLatest,
+    updateAvailable,
+  };
+}
+
+/**
  * Check version information including update availability.
+ * @deprecated Use checkSyrinVersion() instead. This function is kept for backward compatibility.
  */
 export async function checkVersion(
-  packageName: string = '@ankan-ai/syrin'
+  packageName: string = PACKAGE_NAME
 ): Promise<VersionInfo> {
   const current = getCurrentVersion();
   const latest = await getLatestVersion(packageName);
@@ -177,7 +207,7 @@ export async function checkVersion(
  */
 export function formatVersionWithUpdate(
   versionInfo: VersionInfo,
-  packageName: string = '@ankan-ai/syrin'
+  packageName: string = PACKAGE_NAME
 ): string {
   const version = `v${versionInfo.current}`;
   if (versionInfo.isLatest || !versionInfo.latest) {

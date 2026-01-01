@@ -26,6 +26,7 @@ import {
   formatToolsList,
   formatCommandHistory,
 } from '@/presentation/dev-ui';
+import type { VersionInfo } from '@/utils/version-checker';
 
 /**
  * Resolve the server command to use based on config and run-script flag.
@@ -231,10 +232,13 @@ export async function executeDev(
     const initialMessages = buildDevWelcomeMessages();
 
     // Get version info for welcome banner - use same approach as other commands
-    const { checkVersion, formatVersionWithUpdate } =
-      await import('@/utils/version-checker');
-    const versionInfo = await checkVersion('@ankan-ai/syrin');
-    const versionDisplayString = formatVersionWithUpdate(versionInfo);
+    const versionChecker = (await import('@/utils/version-checker')) as {
+      checkSyrinVersion: () => Promise<VersionInfo>;
+      formatVersionWithUpdate: (info: VersionInfo) => string;
+    };
+    const versionInfo = await versionChecker.checkSyrinVersion();
+    const versionDisplayString =
+      versionChecker.formatVersionWithUpdate(versionInfo);
 
     // Create Chat UI
     const historyFile = path.join(projectRoot, Paths.DEV_HISTORY_FILE);

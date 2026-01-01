@@ -6,6 +6,7 @@
 import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PACKAGE_NAME } from '@/constants/app';
 
 export interface InstallResult {
   success: boolean;
@@ -82,7 +83,7 @@ function executeNpmCommand(
  * Update package to latest version.
  */
 export async function updatePackage(
-  packageName: string = '@ankan-ai/syrin'
+  packageName: string = PACKAGE_NAME
 ): Promise<InstallResult> {
   const installType = detectInstallType();
   const args =
@@ -133,7 +134,7 @@ export async function updatePackage(
  */
 export async function installPackageVersion(
   version: string,
-  packageName: string = '@ankan-ai/syrin'
+  packageName: string = PACKAGE_NAME
 ): Promise<InstallResult> {
   const installType = detectInstallType();
   const args =

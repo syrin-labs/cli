@@ -20,8 +20,7 @@ import { Icons } from '@/constants';
 import { SYRIN_LINKS } from '@/constants/links';
 import { ConfigurationError } from '@/utils/errors';
 import { log } from '@/utils/logger';
-
-const PACKAGE_NAME = '@ankan-ai/syrin';
+import { PACKAGE_NAME } from '@/constants/app';
 
 export interface RollbackCommandOptions {
   version: string;
