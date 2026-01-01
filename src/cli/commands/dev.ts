@@ -237,6 +237,12 @@ export async function executeDev(
       command: displayCommand,
     });
 
+    // Get version info for welcome banner - use same approach as other commands
+    const { checkVersion, formatVersionWithUpdate } =
+      await import('@/utils/version-checker');
+    const versionInfo = await checkVersion('@ankan-ai/syrin');
+    const versionDisplayString = formatVersionWithUpdate(versionInfo);
+
     // Create Chat UI
     const historyFile = path.join(projectRoot, Paths.DEV_HISTORY_FILE);
     // Bind the method to avoid closure type inference issues
@@ -251,6 +257,14 @@ export async function executeDev(
       llmProviderName: llmProvider.getName(),
       showTimestamps: false,
       initialMessages,
+      welcomeBanner: {
+        versionDisplay: versionDisplayString,
+        llmProvider: llmProvider.getName(),
+        toolCount: availableTools.length,
+        transport: config.transport,
+        mcpUrl: config.mcp_url,
+        command: displayCommand,
+      },
       historyFile,
       maxHistorySize: 1000,
       onMessage: async (input: string): Promise<void> => {

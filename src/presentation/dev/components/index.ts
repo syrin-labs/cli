@@ -4,6 +4,7 @@
  */
 
 export { createHeader } from './header';
+export { createWelcomeBanner } from './welcome-banner';
 export { createUserMessage } from './user-message';
 export { createAssistantMessage } from './assistant-message';
 export { createSystemMessage } from './system-message';

@@ -46,6 +46,7 @@ export class DevEventMapper {
     string,
     Record<string, unknown>
   >(); // Track arguments for duplicate detection
+  private readonly waitingMessageIdToRequestDetails = new Map<string, string>(); // Store request details for each waiting message
   private readonly proposedToolArguments = new Map<
     string,
     Record<string, unknown>
@@ -304,11 +305,31 @@ export class DevEventMapper {
       // Store start time for calculating elapsed time when response arrives
       this.waitingStartTimes.set(messageId, startTime);
 
+      // Format request details
+      let requestDetails = `📤 **Request sent** to MCP server (${sizeDisplay})`;
+
+      if (payload.tool_name) {
+        requestDetails += `\n\n**Tool:** \`${payload.tool_name}\``;
+        requestDetails += `\n**Type:** ${payload.message_type}`;
+
+        if (payload.tool_arguments) {
+          const argsStr = JSON.stringify(payload.tool_arguments, null, 2);
+          // Truncate very long arguments (over 500 chars) to keep display manageable
+          const truncatedArgs =
+            argsStr.length > 500
+              ? argsStr.substring(0, 500) + '\n... (truncated)'
+              : argsStr;
+          requestDetails += `\n**Arguments:**\n\`\`\`json\n${truncatedArgs}\n\`\`\``;
+        }
+      }
+
+      // Store request details for later use when updating the message
+      this.waitingMessageIdToRequestDetails.set(messageId, requestDetails);
+
+      requestDetails += `\n\n⏳ **Waiting** for response...`;
+
       // Add static waiting message (no live updates to prevent scroll jumping)
-      this.chatUI.addMessage(
-        'system',
-        `📤 **Request sent** to MCP server (${sizeDisplay})\n⏳ **Waiting** for response...`
-      );
+      this.chatUI.addMessage('system', requestDetails);
     }
   }
 
@@ -335,12 +356,19 @@ export class DevEventMapper {
           const elapsedStr =
             elapsed < 1 ? `${elapsed.toFixed(1)}s` : `${Math.floor(elapsed)}s`;
 
-          // Update the waiting message with final response time (only one state update)
-          this.chatUI.updateLastSystemMessage(
-            `📤 **Request sent** to MCP server (${sizeDisplay})\n📥 **Response received** from MCP server (${sizeDisplay}) - ${elapsedStr}`
-          );
+          // Get stored request details and append response info
+          const requestDetails =
+            this.waitingMessageIdToRequestDetails.get(messageId) ||
+            `📤 **Request sent** to MCP server (${sizeDisplay})`;
 
+          const fullMessage = `${requestDetails}\n\n📥 **Response received** from MCP server (${sizeDisplay}) - ${elapsedStr}`;
+
+          // Update the waiting message with final response time (only one state update)
+          this.chatUI.updateLastSystemMessage(fullMessage);
+
+          // Clean up stored data
           this.waitingStartTimes.delete(messageId);
+          this.waitingMessageIdToRequestDetails.delete(messageId);
         }
       } else {
         // Fallback: if no timer found, just add a new message

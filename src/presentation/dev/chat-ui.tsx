@@ -23,6 +23,7 @@ import type { ChatMessage, ChatUIOptions } from './chat-ui-types';
 import { wrapText } from './text-wrapper';
 import {
   createHeader,
+  createWelcomeBanner,
   createInputPanel,
   createMessageComponent,
   createMessagesList,
@@ -930,7 +931,16 @@ export class ChatUI {
           height: '100%',
         },
         // Header - distinct style with blue background and border
-        createHeader(React, Box, Text, options) as React.ReactElement,
+        createHeader(React, Box, Text) as React.ReactElement,
+        // Welcome banner - persistent, not cleared by /clear
+        options.welcomeBanner
+          ? (createWelcomeBanner(
+              React,
+              Box,
+              Text,
+              options.welcomeBanner
+            ) as React.ReactElement)
+          : null,
         // Messages area - scrollable, takes remaining space (allows terminal scrolling)
         createMessagesList(
           React,

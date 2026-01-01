@@ -13,6 +13,10 @@ export interface TransportMessageSentPayload {
   message_type: string;
   message_id?: string;
   size_bytes: number;
+  // Optional request details for tools/call messages
+  tool_name?: string;
+  tool_arguments?: Record<string, unknown>;
+  request_body?: string; // JSON stringified request body
 }
 
 export interface TransportMessageReceivedPayload {

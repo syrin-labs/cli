@@ -106,6 +106,9 @@ export abstract class BaseMCPClientManager {
         transport_type: this.getTransportType(),
         message_type: 'tools/call',
         size_bytes: Buffer.byteLength(requestMessage, 'utf8'),
+        tool_name: toolName,
+        tool_arguments: toolArguments,
+        request_body: requestMessage,
       }
     );
 

@@ -3,7 +3,7 @@
  * Creates a header component that works with dynamically imported React/Ink.
  */
 
-import type { ChatUIOptions } from '../chat-ui-types';
+import { App } from '@/constants';
 
 /**
  * Creates a Header component factory function.
@@ -22,11 +22,9 @@ export function createHeader(
     ) => unknown;
   },
   Box: unknown,
-  Text: unknown,
-  options: ChatUIOptions
+  Text: unknown
 ): unknown {
   const { createElement } = React;
-  const agentName = options.agentName || 'Syrin';
 
   return createElement(
     Box,
@@ -38,7 +36,7 @@ export function createHeader(
     createElement(
       Text,
       { color: 'white', bold: true },
-      ` ${agentName} Dev Mode `
+      ` ${App.NAME} Dev Mode `
     ),
     createElement(
       Text,

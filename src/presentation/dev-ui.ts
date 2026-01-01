@@ -3,8 +3,7 @@
  * Separates UI/logic concerns by providing functions for displaying messages.
  */
 
-import { Messages, TransportTypes } from '@/constants';
-import { checkVersion, getCurrentVersion } from '@/utils/version-checker';
+import { Messages } from '@/constants';
 import {
   estimateObjectSize,
   formatJSONWithPagination,
@@ -14,7 +13,7 @@ import {
 /**
  * Build initial welcome messages for dev mode.
  */
-export async function buildDevWelcomeMessages(options: {
+export function buildDevWelcomeMessages(_options: {
   version: string;
   llmProvider: string;
   toolCount: number;
@@ -22,43 +21,10 @@ export async function buildDevWelcomeMessages(options: {
   mcpUrl?: string;
   command?: string;
 }): Promise<Array<{ role: 'system'; content: string }>> {
-  // Get version info for display - use package version, not config version
-  const currentVersion = getCurrentVersion();
-  const versionInfo = await checkVersion('@ankan-ai/syrin');
-  const versionDisplayString =
-    versionInfo.isLatest || !versionInfo.latest
-      ? `v${currentVersion} (latest)`
-      : `v${currentVersion} (update available: v${versionInfo.latest}, run: syrin update)`;
-
-  const messages: Array<{ role: 'system'; content: string }> = [
-    {
-      role: 'system',
-      content: Messages.DEV_WELCOME,
-    },
-    {
-      role: 'system',
-      content: `Version: ${versionDisplayString} | LLM: ${options.llmProvider} | Tools: ${options.toolCount}`,
-    },
-  ];
-
-  if (options.transport === TransportTypes.HTTP && options.mcpUrl) {
-    messages.push({
-      role: 'system',
-      content: Messages.DEV_TRANSPORT_HTTP(options.transport, options.mcpUrl),
-    });
-  } else if (options.transport === TransportTypes.STDIO && options.command) {
-    messages.push({
-      role: 'system',
-      content: Messages.DEV_TRANSPORT_STDIO(options.transport, options.command),
-    });
-  }
-
-  messages.push({
-    role: 'system',
-    content: Messages.DEV_HELP_MESSAGE,
-  });
-
-  return messages;
+  // Return empty array - welcome banner now handles all welcome info
+  // Old welcome messages are no longer needed as they're displayed in the persistent banner
+  const messages: Array<{ role: 'system'; content: string }> = [];
+  return Promise.resolve(messages);
 }
 
 /**

@@ -3,6 +3,6 @@
  */
 
 export const App = {
-  NAME: 'syrin',
+  NAME: 'Syrin',
   VERSION_KEY: 'version',
 } as const;

@@ -15,6 +15,15 @@ export interface ChatMessage {
   };
 }
 
+export interface WelcomeBannerInfo {
+  versionDisplay: string; // Formatted version string (e.g., "v1.1.0 (latest)" or "v1.1.0 (update available: v1.2.0, run: syrin update)")
+  llmProvider: string;
+  toolCount: number;
+  transport: string;
+  mcpUrl?: string;
+  command?: string;
+}
+
 export interface ChatUIOptions {
   /** Agent name for the prompt */
   agentName?: string;
@@ -27,6 +36,8 @@ export interface ChatUIOptions {
     role: 'user' | 'assistant' | 'system';
     content: string;
   }>;
+  /** Welcome banner information (persistent, not cleared by /clear) */
+  welcomeBanner?: WelcomeBannerInfo;
   /** Callback when user submits a message */
   onMessage?: (message: string) => Promise<void>;
   /** Callback when user exits */
