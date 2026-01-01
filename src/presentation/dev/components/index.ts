@@ -8,5 +8,5 @@ export { createUserMessage } from './user-message';
 export { createAssistantMessage } from './assistant-message';
 export { createSystemMessage } from './system-message';
 export { createInputPanel } from './input-panel';
-export { createMessageComponentFactory } from './message-component';
+export { createMessageComponent } from './message-component';
 export { createMessagesList } from './messages-list';

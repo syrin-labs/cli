@@ -3,19 +3,14 @@
  * Creates a header component that works with dynamically imported React/Ink.
  */
 
-/* eslint-disable
-   @typescript-eslint/no-unsafe-assignment,
-   @typescript-eslint/no-unsafe-call,
-   @typescript-eslint/no-unsafe-member-access,
-   @typescript-eslint/no-unsafe-return,
-   @typescript-eslint/no-unsafe-argument
-*/
+import type { ChatUIOptions } from '../chat-ui-types';
 
 /**
  * Creates a Header component factory function.
  * @param React - React module (dynamically imported)
  * @param Box - Box component from Ink
  * @param Text - Text component from Ink
+ * @param options - Chat UI options
  * @returns Header component element
  */
 export function createHeader(
@@ -27,9 +22,11 @@ export function createHeader(
     ) => unknown;
   },
   Box: unknown,
-  Text: unknown
+  Text: unknown,
+  options: ChatUIOptions
 ): unknown {
   const { createElement } = React;
+  const agentName = options.agentName || 'Syrin';
 
   return createElement(
     Box,
@@ -41,7 +38,7 @@ export function createHeader(
     createElement(
       Text,
       { color: 'white', bold: true },
-      ' Syrin Dev Mode '
+      ` ${agentName} Dev Mode `
     ),
     createElement(
       Text,

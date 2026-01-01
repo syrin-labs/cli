@@ -12,7 +12,6 @@ export interface ChatMessage {
     rawData: string; // Stored as string to save memory
     size: number; // Size in bytes
     summary?: string; // Summary/metadata
-    expanded?: boolean; // Whether user has expanded it
   };
 }
 

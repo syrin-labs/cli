@@ -3,14 +3,6 @@
  * Creates a messages list component that works with dynamically imported React/Ink.
  */
 
-/* eslint-disable
-   @typescript-eslint/no-unsafe-assignment,
-   @typescript-eslint/no-unsafe-call,
-   @typescript-eslint/no-unsafe-member-access,
-   @typescript-eslint/no-unsafe-return,
-   @typescript-eslint/no-unsafe-argument
-*/
-
 import type { ChatMessage, ChatUIOptions } from '../chat-ui-types';
 
 /**
@@ -22,8 +14,6 @@ import type { ChatMessage, ChatUIOptions } from '../chat-ui-types';
  * @param maxVisibleMessages - Maximum number of messages to display
  * @param MessageComponent - The memoized message component to use
  * @param options - Chat UI options
- * @param parseMarkdown - Markdown parsing function
- * @param wrapText - Text wrapping function
  * @returns Messages list component element
  */
 export function createMessagesList(
@@ -42,12 +32,8 @@ export function createMessagesList(
     message: ChatMessage;
     index: number;
     options: ChatUIOptions;
-    parseMarkdown: (text: string, defaultColor?: string) => unknown[];
-    wrapText: (text: string, width: number) => string[];
   }) => unknown,
-  options: ChatUIOptions,
-  parseMarkdown: (text: string, defaultColor?: string) => unknown[],
-  wrapText: (text: string, width: number) => string[]
+  options: ChatUIOptions
 ): unknown {
   const { createElement } = React;
 
@@ -85,12 +71,10 @@ export function createMessagesList(
     ...visibleMessages.map((message: ChatMessage, localIndex: number) => {
       const globalIndex = startIndex + localIndex;
       return createElement(MessageComponent, {
-        key: `${message.role}-${globalIndex}-${message.content.substring(0, 50)}`,
+        key: `${message.role}-${globalIndex}`,
         message,
         index: globalIndex,
         options,
-        parseMarkdown,
-        wrapText,
       });
     })
   );

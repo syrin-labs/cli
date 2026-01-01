@@ -3,14 +3,6 @@
  * Creates a user message component that works with dynamically imported React/Ink.
  */
 
-/* eslint-disable
-   @typescript-eslint/no-unsafe-assignment,
-   @typescript-eslint/no-unsafe-call,
-   @typescript-eslint/no-unsafe-member-access,
-   @typescript-eslint/no-unsafe-return,
-   @typescript-eslint/no-unsafe-argument
-*/
-
 import type { ChatMessage, ChatUIOptions } from '../chat-ui-types';
 
 /**
@@ -18,9 +10,9 @@ import type { ChatMessage, ChatUIOptions } from '../chat-ui-types';
  * @param React - React module (dynamically imported)
  * @param Box - Box component from Ink
  * @param Text - Text component from Ink
- * @param message - The chat message
+ * @param _message - The chat message (unused but required for interface compatibility)
  * @param index - Message index
- * @param options - Chat UI options
+ * @param _options - Chat UI options (unused but required for interface compatibility)
  * @param timestamp - Formatted timestamp string
  * @param wrappedLines - Wrapped text lines
  * @returns User message component element
@@ -35,9 +27,9 @@ export function createUserMessage(
   },
   Box: unknown,
   Text: unknown,
-  message: ChatMessage,
+  _message: ChatMessage,
   index: number,
-  options: ChatUIOptions,
+  _options: ChatUIOptions,
   timestamp: string,
   wrappedLines: string[]
 ): unknown {
@@ -67,7 +59,7 @@ export function createUserMessage(
         createElement(
           Text,
           { key: lineIndex, color: 'white' },
-          timestamp + line
+          lineIndex === 0 ? timestamp + line : line
         )
       )
     )

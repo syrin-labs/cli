@@ -3,14 +3,6 @@
  * Creates a memoized message component that works with dynamically imported React/Ink.
  */
 
-/* eslint-disable
-   @typescript-eslint/no-unsafe-assignment,
-   @typescript-eslint/no-unsafe-call,
-   @typescript-eslint/no-unsafe-member-access,
-   @typescript-eslint/no-unsafe-return,
-   @typescript-eslint/no-unsafe-argument
-*/
-
 import type { ChatMessage, ChatUIOptions } from '../chat-ui-types';
 import {
   createUserMessage,
@@ -26,7 +18,7 @@ import {
  * @param memo - memo function from React
  * @returns Factory function that creates MessageComponent given parseMarkdown and wrapText
  */
-export function createMessageComponentFactory(
+export function createMessageComponent(
   React: {
     createElement: (
       type: unknown,
@@ -41,8 +33,6 @@ export function createMessageComponentFactory(
   parseMarkdown: (text: string, defaultColor?: string) => unknown[],
   wrapText: (text: string, width: number) => string[]
 ) => unknown {
-  const { createElement } = React;
-
   return (
     parseMarkdown: (text: string, defaultColor?: string) => unknown[],
     wrapText: (text: string, width: number) => string[]
@@ -52,23 +42,15 @@ export function createMessageComponentFactory(
       message: ChatMessage;
       index: number;
       options: ChatUIOptions;
-      parseMarkdown: (text: string, defaultColor?: string) => unknown[];
-      wrapText: (text: string, width: number) => string[];
     }): unknown => {
-      const {
-        message,
-        index,
-        options,
-        parseMarkdown,
-        wrapText: wrapTextFn,
-      } = props;
+      const { message, index, options } = props;
       const timestamp = options.showTimestamps
         ? `[${message.timestamp?.toLocaleTimeString() || ''}] `
         : '';
 
       if (message.role === 'user') {
         // User messages: minimalistic bordered rectangle with blue background
-        const wrappedLines = wrapTextFn(message.content, 60);
+        const wrappedLines = wrapText(message.content, 60);
         return createUserMessage(
           React,
           Box,
@@ -92,20 +74,13 @@ export function createMessageComponentFactory(
             React,
             Box,
             Text,
-            message,
             index,
             options,
             markdownElements
           );
         } else {
           // System messages: styled with bright yellow color to make them pop (no prefix)
-          return createSystemMessage(
-            React,
-            Box,
-            message,
-            index,
-            markdownElements
-          );
+          return createSystemMessage(React, Box, index, markdownElements);
         }
       }
     };
@@ -125,11 +100,12 @@ export function createMessageComponentFactory(
           options: ChatUIOptions;
         }
       ) => {
-        // Custom comparison: only re-render if message content or role changed
+        // Custom comparison: re-render if message content, role, index, or options changed
         return (
           prevProps.message.content === nextProps.message.content &&
           prevProps.message.role === nextProps.message.role &&
-          prevProps.index === nextProps.index
+          prevProps.index === nextProps.index &&
+          prevProps.options.showTimestamps === nextProps.options.showTimestamps
         );
       }
     );

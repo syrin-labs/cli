@@ -24,7 +24,7 @@ import { wrapText } from './text-wrapper';
 import {
   createHeader,
   createInputPanel,
-  createMessageComponentFactory,
+  createMessageComponent,
   createMessagesList,
 } from './components';
 
@@ -904,33 +904,20 @@ export class ChatUI {
         [parseInlineMarkdown, parseTable]
       );
 
-      // Wrap text using imported utility
-      const wrapTextFn = useCallback(
-        (text: string, width: number): string[] => {
-          return wrapText(text, width);
-        },
-        []
-      );
-
       // Create message component using extracted factory
-      const createMessageComponent = createMessageComponentFactory(
+      const createMessageComponentFn = createMessageComponent(
         React,
         Box,
         Text,
         memo
       );
-      const MessageComponent = createMessageComponent(
+      const MessageComponent = createMessageComponentFn(
         parseMarkdown,
-        wrapTextFn
+        wrapText
       ) as (props: {
         message: ChatMessage;
         index: number;
         options: ChatUIOptions;
-        parseMarkdown: (
-          text: string,
-          defaultColor?: string
-        ) => React.ReactElement[];
-        wrapText: (text: string, width: number) => string[];
       }) => React.ReactElement;
 
       // Render using React.createElement (can't use JSX here without importing React at top level)
@@ -943,7 +930,7 @@ export class ChatUI {
           height: '100%',
         },
         // Header - distinct style with blue background and border
-        createHeader(React, Box, Text) as React.ReactElement,
+        createHeader(React, Box, Text, options) as React.ReactElement,
         // Messages area - scrollable, takes remaining space (allows terminal scrolling)
         createMessagesList(
           React,
@@ -955,12 +942,8 @@ export class ChatUI {
             message: ChatMessage;
             index: number;
             options: ChatUIOptions;
-            parseMarkdown: (text: string, defaultColor?: string) => unknown[];
-            wrapText: (text: string, width: number) => string[];
           }) => unknown,
-          options,
-          parseMarkdown as (text: string, defaultColor?: string) => unknown[],
-          wrapTextFn
+          options
         ) as React.ReactElement,
         // Input area - fixed at bottom, modern minimal design with border and black background
         // flexShrink: 0 ensures it never shrinks, keeping it always visible at bottom

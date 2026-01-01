@@ -3,22 +3,13 @@
  * Creates an assistant message component that works with dynamically imported React/Ink.
  */
 
-/* eslint-disable
-   @typescript-eslint/no-unsafe-assignment,
-   @typescript-eslint/no-unsafe-call,
-   @typescript-eslint/no-unsafe-member-access,
-   @typescript-eslint/no-unsafe-return,
-   @typescript-eslint/no-unsafe-argument
-*/
-
-import type { ChatMessage, ChatUIOptions } from '../chat-ui-types';
+import type { ChatUIOptions } from '../chat-ui-types';
 
 /**
  * Creates an Assistant Message component element.
  * @param React - React module (dynamically imported)
  * @param Box - Box component from Ink
  * @param Text - Text component from Ink
- * @param message - The chat message
  * @param index - Message index
  * @param options - Chat UI options
  * @param markdownElements - Parsed markdown elements
@@ -34,7 +25,6 @@ export function createAssistantMessage(
   },
   Box: unknown,
   Text: unknown,
-  message: ChatMessage,
   index: number,
   options: ChatUIOptions,
   markdownElements: unknown[]
@@ -54,7 +44,7 @@ export function createAssistantMessage(
       Box,
       {
         flexDirection: 'row',
-        marginBottom: 0.25,
+        marginBottom: 0,
         marginLeft: 1,
       },
       createElement(
@@ -70,7 +60,7 @@ export function createAssistantMessage(
         borderStyle: 'round',
         borderColor: 'gray',
         paddingX: 1,
-        paddingY: 0.5,
+        paddingY: 1,
         marginLeft: 1,
       },
       ...markdownElements
