@@ -9,3 +9,4 @@ export * from './list';
 export * from './dev';
 export * from './update';
 export * from './rollback';
+export * from './analyse';

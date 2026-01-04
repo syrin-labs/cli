@@ -166,4 +166,19 @@ export const Messages = {
     `Version ${version} not found on npm registry`,
   ROLLBACK_CONFIRM: (currentVersion: string, targetVersion: string) =>
     `Are you sure you want to rollback from ${currentVersion} to ${targetVersion}?`,
+
+  // Analyse Command Messages
+  ANALYSE_CONNECTING: 'Connecting to MCP server...',
+  ANALYSE_LOADING_TOOLS: 'Loading tools...',
+  ANALYSE_ANALYZING: 'Analyzing tools...',
+  ANALYSE_ERROR_FAILED: 'Failed to analyze MCP server',
+  ANALYSE_NO_TOOLS: 'No tools found in MCP server',
+  ANALYSE_VERDICT_PASS: 'Syrin analysis passed',
+  ANALYSE_VERDICT_FAIL: (errors: number, warnings: number) =>
+    `Syrin analysis failed (${errors} error${errors !== 1 ? 's' : ''}, ${warnings} warning${warnings !== 1 ? 's' : ''})`,
+  ANALYSE_VERDICT_PASS_WARNINGS: (warnings: number) =>
+    `Syrin analysis passed with ${warnings} warning${warnings !== 1 ? 's' : ''}`,
+  ANALYSE_ERRORS_HEADER: 'Errors:',
+  ANALYSE_WARNINGS_HEADER: 'Warnings:',
+  ANALYSE_SUGGESTIONS_HEADER: 'Suggestions:',
 } as const;

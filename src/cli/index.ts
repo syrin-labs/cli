@@ -8,6 +8,7 @@ import { executeInit } from '@/cli/commands/init';
 import { executeDoctor } from '@/cli/commands/doctor';
 import { executeTest } from '@/cli/commands/test';
 import { executeList } from '@/cli/commands/list';
+import { executeAnalyse } from '@/cli/commands/analyse';
 import { executeDev } from '@/cli/commands/dev';
 import { executeUpdate } from '@/cli/commands/update';
 import { executeRollback } from '@/cli/commands/rollback';
@@ -210,6 +211,59 @@ export function setupCLI(): void {
           // Error handling is done in executeList
           if (error instanceof Error) {
             logger.error('List command failed', error);
+          }
+        }
+      }
+    );
+
+  // analyse command
+  program
+    .command('analyse')
+    .alias('analyze')
+    .description('Perform static analysis on MCP tool contracts')
+    .option('--ci', 'CI mode: minimal output, exit code 1 on errors')
+    .option('--json', 'Output results as JSON')
+    .option('--graph', 'Include dependency graph in output')
+    .option(
+      '--transport <type>',
+      'Transport type (http or stdio). If not provided, uses transport from config.yaml'
+    )
+    .option(
+      '--url <url>',
+      'MCP URL (for http transport). If not provided, uses URL from config.yaml'
+    )
+    .option(
+      '--script <script>',
+      'Script (for stdio transport). If not provided, uses script from config.yaml'
+    )
+    .option(
+      '--project-root <path>',
+      'Project root directory (defaults to current directory)'
+    )
+    .action(
+      async (options: {
+        ci?: boolean;
+        json?: boolean;
+        graph?: boolean;
+        transport?: string;
+        url?: string;
+        script?: string;
+        projectRoot?: string;
+      }) => {
+        try {
+          await executeAnalyse({
+            ci: options.ci,
+            json: options.json,
+            graph: options.graph,
+            transport: options.transport as 'http' | 'stdio' | undefined,
+            url: options.url,
+            script: options.script,
+            projectRoot: options.projectRoot,
+          });
+        } catch (error) {
+          // Error handling is done in executeAnalyse
+          if (error instanceof Error) {
+            logger.error('Analyse command failed', error);
           }
         }
       }

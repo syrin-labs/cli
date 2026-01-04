@@ -19,6 +19,8 @@ export const ToolCommands = {
   TEST: 'syrin test',
   /** List command */
   LIST: 'syrin list',
+  /** Analyse command */
+  ANALYSE: 'syrin analyse',
 } as const;
 
 /**

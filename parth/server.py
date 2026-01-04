@@ -10,10 +10,35 @@ import argparse
 import asyncio
 import random
 import json
+from typing import Annotated, Literal
+from pydantic import BaseModel, Field
 from fastmcp import FastMCP
 
 # Create MCP server instance using FastMCP
 mcp = FastMCP("Parth")
+
+
+# Pydantic models for structured outputs
+class LocationResponse(BaseModel):
+    """Response containing the user's location."""
+    location: str = Field(description="The user's location (city, state, country, or address)")
+    prompt: str = Field(description="Status message about the location request")
+
+
+class WeatherResponse(BaseModel):
+    """Response containing weather information."""
+    weather: str = Field(description="The weather condition (Sunny, Rainy, Snowy, etc.). Use this field as input to order_food.")
+    condition: str = Field(description="Alias for weather condition (Sunny, Rainy, Snowy, etc.)")
+    temperature: int = Field(description="Temperature in Celsius")
+    humidity: int = Field(description="Humidity percentage")
+    description: str = Field(description="Human-readable weather description")
+
+
+class FoodOrderResponse(BaseModel):
+    """Response containing food recommendation."""
+    food: str = Field(description="The recommended food item name")
+    recommendation: str = Field(description="The full food recommendation message with emoji")
+    comment: str = Field(description="Funny comment about the food recommendation")
 
 # Weather data (10 different scenarios)
 WEATHER_DATA = [
@@ -156,47 +181,94 @@ WEATHER_FOOD_MAP = {
 
 # Tools
 @mcp.tool()
-def current_location() -> str:
-    """Ask the user for their current location. This tool prompts the user to provide their location."""
-    return "What is your current location? Please provide your city, state, or address."
+def current_location() -> LocationResponse:
+    """Get the user's current location by prompting them. Returns the location value that can be used with get_weather.
+    
+    This tool asks the user for their location and returns it. The location value returned
+    by this tool should be used as the location parameter for get_weather.
+    
+    Tool chain: current_location returns location -> get_weather uses location parameter
+    
+    Returns:
+        LocationResponse with a "location" field containing the user's location.
+        The location field from this response should be passed to get_weather as the location parameter.
+    """
+    # In a real scenario, this would prompt the user and get their response
+    # For now, this returns a structured format that can be used by get_weather
+    return LocationResponse(
+        location="What is your current location? Please provide your city, state, or address.",
+        prompt="User location requested"
+    )
 
 
 @mcp.tool()
-def get_weather(location: str) -> str:
-    """Get weather information for a specific location. Returns temperature, condition, humidity, and description.
+def get_weather(
+    location: Annotated[
+        str,
+        Field(
+            description="The location to get weather for. Can be a city name, city with state/country, or full address. This should be obtained from the user (either directly from conversation or by using the current_location tool to prompt the user).",
+            examples=["New York", "London, UK", "San Francisco, CA", "Paris", "Tokyo, Japan"],
+        ),
+    ],
+) -> WeatherResponse:
+    """Retrieve weather information for a location.
+    
+    Tool chain: current_location provides location -> get_weather -> order_food
     
     Args:
-        location: The location to get weather for
+        location: Location name (city, state/country, or address). Use current_location tool for user location.
+                  Examples: "New York", "London, UK"
+    
+    Returns:
+        WeatherResponse with weather condition, temperature, humidity, description.
+        Use the weather field as input to order_food.
     """
     # Randomly select weather data
-    weather = random.choice(WEATHER_DATA)
-    result = (
-        f"Weather for {location}:\n"
-        f"Condition: {weather['condition']}\n"
-        f"Temperature: {weather['temp']}°C\n"
-        f"Humidity: {weather['humidity']}%\n"
-        f"Description: {weather['description']}"
+    weather_data = random.choice(WEATHER_DATA)
+    return WeatherResponse(
+        weather=weather_data['condition'],
+        condition=weather_data['condition'],
+        temperature=weather_data['temp'],
+        humidity=weather_data['humidity'],
+        description=f"Weather for {location}: {weather_data['description']}"
     )
-    return result
 
 
 @mcp.tool()
-def order_food(weather: str) -> str:
-    """Order food based on weather conditions. Takes weather condition as input and recommends appropriate food with a funny comment.
+def order_food(
+    weather: Annotated[
+        str,
+        Field(
+            description="The weather condition to recommend food for. Must be one of the valid weather conditions. Obtain this from get_weather tool's weather or condition field output.",
+            enum=["Sunny", "Rainy", "Snowy", "Cloudy", "Windy", "Foggy", "Stormy", "Hot", "Cold", "Misty"],
+            examples=["Sunny", "Rainy", "Snowy"],
+        ),
+    ],
+) -> FoodOrderResponse:
+    """Recommend food based on weather conditions.
+    
+    Use get_weather to obtain weather condition, then pass the weather field to this tool.
     
     Args:
-        weather: The weather condition (e.g., 'Sunny', 'Rainy', 'Snowy', etc.)
+        weather: Weather condition from get_weather. Values: Sunny, Rainy, Snowy, Cloudy, Windy, Foggy, Stormy, Hot, Cold, Misty.
+    
+    Returns:
+        FoodOrderResponse with recommended food and comment.
     """
     # Get food recommendations for this weather condition
     foods = WEATHER_FOOD_MAP.get(weather, WEATHER_FOOD_MAP["Sunny"])
     # Randomly select a food
     food_item = random.choice(foods)
-    result = (
+    recommendation = (
         f"🍽️ Food Recommendation for {weather} Weather:\n"
         f"Order: {food_item['food']}\n"
         f"💬 {food_item['funny']}"
     )
-    return result
+    return FoodOrderResponse(
+        food=food_item['food'],
+        recommendation=recommendation,
+        comment=food_item['funny']
+    )
 
 
 # Prompts
