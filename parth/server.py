@@ -10,7 +10,7 @@ import argparse
 import asyncio
 import random
 import json
-from typing import Annotated, Literal
+from typing import Annotated
 from pydantic import BaseModel, Field
 from fastmcp import FastMCP
 
@@ -182,22 +182,25 @@ WEATHER_FOOD_MAP = {
 # Tools
 @mcp.tool()
 def current_location() -> LocationResponse:
-    """Get the user's current location by prompting them. Returns the location value that can be used with get_weather.
+    """Get the user's current location by prompting them.
     
-    This tool asks the user for their location and returns it. The location value returned
-    by this tool should be used as the location parameter for get_weather.
+    This tool asks the user for their location. The location field will be empty
+    until the user provides their location. The prompt field contains the question
+    to ask the user. Once the user provides their location, it should be used as
+    the location parameter for get_weather.
     
-    Tool chain: current_location returns location -> get_weather uses location parameter
+    Tool chain: current_location prompts user -> user provides location -> get_weather uses location parameter
     
     Returns:
-        LocationResponse with a "location" field containing the user's location.
-        The location field from this response should be passed to get_weather as the location parameter.
+        LocationResponse with an empty "location" field and a "prompt" field containing
+        the question to ask the user. Once the user responds, the location field should
+        be populated and passed to get_weather as the location parameter.
     """
     # In a real scenario, this would prompt the user and get their response
-    # For now, this returns a structured format that can be used by get_weather
+    # For now, this returns a structured format with an empty location and a prompt
     return LocationResponse(
-        location="What is your current location? Please provide your city, state, or address.",
-        prompt="User location requested"
+        location="",
+        prompt="What is your current location? Please provide your city, state, or address."
     )
 
 

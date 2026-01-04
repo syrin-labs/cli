@@ -43,7 +43,7 @@ class E007OutputNotGuaranteedRule extends BaseRule {
       }
 
       // Check if output is nullable or optional
-      if (fromField.nullable === true) {
+      if (fromField.nullable === true || fromField.optional === true) {
         diagnostics.push(
           this.createDiagnostic(
             `Output of "${dep.fromTool}" (field: "${dep.fromField}") is nullable but is used by "${dep.toTool}" without fallback.`,

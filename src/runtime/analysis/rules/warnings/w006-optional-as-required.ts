@@ -50,7 +50,7 @@ class W006OptionalAsRequiredRule extends BaseRule {
       if (isSourceOptional && isTargetRequired) {
         diagnostics.push(
           this.createDiagnostic(
-            `Optional input "${dep.toField}" in "${dep.toTool}" is treated as required downstream, but source "${dep.fromTool}.${dep.fromField}" is optional/nullable.`,
+            `Source field "${dep.fromTool}.${dep.fromField}" is nullable/optional but is being wired into required input "${dep.toTool}.${dep.toField}".`,
             dep.toTool,
             dep.toField,
             `Make "${dep.fromTool}.${dep.fromField}" non-nullable, or make "${dep.toTool}.${dep.toField}" optional.`

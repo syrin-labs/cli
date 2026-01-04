@@ -86,8 +86,8 @@ class E008CircularDependencyRule extends BaseRule {
     const reportedCycles = new Set<string>();
 
     for (const cycle of cycles) {
-      // Create a canonical representation of the cycle
-      const cycleKey = cycle.sort().join(' → ');
+      // Create a canonical representation of the cycle (sort a copy to avoid mutating original)
+      const cycleKey = [...cycle].sort().join(' → ');
 
       if (reportedCycles.has(cycleKey)) {
         continue;

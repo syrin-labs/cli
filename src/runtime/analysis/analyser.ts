@@ -9,6 +9,7 @@ import { normalizeTools } from './normalizer';
 import { buildIndexes } from './indexer';
 import { inferDependencies } from './dependencies';
 import { ALL_RULES } from './rules';
+import { logger } from '@/utils/logger';
 import type {
   AnalysisContext,
   AnalysisResult,
@@ -45,7 +46,14 @@ function runRules(
       diagnostics.push(...ruleDiagnostics);
     } catch (error) {
       // If a rule fails, log error but don't crash the analysis
-      console.error(`Rule ${rule.id} failed:`, error);
+      logger.error(
+        `Rule ${rule.id} failed`,
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          ruleId: rule.id,
+          ruleName: rule.ruleName,
+        }
+      );
     }
   }
 
@@ -87,7 +95,7 @@ export async function analyseTools(client: Client): Promise<AnalysisResult> {
   const indexes = buildIndexes(tools);
 
   // Step 4: Infer dependencies
-  const dependencies = inferDependencies(tools, indexes);
+  const dependencies = inferDependencies(tools);
 
   // Step 5: Run rules
   const diagnostics = runRules(tools, dependencies, indexes);

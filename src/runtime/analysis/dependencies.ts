@@ -3,7 +3,7 @@
  * Infers tool dependencies using deterministic heuristics.
  */
 
-import type { ToolSpec, Dependency, Indexes } from './types';
+import type { ToolSpec, Dependency } from './types';
 
 /**
  * Confidence threshold for dependencies.
@@ -23,18 +23,18 @@ function nameSimilarity(name1: string, name2: string): number {
     return 1.0;
   }
 
-  // One contains the other
-  if (n1.includes(n2) || n2.includes(n1)) {
-    return 0.8;
-  }
-
-  // Partial match (common substring)
+  // Partial match (common substring) - check length first to apply substring rule
   const longer = n1.length > n2.length ? n1 : n2;
   const shorter = n1.length > n2.length ? n2 : n1;
 
   // Check if shorter is a significant substring of longer
-  if (longer.includes(shorter) && shorter.length >= 3) {
+  if (shorter.length >= 3 && longer.includes(shorter)) {
     return 0.7;
+  }
+
+  // One contains the other (but shorter is less than 3 chars, so lower confidence)
+  if (n1.includes(n2) || n2.includes(n1)) {
+    return 0.8;
   }
 
   // Word overlap
@@ -115,10 +115,7 @@ function descriptionOverlap(
 /**
  * Infer dependencies between tools.
  */
-export function inferDependencies(
-  tools: ToolSpec[],
-  _indexes: Indexes
-): Dependency[] {
+export function inferDependencies(tools: ToolSpec[]): Dependency[] {
   const dependencies: Dependency[] = [];
 
   for (const toTool of tools) {
@@ -139,11 +136,8 @@ export function inferDependencies(
 
           // Type compatibility (weight: 0.3)
           const typeCompat = typeCompatible(fromField.type, toField.type);
-          if (typeCompat > 0) {
-            confidence += typeCompat;
-          } else if (typeCompat < 0) {
-            confidence += typeCompat; // Penalty for incompatible types
-          }
+          const weightedType = typeCompat * 0.3;
+          confidence += weightedType;
 
           // Description token overlap (weight: 0.3)
           const descOverlap = descriptionOverlap(

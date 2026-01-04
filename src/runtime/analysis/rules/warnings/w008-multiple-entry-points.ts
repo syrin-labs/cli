@@ -18,6 +18,11 @@ import type { AnalysisContext, Diagnostic } from '../../types';
 function extractConcept(fieldName: string): string | null {
   const name = fieldName.toLowerCase();
 
+  // Split field name into tokens (on non-word characters and camelCase boundaries)
+  const tokens = name
+    .split(/[^\w]+|(?<=[a-z])(?=[A-Z])/)
+    .filter(t => t.length > 0);
+
   // Common concepts
   const concepts: Array<[string[], string]> = [
     [['location', 'loc', 'place', 'address', 'city', 'country'], 'location'],
@@ -30,7 +35,9 @@ function extractConcept(fieldName: string): string | null {
 
   for (const [keywords, concept] of concepts) {
     for (const keyword of keywords) {
-      if (name.includes(keyword)) {
+      // Check for exact token match or word-boundary match
+      const keywordRegex = new RegExp(`\\b${keyword}\\b`, 'i');
+      if (tokens.includes(keyword) || keywordRegex.test(name)) {
         return concept;
       }
     }
@@ -82,12 +89,29 @@ class W008MultipleEntryPointsRule extends BaseRule {
     for (const [concept, tools] of conceptToTools.entries()) {
       if (tools.length > 1) {
         const toolNames = tools.map(t => `"${t.tool}"`).join(', ');
+        const toolFields = tools.map(t => ({
+          tool: t.tool,
+          fields: [t.field],
+        }));
+        // Group by tool name in case same tool appears multiple times
+        const toolFieldsMap = new Map<string, string[]>();
+        for (const tf of toolFields) {
+          if (!toolFieldsMap.has(tf.tool)) {
+            toolFieldsMap.set(tf.tool, []);
+          }
+          toolFieldsMap.get(tf.tool)!.push(...tf.fields);
+        }
+        const context: Record<string, unknown> = {};
+        for (const [tool, fields] of toolFieldsMap.entries()) {
+          context[tool] = fields.join(', ');
+        }
         diagnostics.push(
           this.createDiagnostic(
             `Multiple tools capture the same concept: "${concept}" (${toolNames}).`,
             undefined,
             undefined,
-            `Consolidate "${concept}" collection into a single tool to avoid conflicting sources of truth.`
+            `Consolidate "${concept}" collection into a single tool to avoid conflicting sources of truth.`,
+            context
           )
         );
       }

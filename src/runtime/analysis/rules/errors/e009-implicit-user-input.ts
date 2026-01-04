@@ -42,12 +42,34 @@ class E009ImplicitUserInputRule extends BaseRule {
           for (const output of otherTool.outputs) {
             const outputName = output.name.toLowerCase();
 
-            // Check for name similarity
-            if (
-              outputName === fieldName ||
-              outputName.includes(fieldName) ||
-              fieldName.includes(outputName)
-            ) {
+            // Check for exact match or token-based match
+            if (outputName === fieldName) {
+              hasExplicitSource = true;
+              break;
+            }
+
+            // Token-based matching: split on non-alphanumeric and camelCase boundaries
+            const fieldTokens = new Set(
+              fieldName
+                .split(/[^\w]+|(?<=[a-z])(?=[A-Z])/)
+                .filter(t => t.length > 0)
+            );
+            const outputTokens = new Set(
+              outputName
+                .split(/[^\w]+|(?<=[a-z])(?=[A-Z])/)
+                .filter(t => t.length > 0)
+            );
+
+            // Check for token intersection
+            const hasTokenMatch =
+              Array.from(fieldTokens).some(
+                token => outputTokens.has(token) && token.length >= 3
+              ) ||
+              Array.from(outputTokens).some(
+                token => fieldTokens.has(token) && token.length >= 3
+              );
+
+            if (hasTokenMatch) {
               hasExplicitSource = true;
               break;
             }

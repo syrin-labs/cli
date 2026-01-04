@@ -35,9 +35,24 @@ function isUserFacingInput(inputName: string, description?: string): boolean {
     'message',
   ];
 
-  const combined = `${name} ${desc}`;
+  // Split into tokens for whole-word matching
+  const nameTokens = name
+    .split(/[^\w]+|(?<=[a-z])(?=[A-Z])/)
+    .filter(t => t.length > 0);
+  const descTokens = desc
+    .split(/[^\w]+|(?<=[a-z])(?=[A-Z])/)
+    .filter(t => t.length > 0);
+  const allTokens = new Set([...nameTokens, ...descTokens]);
 
-  return userInputIndicators.some(indicator => combined.includes(indicator));
+  // Check for whole-word matches using word boundaries
+  return userInputIndicators.some(indicator => {
+    const indicatorRegex = new RegExp(`\\b${indicator}\\b`, 'i');
+    return (
+      allTokens.has(indicator) ||
+      indicatorRegex.test(name) ||
+      indicatorRegex.test(desc)
+    );
+  });
 }
 
 class W003MissingExamplesRule extends BaseRule {
@@ -57,8 +72,17 @@ class W003MissingExamplesRule extends BaseRule {
           continue;
         }
 
-        // Check if it has an example
-        if (input.example === undefined) {
+        // Check if it has an example (treat undefined, empty strings, whitespace-only, and empty arrays/objects as missing)
+        const example = input.example;
+        const isMissing =
+          example === undefined ||
+          (typeof example === 'string' && example.trim().length === 0) ||
+          (Array.isArray(example) && example.length === 0) ||
+          (typeof example === 'object' &&
+            example !== null &&
+            Object.keys(example).length === 0);
+
+        if (isMissing) {
           diagnostics.push(
             this.createDiagnostic(
               `Tool "${tool.name}" parameter "${input.name}" has no examples. LLM accuracy may be reduced.`,

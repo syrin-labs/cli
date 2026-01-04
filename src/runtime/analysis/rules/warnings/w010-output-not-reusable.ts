@@ -53,12 +53,14 @@ function isNaturalLanguageOnly(output: {
  */
 function isStructured(output: {
   type: string;
-  properties?: unknown[];
+  properties?: Record<string, unknown>;
 }): boolean {
   return (
     output.type === 'object' ||
     output.type === 'array' ||
-    Boolean(output.properties)
+    (output.properties &&
+      typeof output.properties === 'object' &&
+      Object.keys(output.properties).length > 0)
   );
 }
 

@@ -59,7 +59,6 @@ class E005ToolAmbiguityRule extends BaseRule {
 
   check(ctx: AnalysisContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
-    const checked = new Set<string>();
 
     for (let i = 0; i < ctx.tools.length; i++) {
       const tool1 = ctx.tools[i];
@@ -68,12 +67,6 @@ class E005ToolAmbiguityRule extends BaseRule {
       for (let j = i + 1; j < ctx.tools.length; j++) {
         const tool2 = ctx.tools[j];
         if (!tool2) continue;
-
-        const pairKey = `${tool1.name},${tool2.name}`;
-        if (checked.has(pairKey)) {
-          continue;
-        }
-        checked.add(pairKey);
 
         // Calculate description similarity
         const descSimilarity = tokenSimilarity(

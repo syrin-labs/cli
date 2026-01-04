@@ -55,11 +55,12 @@ export function buildIndexes(tools: ToolSpec[]): Indexes {
 
     // Build keyword index
     const keywords = extractKeywords(tool);
+    const toolNameLower = tool.name.toLowerCase();
     for (const keyword of keywords) {
       if (!keywordIndex.has(keyword)) {
         keywordIndex.set(keyword, new Set());
       }
-      keywordIndex.get(keyword)!.add(tool.name);
+      keywordIndex.get(keyword)!.add(toolNameLower);
     }
   }
 

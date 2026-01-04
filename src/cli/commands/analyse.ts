@@ -22,7 +22,6 @@ interface AnalyseCommandOptions {
   transport?: TransportType;
   url?: string;
   script?: string;
-  projectRoot?: string;
 }
 
 /**
@@ -77,9 +76,9 @@ export async function executeAnalyse(
     // Exit with appropriate code
     if (result.errors.length > 0) {
       process.exit(1);
+    } else {
+      process.exit(0);
     }
-
-    process.exit(0);
   } catch (error) {
     handleCommandError(error, Messages.ANALYSE_ERROR_FAILED);
     process.exit(1);

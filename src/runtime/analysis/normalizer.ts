@@ -25,9 +25,14 @@ type JSONSchema = JSONSchemaField | Record<string, unknown>;
 
 /**
  * Type guard to check if object is a JSONSchemaField.
+ * Performs structural check for expected JSON Schema field properties.
  */
 function isJSONSchemaField(obj: unknown): obj is JSONSchemaField {
-  return typeof obj === 'object' && obj !== null;
+  return (
+    typeof obj === 'object' &&
+    obj !== null &&
+    ('type' in obj || 'properties' in obj || 'items' in obj || '$ref' in obj)
+  );
 }
 
 /**
@@ -90,13 +95,19 @@ async function extractFieldsFromSchema(
 
       const field = fieldSchema;
 
+      // Determine nullable: true if explicitly set, or if type is an array containing 'null'
+      // Do not infer nullable from single type === 'null' (that means value must be null)
+      const isNullable =
+        field.nullable === true ||
+        (Array.isArray(field.type) && field.type.includes('null'));
+
       const fieldSpec: FieldSpec = {
         tool: toolName,
         name: fieldName,
         type: field.type || 'any',
         required: required.has(fieldName),
         description: field.description,
-        nullable: field.nullable === true || field.type === 'null',
+        nullable: isNullable,
       };
 
       // Extract enum values
