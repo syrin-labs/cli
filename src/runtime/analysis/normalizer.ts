@@ -51,6 +51,28 @@ function extractTokens(text: string): Set<string> {
 }
 
 /**
+ * Normalize a JSON Schema type to a string representation.
+ * Handles string, string[], and undefined types.
+ *
+ * @param type - The type to normalize (string, string[], or undefined)
+ * @returns Normalized type string ('any' for empty/undefined, joined types for arrays)
+ */
+function normalizeType(type: string | string[] | undefined): string {
+  if (Array.isArray(type)) {
+    // Empty array defaults to 'any'
+    if (type.length === 0) {
+      return 'any';
+    }
+    // Filter out 'null' and join remaining types
+    const nonNullTypes = type.filter(t => t !== 'null');
+    // If only 'null' remains, return 'null', otherwise join non-null types
+    return nonNullTypes.length > 0 ? nonNullTypes.join('|') : 'null';
+  }
+  // String or undefined: return type or 'any' as fallback
+  return type || 'any';
+}
+
+/**
  * Extract field specifications from a JSON Schema object.
  */
 async function extractFieldsFromSchema(
@@ -103,15 +125,8 @@ async function extractFieldsFromSchema(
         field.nullable === true ||
         (Array.isArray(field.type) && field.type.includes('null'));
 
-      // Normalize type: if array, join with '|' or pick non-null type
-      let normalizedType: string;
-      if (Array.isArray(field.type)) {
-        const nonNullTypes = field.type.filter(t => t !== 'null');
-        normalizedType =
-          nonNullTypes.length > 0 ? nonNullTypes.join('|') : 'null';
-      } else {
-        normalizedType = field.type || 'any';
-      }
+      // Normalize type using helper function
+      const normalizedType = normalizeType(field.type);
 
       const fieldSpec: FieldSpec = {
         tool: toolName,
@@ -140,8 +155,11 @@ async function extractFieldsFromSchema(
       }
 
       // Handle nested object properties
-      const fieldType = Array.isArray(field.type) ? field.type[0] : field.type;
-      if (fieldType === 'object' && field.properties) {
+      // Check if type is 'object' (either directly or in an array)
+      const isObjectType =
+        (Array.isArray(field.type) && field.type.includes('object')) ||
+        field.type === 'object';
+      if (isObjectType && field.properties) {
         fieldSpec.properties = await extractFieldsFromSchema(
           field,
           toolName,
@@ -153,15 +171,8 @@ async function extractFieldsFromSchema(
     }
   } else if (resolvedSchema.type) {
     // Handle non-object types (simple types)
-    // Normalize type: if array, join with '|' or pick non-null type
-    let normalizedType: string;
-    if (Array.isArray(resolvedSchema.type)) {
-      const nonNullTypes = resolvedSchema.type.filter(t => t !== 'null');
-      normalizedType =
-        nonNullTypes.length > 0 ? nonNullTypes.join('|') : 'null';
-    } else {
-      normalizedType = resolvedSchema.type;
-    }
+    // Normalize type using helper function
+    const normalizedType = normalizeType(resolvedSchema.type);
 
     const fieldSpec: FieldSpec = {
       tool: toolName,

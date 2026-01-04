@@ -11,13 +11,7 @@
 
 import { BaseRule } from '../base';
 import type { AnalysisContext, Diagnostic } from '../../types';
-
-/**
- * Escape regex metacharacters in a string to use it as a literal pattern.
- */
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+import { escapeRegex } from '../../utils';
 
 /**
  * Check if an input field appears to be user-provided.
