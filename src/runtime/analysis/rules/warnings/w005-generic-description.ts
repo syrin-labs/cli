@@ -17,12 +17,13 @@ import type { AnalysisContext, Diagnostic } from '../../types';
 
 /**
  * Default list of concrete nouns that make a description specific.
- * This list can be extended or overridden by importing and modifying this constant.
+ * This list can be extended or overridden when creating a custom rule instance.
  *
  * @example
  * ```ts
- * import { DEFAULT_CONCRETE_NOUNS } from './w005-generic-description';
+ * import { createW005Rule, DEFAULT_CONCRETE_NOUNS } from './w005-generic-description';
  * const customNouns = [...DEFAULT_CONCRETE_NOUNS, 'invoice', 'report'];
+ * const customRule = createW005Rule(customNouns);
  * ```
  */
 export const DEFAULT_CONCRETE_NOUNS = [
@@ -86,13 +87,19 @@ class W005GenericDescriptionRule extends BaseRule {
   readonly description =
     'Description of tool is too generic. LLM cannot discriminate tools.';
 
+  constructor(
+    private readonly concreteNouns: readonly string[] = DEFAULT_CONCRETE_NOUNS
+  ) {
+    super();
+  }
+
   check(ctx: AnalysisContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
     for (const tool of ctx.tools) {
       const description = tool.description || '';
 
-      if (isGenericDescription(description)) {
+      if (isGenericDescription(description, this.concreteNouns)) {
         diagnostics.push(
           this.createDiagnostic(
             `Description of "${tool.name}" is too generic.`,
@@ -106,6 +113,25 @@ class W005GenericDescriptionRule extends BaseRule {
 
     return diagnostics;
   }
+}
+
+/**
+ * Create a W005 rule instance with custom concrete nouns.
+ *
+ * @param concreteNouns - Optional list of concrete nouns (defaults to DEFAULT_CONCRETE_NOUNS)
+ * @returns A new W005GenericDescriptionRule instance
+ *
+ * @example
+ * ```ts
+ * import { createW005Rule, DEFAULT_CONCRETE_NOUNS } from './w005-generic-description';
+ * const customNouns = [...DEFAULT_CONCRETE_NOUNS, 'invoice', 'report'];
+ * const customRule = createW005Rule(customNouns);
+ * ```
+ */
+export function createW005Rule(
+  concreteNouns?: readonly string[]
+): W005GenericDescriptionRule {
+  return new W005GenericDescriptionRule(concreteNouns);
 }
 
 export const W005GenericDescription = new W005GenericDescriptionRule();

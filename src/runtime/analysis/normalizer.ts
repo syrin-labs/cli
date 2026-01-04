@@ -10,10 +10,12 @@ import type { RawTool, ToolSpec, FieldSpec } from './types';
  * JSON Schema types for type-safe access.
  */
 interface JSONSchemaField {
-  type?: string;
+  type?: string | string[];
   description?: string;
   required?: string[];
   properties?: Record<string, JSONSchemaField>;
+  items?: JSONSchemaField | JSONSchemaField[];
+  $ref?: string;
   enum?: unknown[];
   pattern?: string;
   example?: unknown;
@@ -101,10 +103,20 @@ async function extractFieldsFromSchema(
         field.nullable === true ||
         (Array.isArray(field.type) && field.type.includes('null'));
 
+      // Normalize type: if array, join with '|' or pick non-null type
+      let normalizedType: string;
+      if (Array.isArray(field.type)) {
+        const nonNullTypes = field.type.filter(t => t !== 'null');
+        normalizedType =
+          nonNullTypes.length > 0 ? nonNullTypes.join('|') : 'null';
+      } else {
+        normalizedType = field.type || 'any';
+      }
+
       const fieldSpec: FieldSpec = {
         tool: toolName,
         name: fieldName,
-        type: field.type || 'any',
+        type: normalizedType,
         required: required.has(fieldName),
         description: field.description,
         nullable: isNullable,
@@ -128,7 +140,8 @@ async function extractFieldsFromSchema(
       }
 
       // Handle nested object properties
-      if (field.type === 'object' && field.properties) {
+      const fieldType = Array.isArray(field.type) ? field.type[0] : field.type;
+      if (fieldType === 'object' && field.properties) {
         fieldSpec.properties = await extractFieldsFromSchema(
           field,
           toolName,
@@ -140,10 +153,20 @@ async function extractFieldsFromSchema(
     }
   } else if (resolvedSchema.type) {
     // Handle non-object types (simple types)
+    // Normalize type: if array, join with '|' or pick non-null type
+    let normalizedType: string;
+    if (Array.isArray(resolvedSchema.type)) {
+      const nonNullTypes = resolvedSchema.type.filter(t => t !== 'null');
+      normalizedType =
+        nonNullTypes.length > 0 ? nonNullTypes.join('|') : 'null';
+    } else {
+      normalizedType = resolvedSchema.type;
+    }
+
     const fieldSpec: FieldSpec = {
       tool: toolName,
       name: isInput ? 'input' : 'output',
-      type: resolvedSchema.type,
+      type: normalizedType,
       required: !isInput, // Outputs are always "required" conceptually
       description: resolvedSchema.description,
       nullable: resolvedSchema.nullable === true,

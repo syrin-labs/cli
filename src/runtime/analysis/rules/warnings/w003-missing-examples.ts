@@ -13,13 +13,21 @@ import { BaseRule } from '../base';
 import type { AnalysisContext, Diagnostic } from '../../types';
 
 /**
+ * Escape regex metacharacters in a string to use it as a literal pattern.
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Check if an input field appears to be user-provided.
+ * Indicators are treated as plain text (not regex patterns).
  */
 function isUserFacingInput(inputName: string, description?: string): boolean {
   const name = inputName.toLowerCase();
   const desc = (description || '').toLowerCase();
 
-  // Keywords that suggest user input
+  // Keywords that suggest user input (treated as plain text, not regex)
   const userInputIndicators = [
     'user',
     'person',
@@ -45,13 +53,14 @@ function isUserFacingInput(inputName: string, description?: string): boolean {
   const allTokens = new Set([...nameTokens, ...descTokens]);
 
   // Check for whole-word matches using word boundaries
+  // Escape indicators to prevent regex injection
   return userInputIndicators.some(indicator => {
-    const indicatorRegex = new RegExp(`\\b${indicator}\\b`, 'i');
-    return (
-      allTokens.has(indicator) ||
-      indicatorRegex.test(name) ||
-      indicatorRegex.test(desc)
-    );
+    if (allTokens.has(indicator)) {
+      return true;
+    }
+    const escapedIndicator = escapeRegex(indicator);
+    const indicatorRegex = new RegExp(`\\b${escapedIndicator}\\b`, 'i');
+    return indicatorRegex.test(name) || indicatorRegex.test(desc);
   });
 }
 

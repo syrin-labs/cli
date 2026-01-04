@@ -13,15 +13,24 @@ import { BaseRule } from '../base';
 import type { AnalysisContext, Diagnostic } from '../../types';
 
 /**
+ * Escape regex metacharacters in a string to use it as a literal pattern.
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Extract the concept from an input field name.
  */
 function extractConcept(fieldName: string): string | null {
-  const name = fieldName.toLowerCase();
-
   // Split field name into tokens (on non-word characters and camelCase boundaries)
-  const tokens = name
+  // Preserve case for camelCase detection, then lowercase tokens individually
+  const tokens = fieldName
     .split(/[^\w]+|(?<=[a-z])(?=[A-Z])/)
-    .filter(t => t.length > 0);
+    .filter(t => t.length > 0)
+    .map(t => t.toLowerCase());
+
+  const name = fieldName.toLowerCase();
 
   // Common concepts
   const concepts: Array<[string[], string]> = [
@@ -36,7 +45,9 @@ function extractConcept(fieldName: string): string | null {
   for (const [keywords, concept] of concepts) {
     for (const keyword of keywords) {
       // Check for exact token match or word-boundary match
-      const keywordRegex = new RegExp(`\\b${keyword}\\b`, 'i');
+      // Escape keyword to prevent regex injection
+      const escapedKeyword = escapeRegex(keyword);
+      const keywordRegex = new RegExp(`\\b${escapedKeyword}\\b`, 'i');
       if (tokens.includes(keyword) || keywordRegex.test(name)) {
         return concept;
       }
@@ -89,17 +100,13 @@ class W008MultipleEntryPointsRule extends BaseRule {
     for (const [concept, tools] of conceptToTools.entries()) {
       if (tools.length > 1) {
         const toolNames = tools.map(t => `"${t.tool}"`).join(', ');
-        const toolFields = tools.map(t => ({
-          tool: t.tool,
-          fields: [t.field],
-        }));
         // Group by tool name in case same tool appears multiple times
         const toolFieldsMap = new Map<string, string[]>();
-        for (const tf of toolFields) {
-          if (!toolFieldsMap.has(tf.tool)) {
-            toolFieldsMap.set(tf.tool, []);
+        for (const toolEntry of tools) {
+          if (!toolFieldsMap.has(toolEntry.tool)) {
+            toolFieldsMap.set(toolEntry.tool, []);
           }
-          toolFieldsMap.get(tf.tool)!.push(...tf.fields);
+          toolFieldsMap.get(toolEntry.tool)!.push(toolEntry.field);
         }
         const context: Record<string, unknown> = {};
         for (const [tool, fields] of toolFieldsMap.entries()) {

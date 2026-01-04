@@ -27,14 +27,14 @@ function nameSimilarity(name1: string, name2: string): number {
   const longer = n1.length > n2.length ? n1 : n2;
   const shorter = n1.length > n2.length ? n2 : n1;
 
-  // Check if shorter is a significant substring of longer
+  // Check if shorter is a significant substring of longer (>=3 chars = higher confidence)
   if (shorter.length >= 3 && longer.includes(shorter)) {
-    return 0.7;
+    return 0.8;
   }
 
   // One contains the other (but shorter is less than 3 chars, so lower confidence)
   if (n1.includes(n2) || n2.includes(n1)) {
-    return 0.8;
+    return 0.7;
   }
 
   // Word overlap
