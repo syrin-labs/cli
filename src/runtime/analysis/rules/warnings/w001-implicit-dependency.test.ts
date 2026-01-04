@@ -198,7 +198,15 @@ describe('W001: Implicit Dependency', () => {
             required: false,
           },
         ],
-        descriptionTokens: new Set(['get', 'user', 'details', 'using', 'get', 'user', 'id']),
+        descriptionTokens: new Set([
+          'get',
+          'user',
+          'details',
+          'using',
+          'get',
+          'user',
+          'id',
+        ]),
       },
     ];
 

@@ -101,9 +101,9 @@ describe('InteractiveREPL', () => {
       repl.start(onInput);
 
       // Verify line handler is registered
-      const lineCall = vi.mocked(mockRl.on).mock.calls.find(
-        call => call[0] === 'line'
-      );
+      const lineCall = vi
+        .mocked(mockRl.on)
+        .mock.calls.find(call => call[0] === 'line');
       expect(lineCall).toBeDefined();
       expect(lineCall?.[1]).toBeInstanceOf(Function);
     });
@@ -115,9 +115,9 @@ describe('InteractiveREPL', () => {
       repl.start(vi.fn(), onClose);
 
       // Verify close handler is registered
-      const closeCall = vi.mocked(mockRl.on).mock.calls.find(
-        call => call[0] === 'close'
-      );
+      const closeCall = vi
+        .mocked(mockRl.on)
+        .mock.calls.find(call => call[0] === 'close');
       expect(closeCall).toBeDefined();
       expect(closeCall?.[1]).toBeInstanceOf(Function);
     });
@@ -213,9 +213,11 @@ describe('InteractiveREPL', () => {
       repl.start(vi.fn());
 
       // Add some history
-      const lineHandler = vi.mocked(mockRl.on).mock.calls.find(
-        call => call[0] === 'line'
-      )?.[1] as (line: string) => void;
+      const lineHandler = vi
+        .mocked(mockRl.on)
+        .mock.calls.find(call => call[0] === 'line')?.[1] as (
+        line: string
+      ) => void;
       lineHandler('command1');
       lineHandler('command2');
 
@@ -250,7 +252,7 @@ describe('InteractiveREPL', () => {
       // Test that getHistory returns an array
       const history = repl.getHistory();
       expect(Array.isArray(history)).toBe(true);
-      
+
       // Test that clearHistory works
       repl.clearHistory();
       expect(repl.getHistory().length).toBe(0);
@@ -262,15 +264,21 @@ describe('InteractiveREPL', () => {
       });
 
       repl.start(vi.fn());
-      const lineHandler = vi.mocked(mockRl.on).mock.calls.find(
-        call => call[0] === 'line'
-      )?.[1] as (line: string) => void;
+      const lineHandler = vi
+        .mocked(mockRl.on)
+        .mock.calls.find(call => call[0] === 'line')?.[1] as (
+        line: string
+      ) => void;
 
       // Add more than maxHistorySize commands
+      // Process commands and wait for async operations to complete
+      const promises: Promise<void>[] = [];
       for (let i = 0; i < 10; i++) {
         lineHandler(`command${i}`);
-        await new Promise(resolve => setTimeout(resolve, 10));
+        // Wait for the line handler to complete processing
+        promises.push(new Promise(resolve => setImmediate(resolve)));
       }
+      await Promise.all(promises);
 
       const history = repl.getHistory();
       expect(history.length).toBeLessThanOrEqual(5);

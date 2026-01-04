@@ -14,7 +14,7 @@ vi.mock('@/cli/utils', async () => {
   return {
     ...actual,
     resolveTransportConfig: vi.fn(),
-    handleCommandError: vi.fn((error) => {
+    handleCommandError: vi.fn(error => {
       throw error;
     }),
   };
@@ -86,11 +86,7 @@ describe('executeTest', () => {
         throw new Error('process.exit(1)');
       });
 
-      try {
-        await executeTest({});
-      } catch (error) {
-        // Expected to throw due to process.exit
-      }
+      await expect(executeTest({})).rejects.toThrow();
 
       expect(exitSpy).toHaveBeenCalledWith(1);
       exitSpy.mockRestore();
@@ -127,6 +123,7 @@ describe('executeTest', () => {
         command: undefined,
       });
 
+      expect(exitSpy).not.toHaveBeenCalled();
       exitSpy.mockRestore();
     });
 
@@ -236,9 +233,7 @@ describe('executeTest', () => {
         urlSource: 'cli',
       });
 
-      vi.mocked(connectMCP).mockRejectedValue(
-        new Error('Connection failed')
-      );
+      vi.mocked(connectMCP).mockRejectedValue(new Error('Connection failed'));
 
       await expect(executeTest({})).rejects.toThrow('Connection failed');
     });

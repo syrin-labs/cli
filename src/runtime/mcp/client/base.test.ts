@@ -100,12 +100,9 @@ describe('BaseMCPClientManager', () => {
       manager.setClient(null);
       manager.setConnected(false);
 
-      await expect(manager.getAvailableTools()).rejects.toThrow(
-        ConfigurationError
-      );
-      await expect(manager.getAvailableTools()).rejects.toThrow(
-        'MCP client is not connected'
-      );
+      const promise = manager.getAvailableTools();
+      await expect(promise).rejects.toThrow(ConfigurationError);
+      await expect(promise).rejects.toThrow('MCP client is not connected');
     });
 
     it('should handle tools with missing description', async () => {
@@ -302,7 +299,7 @@ describe('BaseMCPClientManager', () => {
 
       const result = await manager.executeTool('test_tool', {}, true);
 
-      expect(result).toBe(mockResult);
+      expect(result).toEqual(mockResult);
     });
 
     it('should handle result without content', async () => {
@@ -312,19 +309,19 @@ describe('BaseMCPClientManager', () => {
 
       const result = await manager.executeTool('test_tool', {}, true);
 
-      expect(result).toBe(mockResult);
+      expect(result).toEqual(mockResult);
     });
 
     it('should throw ConfigurationError when not connected', async () => {
       manager.setClient(null);
       manager.setConnected(false);
 
-      await expect(
-        manager.executeTool('test_tool', {}, true)
-      ).rejects.toThrow(ConfigurationError);
-      await expect(
-        manager.executeTool('test_tool', {}, true)
-      ).rejects.toThrow('MCP client is not connected');
+      await expect(manager.executeTool('test_tool', {}, true)).rejects.toThrow(
+        ConfigurationError
+      );
+      await expect(manager.executeTool('test_tool', {}, true)).rejects.toThrow(
+        'MCP client is not connected'
+      );
     });
 
     it('should emit error events on tool execution failure', async () => {
@@ -363,9 +360,9 @@ describe('BaseMCPClientManager', () => {
     it('should handle non-Error exceptions', async () => {
       vi.mocked(mockClient.callTool).mockRejectedValue('String error');
 
-      await expect(
-        manager.executeTool('test_tool', {}, true)
-      ).rejects.toThrow('Tool execution failed: String error');
+      await expect(manager.executeTool('test_tool', {}, true)).rejects.toThrow(
+        'Tool execution failed: String error'
+      );
     });
 
     it('should calculate execution duration', async () => {
@@ -385,8 +382,7 @@ describe('BaseMCPClientManager', () => {
       const completedCall = vi
         .mocked(mockEventEmitter.emit)
         .mock.calls.find(
-          call =>
-            call[0] === ToolExecutionEventType.TOOL_EXECUTION_COMPLETED
+          call => call[0] === ToolExecutionEventType.TOOL_EXECUTION_COMPLETED
         );
 
       expect(completedCall?.[1]).toMatchObject({

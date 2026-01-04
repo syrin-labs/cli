@@ -43,7 +43,9 @@ describe('process utilities', () => {
 
     it('should return true for commands with && operator', () => {
       expect(requiresShellExecution('cmd1 && cmd2')).toBe(true);
-      expect(requiresShellExecution('python server.py && echo done')).toBe(true);
+      expect(requiresShellExecution('python server.py && echo done')).toBe(
+        true
+      );
     });
 
     it('should return true for commands with || operator', () => {
@@ -106,7 +108,13 @@ describe('process utilities', () => {
     it('should parse commands with multiple arguments', () => {
       const result = parseCommand('node index.js --port 3000 --env dev');
       expect(result.executable).toBe('node');
-      expect(result.args).toEqual(['index.js', '--port', '3000', '--env', 'dev']);
+      expect(result.args).toEqual([
+        'index.js',
+        '--port',
+        '3000',
+        '--env',
+        'dev',
+      ]);
     });
 
     it('should handle commands with shell operators', () => {

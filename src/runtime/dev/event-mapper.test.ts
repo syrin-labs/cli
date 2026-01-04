@@ -20,6 +20,12 @@ describe('DevEventMapper', () => {
   let mockChatUI: ChatUI;
   let mapper: DevEventMapper;
 
+  // Helper function to get the subscriber callback from the mocked event emitter
+  function getSubscriber(): EventSubscriber {
+    return vi.mocked(mockEventEmitter.subscribe).mock
+      .calls[0][0] as EventSubscriber;
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
 
@@ -64,10 +70,7 @@ describe('DevEventMapper', () => {
 
     it('should not subscribe if eventEmitter does not support subscriptions', () => {
       const emitterWithoutSubscribe = {} as EventEmitter;
-      const mapper2 = new DevEventMapper(
-        emitterWithoutSubscribe,
-        mockChatUI
-      );
+      const mapper2 = new DevEventMapper(emitterWithoutSubscribe, mockChatUI);
 
       mapper2.start();
 
@@ -116,9 +119,7 @@ describe('DevEventMapper', () => {
         sequence: 1,
       };
 
-      // Get the subscriber callback
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(event);
 
       expect(mockChatUI.addMessage).toHaveBeenCalledWith(
@@ -139,8 +140,7 @@ describe('DevEventMapper', () => {
         sequence: 1,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(event);
 
       // Validation started doesn't show message immediately, but stores state
@@ -184,8 +184,7 @@ describe('DevEventMapper', () => {
         sequence: 2,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(startedEvent);
       subscriber(passedEvent);
 
@@ -209,8 +208,7 @@ describe('DevEventMapper', () => {
         sequence: 1,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(event);
 
       expect(mockChatUI.addMessage).toHaveBeenCalledWith(
@@ -244,8 +242,7 @@ describe('DevEventMapper', () => {
         sequence: 2,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(proposedEvent);
       subscriber(startedEvent);
 
@@ -281,8 +278,7 @@ describe('DevEventMapper', () => {
         sequence: 2,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(startedEvent);
       subscriber(completedEvent);
 
@@ -322,8 +318,7 @@ describe('DevEventMapper', () => {
         sequence: 2,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(startedEvent);
       subscriber(failedEvent);
 
@@ -351,8 +346,7 @@ describe('DevEventMapper', () => {
         sequence: 1,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(event);
 
       expect(mockChatUI.addMessage).toHaveBeenCalledWith(
@@ -385,8 +379,7 @@ describe('DevEventMapper', () => {
         sequence: 2,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(sentEvent);
       subscriber(receivedEvent);
 
@@ -415,8 +408,7 @@ describe('DevEventMapper', () => {
         sequence: 1,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(event);
 
       expect(mockChatUI.addMessage).toHaveBeenCalledWith(
@@ -443,9 +435,7 @@ describe('DevEventMapper', () => {
         sequence: 1,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
-      subscriber(event);
+      const subscriber = getSubscriber();
 
       // LLM_FINAL_RESPONSE_GENERATED is a no-op, but should not throw
       expect(() => subscriber(event)).not.toThrow();
@@ -471,8 +461,7 @@ describe('DevEventMapper', () => {
         sequence: 1,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(event);
 
       expect(mockChatUI.addMessage).toHaveBeenCalledWith(
@@ -494,8 +483,7 @@ describe('DevEventMapper', () => {
         sequence: 1,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(event);
 
       expect(mockChatUI.addMessage).toHaveBeenCalledWith(
@@ -538,8 +526,7 @@ describe('DevEventMapper', () => {
         sequence: 2,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(startedEvent);
       subscriber(completedEvent);
 
@@ -576,8 +563,7 @@ describe('DevEventMapper', () => {
         sequence: 2,
       };
 
-      const subscriber = vi.mocked(mockEventEmitter.subscribe).mock
-        .calls[0][0] as EventSubscriber;
+      const subscriber = getSubscriber();
       subscriber(startedEvent);
       subscriber(completedEvent);
 

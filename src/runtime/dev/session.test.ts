@@ -78,9 +78,11 @@ describe('DevSession', () => {
       load: vi.fn().mockReturnValue({ data: 'loaded' }),
       getReference: vi.fn(),
     })) as any;
-    
+
     // Add static methods to the mock
-    (DataManager as any).shouldExternalize = vi.fn((size: number) => size > 100 * 1024);
+    (DataManager as any).shouldExternalize = vi.fn(
+      (size: number) => size > 100 * 1024
+    );
     (DataManager as any).formatSize = vi.fn((size: number) => {
       const sizeKB = size / 1024;
       const sizeMB = sizeKB / 1024;
@@ -512,18 +514,26 @@ describe('DevSession', () => {
       // The error is caught and stored in toolResult, so we check for that
       const state = session.getState();
       expect(state.toolCalls.length).toBeGreaterThan(0);
-      
+
       // Check that error was handled (tool call was tracked even with error)
       const toolCall = state.toolCalls[0];
       expect(toolCall).toBeDefined();
-      
-      // Verify error was emitted
-      const failedCalls = vi.mocked(mockEventEmitter.emit).mock.calls.filter(
-        call => call[0] === ToolExecutionEventType.TOOL_EXECUTION_FAILED
-      );
+
+      // Verify error was emitted or stored in conversation
+      const failedCalls = vi
+        .mocked(mockEventEmitter.emit)
+        .mock.calls.filter(
+          call => call[0] === ToolExecutionEventType.TOOL_EXECUTION_FAILED
+        );
       // Error handling may emit the event or just store it in conversation
-      // Both are valid behaviors
-      expect(failedCalls.length).toBeGreaterThanOrEqual(0);
+      // Both are valid behaviors - verify that either the event was emitted or the error was stored
+      const hasFailedEvent = failedCalls.length > 0;
+      const hasErrorInConversation = state.conversationHistory.some(
+        msg =>
+          msg.role === 'assistant' &&
+          msg.content?.includes('Tool execution failed')
+      );
+      expect(hasFailedEvent || hasErrorInConversation).toBe(true);
     });
   });
 

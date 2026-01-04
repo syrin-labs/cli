@@ -15,7 +15,6 @@ import {
   normalizeVersion,
   detectInstallType,
 } from '@/utils/package-manager';
-import { ConfigurationError } from '@/utils/errors';
 import { PACKAGE_NAME } from '@/constants/app';
 
 // Mock dependencies
@@ -45,15 +44,24 @@ vi.mock('@/utils/logger', () => ({
 }));
 
 describe('executeRollback', () => {
+  let exitSpy: ReturnType<typeof vi.spyOn> | null = null;
+
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    if (exitSpy) {
+      exitSpy.mockRestore();
+      exitSpy = null;
+    }
   });
 
   describe('version validation', () => {
     it('should reject invalid version format', async () => {
       vi.mocked(isValidVersion).mockReturnValue(false);
 
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+      exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(1)');
       });
 
@@ -63,7 +71,6 @@ describe('executeRollback', () => {
 
       expect(isValidVersion).toHaveBeenCalledWith('invalid-version');
       expect(exitSpy).toHaveBeenCalledWith(1);
-      exitSpy.mockRestore();
     });
 
     it('should accept valid version formats', async () => {
@@ -190,9 +197,7 @@ describe('executeRollback', () => {
       vi.mocked(isValidVersion).mockReturnValue(true);
       vi.mocked(normalizeVersion).mockReturnValue(normalizedVersion);
       vi.mocked(getCurrentVersion).mockReturnValue(currentVersion);
-      vi.mocked(fetchPackageInfo).mockRejectedValue(
-        new Error('Network error')
-      );
+      vi.mocked(fetchPackageInfo).mockRejectedValue(new Error('Network error'));
       vi.mocked(compareVersions).mockReturnValue(1);
       vi.mocked(detectInstallType).mockReturnValue('global');
       vi.mocked(installPackageVersion).mockResolvedValue({

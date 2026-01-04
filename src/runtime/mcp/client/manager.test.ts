@@ -192,8 +192,9 @@ describe('MCP Client Manager', () => {
         const error = new Error('Connection failed');
         vi.mocked(getConnectedClient).mockRejectedValue(error);
 
-        await expect(manager.connect()).rejects.toThrow(ConfigurationError);
-        await expect(manager.connect()).rejects.toThrow(
+        const connectPromise = manager.connect();
+        await expect(connectPromise).rejects.toThrow(ConfigurationError);
+        await expect(connectPromise).rejects.toThrow(
           'Failed to connect to MCP server'
         );
 
@@ -594,40 +595,41 @@ describe('MCP Client Manager', () => {
     });
 
     it('should throw ConfigurationError for http without URL', () => {
-      expect(() =>
-        createMCPClientManager('http', undefined, undefined, mockEventEmitter)
-      ).toThrow(ConfigurationError);
-      expect(() =>
-        createMCPClientManager('http', undefined, undefined, mockEventEmitter)
-      ).toThrow('MCP URL is required for HTTP transport');
+      let err: Error | undefined;
+      try {
+        createMCPClientManager('http', undefined, undefined, mockEventEmitter);
+      } catch (e) {
+        err = e as Error;
+      }
+      expect(err).toBeInstanceOf(ConfigurationError);
+      expect(err?.message).toContain('MCP URL is required for HTTP transport');
     });
 
     it('should throw ConfigurationError for stdio without command', () => {
-      expect(() =>
-        createMCPClientManager('stdio', undefined, undefined, mockEventEmitter)
-      ).toThrow(ConfigurationError);
-      expect(() =>
-        createMCPClientManager('stdio', undefined, undefined, mockEventEmitter)
-      ).toThrow('Command is required for stdio transport');
+      let err: Error | undefined;
+      try {
+        createMCPClientManager('stdio', undefined, undefined, mockEventEmitter);
+      } catch (e) {
+        err = e as Error;
+      }
+      expect(err).toBeInstanceOf(ConfigurationError);
+      expect(err?.message).toContain('Command is required for stdio transport');
     });
 
     it('should throw ConfigurationError for unsupported transport', () => {
-      expect(() =>
+      let err: Error | undefined;
+      try {
         createMCPClientManager(
           'websocket' as any,
           undefined,
           undefined,
           mockEventEmitter
-        )
-      ).toThrow(ConfigurationError);
-      expect(() =>
-        createMCPClientManager(
-          'websocket' as any,
-          undefined,
-          undefined,
-          mockEventEmitter
-        )
-      ).toThrow('Unsupported transport type');
+        );
+      } catch (e) {
+        err = e as Error;
+      }
+      expect(err).toBeInstanceOf(ConfigurationError);
+      expect(err?.message).toContain('Unsupported transport type');
     });
 
     it('should pass shouldSpawn to HTTPMCPClientManager', () => {

@@ -77,9 +77,7 @@ describe('stdio-transport', () => {
     });
 
     it('should connect successfully with command and arguments', async () => {
-      const result = await getConnectedStdioClient(
-        'node index.js --port 3000'
-      );
+      const result = await getConnectedStdioClient('node index.js --port 3000');
 
       expect(childProcess.spawn).toHaveBeenCalledWith(
         'node',

@@ -53,8 +53,8 @@ vi.mock('@/utils/logger', () => ({
 }));
 vi.mock('@/presentation/dev-ui', () => ({
   buildDevWelcomeMessages: vi.fn(() => []),
-  formatToolsList: vi.fn((tools) => `Tools: ${tools.length}`),
-  formatCommandHistory: vi.fn((history) => `History: ${history.length} entries`),
+  formatToolsList: vi.fn(tools => `Tools: ${tools.length}`),
+  formatCommandHistory: vi.fn(history => `History: ${history.length} entries`),
 }));
 vi.mock('@/utils/version-checker', () => ({
   checkSyrinVersion: vi.fn().mockResolvedValue({
@@ -63,13 +63,13 @@ vi.mock('@/utils/version-checker', () => ({
     isLatest: true,
     updateAvailable: false,
   }),
-  formatVersionWithUpdate: vi.fn((info) => `v${info.current}`),
+  formatVersionWithUpdate: vi.fn(info => `v${info.current}`),
 }));
 vi.mock('uuid', () => ({
   v4: vi.fn(() => 'test-uuid-1234'),
 }));
 vi.mock('@/types/factories', () => ({
-  makeSessionID: vi.fn((prefix) => `${prefix}-test-session-id`),
+  makeSessionID: vi.fn(prefix => `${prefix}-test-session-id`),
 }));
 
 describe('executeDev', () => {
@@ -111,9 +111,11 @@ describe('executeDev', () => {
     mockMCPClientManager = {
       connect: vi.fn().mockResolvedValue(undefined),
       disconnect: vi.fn().mockResolvedValue(undefined),
-      getAvailableTools: vi.fn().mockResolvedValue([
-        { name: 'test-tool', description: 'Test tool', inputSchema: {} },
-      ]),
+      getAvailableTools: vi
+        .fn()
+        .mockResolvedValue([
+          { name: 'test-tool', description: 'Test tool', inputSchema: {} },
+        ]),
     };
 
     mockEventEmitter = {
@@ -150,10 +152,13 @@ describe('executeDev', () => {
     vi.mocked(getLLMProvider).mockReturnValue(mockLLMProvider);
     vi.mocked(createMCPClientManager).mockReturnValue(mockMCPClientManager);
     vi.mocked(RuntimeEventEmitter).mockImplementation(() => mockEventEmitter);
-    vi.mocked(MemoryEventStore).mockImplementation(() => ({} as any));
-    vi.mocked(FileEventStore).mockImplementation(() => ({
-      close: vi.fn().mockResolvedValue(undefined),
-    } as any));
+    vi.mocked(MemoryEventStore).mockImplementation(() => ({}) as any);
+    vi.mocked(FileEventStore).mockImplementation(
+      () =>
+        ({
+          close: vi.fn().mockResolvedValue(undefined),
+        }) as any
+    );
     vi.mocked(DevSession).mockImplementation(() => mockSession);
     vi.mocked(ChatUI).mockImplementation(() => mockChatUI);
     vi.mocked(DevEventMapper).mockImplementation(() => mockEventMapper);
@@ -419,10 +424,7 @@ describe('executeDev', () => {
 
       await executeDev({});
 
-      expect(sigtermSpy).toHaveBeenCalledWith(
-        'SIGTERM',
-        expect.any(Function)
-      );
+      expect(sigtermSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
 
       sigtermSpy.mockRestore();
     });
@@ -486,7 +488,9 @@ describe('executeDev', () => {
         throw new Error('Failed to create client manager');
       });
 
-      await expect(executeDev({})).rejects.toThrow('Failed to create client manager');
+      await expect(executeDev({})).rejects.toThrow(
+        'Failed to create client manager'
+      );
     });
   });
 

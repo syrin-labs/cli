@@ -42,8 +42,28 @@ class E007OutputNotGuaranteedRule extends BaseRule {
         continue;
       }
 
-      // Check if output is nullable or optional
-      if (fromField.nullable === true || fromField.optional === true) {
+      // Find the downstream input field
+      const toTool = ctx.indexes.toolIndex.get(dep.toTool.toLowerCase());
+
+      if (!toTool) {
+        continue;
+      }
+
+      const toField = toTool.inputs.find(f => f.name === dep.toField);
+
+      if (!toField) {
+        continue;
+      }
+
+      // Check if output is not guaranteed and downstream requires it without fallback
+      // Optional upstream always triggers when downstream requires it
+      // Nullable upstream only triggers when downstream is required AND not nullable (can't handle null)
+      if (
+        (fromField.optional === true && toField.required === true) ||
+        (fromField.nullable === true &&
+          toField.required === true &&
+          toField.nullable !== true)
+      ) {
         diagnostics.push(
           this.createDiagnostic(
             `Output of "${dep.fromTool}" (field: "${dep.fromField}") is nullable but is used by "${dep.toTool}" without fallback.`,

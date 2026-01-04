@@ -41,7 +41,9 @@ describe('OpenAIProvider', () => {
       },
     };
 
-    vi.mocked(OpenAI).mockImplementation(() => mockOpenAIClient as unknown as OpenAI);
+    vi.mocked(OpenAI).mockImplementation(
+      () => mockOpenAIClient as unknown as OpenAI
+    );
   });
 
   describe('constructor', () => {
@@ -119,9 +121,7 @@ describe('OpenAIProvider', () => {
       );
 
       const request: LLMRequest = {
-        messages: [
-          { role: 'user', content: 'Hello' },
-        ],
+        messages: [{ role: 'user', content: 'Hello' }],
       };
 
       const response = await provider.chat(request);
@@ -473,13 +473,6 @@ describe('OpenAIProvider', () => {
 
   describe('fromConfig', () => {
     it('should create provider from config with valid env vars', () => {
-      vi.mocked(checkEnvVar).mockReturnValue({
-        isSet: true,
-        value: 'test-api-key',
-        envFileExists: true,
-        keyExistsInEnvFile: true,
-      });
-
       vi.mocked(checkEnvVar)
         .mockReturnValueOnce({
           isSet: true,
@@ -553,10 +546,7 @@ describe('OpenAIProvider', () => {
 
       OpenAIProvider.fromConfig('OPENAI_API_KEY', 'OPENAI_MODEL');
 
-      expect(checkEnvVar).toHaveBeenCalledWith(
-        'OPENAI_API_KEY',
-        process.cwd()
-      );
+      expect(checkEnvVar).toHaveBeenCalledWith('OPENAI_API_KEY', process.cwd());
       expect(checkEnvVar).toHaveBeenCalledWith('OPENAI_MODEL', process.cwd());
     });
   });

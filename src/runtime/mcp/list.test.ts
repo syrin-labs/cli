@@ -4,12 +4,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import {
-  listTools,
-  listResources,
-  listPrompts,
-  closeConnection,
-} from './list';
+import { listTools, listResources, listPrompts, closeConnection } from './list';
 import type { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 

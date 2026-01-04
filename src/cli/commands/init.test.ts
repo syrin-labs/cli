@@ -67,6 +67,8 @@ describe('executeInit', () => {
 
       await executeInit();
 
+      // The function uses process.cwd() which may resolve symlinks differently
+      // So we check that it was called with a path that contains the tempDir basename
       expect(isProjectInitialized).toHaveBeenCalledWith(
         expect.stringContaining(path.basename(tempDir))
       );

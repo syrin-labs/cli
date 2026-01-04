@@ -3,10 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import {
-  generateStackTrace,
-  formatStackTrace,
-} from './stack-trace';
+import { generateStackTrace, formatStackTrace } from './stack-trace';
 import type { EventStore } from '@/events/store';
 import type { EventEnvelope } from '@/events/types';
 import type { SessionID } from '@/types/ids';
@@ -207,7 +204,7 @@ describe('Stack Trace Generation', () => {
         event_id: `event-${i}` as any,
         event_type: ToolExecutionEventType.TOOL_EXECUTION_STARTED,
         payload: { tool_name: `tool${i}`, execution_id: `exec-${i}` },
-        timestamp: `2024-01-01T10:00:0${i}.000Z`,
+        timestamp: `2024-01-01T10:00:${String(i).padStart(2, '0')}.000Z`,
         sequence: i + 1,
       }));
 

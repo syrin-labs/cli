@@ -77,7 +77,17 @@ describe('W004: Overloaded Responsibility', () => {
             required: false,
           },
         ],
-        descriptionTokens: new Set(['get', 'user', 'create', 'user', 'delete', 'user', 'and', 'update', 'user']),
+        descriptionTokens: new Set([
+          'get',
+          'user',
+          'create',
+          'user',
+          'delete',
+          'user',
+          'and',
+          'update',
+          'user',
+        ]),
       },
     ];
 

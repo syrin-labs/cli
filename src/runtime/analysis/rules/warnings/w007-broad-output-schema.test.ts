@@ -95,7 +95,12 @@ describe('W007: Broad Output Schema', () => {
         inputSchema: { type: 'object', properties: {} },
         outputSchema: {
           type: 'object',
-          properties: {}, // No properties defined
+          properties: {
+            result: {
+              type: 'object',
+              properties: {},
+            },
+          },
         },
       },
     ]);

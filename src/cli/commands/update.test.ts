@@ -4,10 +4,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { executeUpdate } from './update';
-import {
-  checkSyrinVersion,
-  getCurrentVersion,
-} from '@/utils/version-checker';
+import { checkSyrinVersion, getCurrentVersion } from '@/utils/version-checker';
 import { updatePackage, detectInstallType } from '@/utils/package-manager';
 import { PACKAGE_NAME } from '@/constants/app';
 

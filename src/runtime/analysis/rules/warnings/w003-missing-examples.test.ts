@@ -141,6 +141,7 @@ describe('W003: Missing Examples', () => {
             type: 'string',
             required: true,
             description: 'User query about location',
+            // The normalizer takes the first entry from the examples array and uses it as the singular example
             example: 'Where am I?', // Has example
           },
         ],

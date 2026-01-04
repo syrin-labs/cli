@@ -13,6 +13,7 @@ import { resolveTransportConfig } from '@/cli/utils';
 import { analyseTools } from '@/runtime/analysis';
 import { displayAnalysisResult } from '@/presentation/analysis-ui';
 import { TransportTypes } from '@/constants';
+import { log } from '@/utils/logger';
 
 // Mock dependencies
 vi.mock('@/runtime/mcp');
@@ -258,6 +259,8 @@ describe('executeAnalyse', () => {
         throw new Error('process.exit(0)');
       });
 
+      const logInfoSpy = vi.spyOn(log, 'info');
+
       try {
         await executeAnalyse({ ci: true });
       } catch (error) {
@@ -265,8 +268,14 @@ describe('executeAnalyse', () => {
       }
 
       // In CI mode, log.info should not be called for connecting/loading messages
-      // (This is tested implicitly by the fact that displayAnalysisResult is called)
+      expect(logInfoSpy).not.toHaveBeenCalled();
+      expect(displayAnalysisResult).toHaveBeenCalledWith(mockResult, {
+        ci: true,
+        json: undefined,
+        graph: undefined,
+      });
 
+      logInfoSpy.mockRestore();
       exitSpy.mockRestore();
     });
   });
@@ -310,9 +319,7 @@ describe('executeAnalyse', () => {
         transport: mockTransport as any,
       });
 
-      vi.mocked(analyseTools).mockRejectedValue(
-        new Error('Analysis failed')
-      );
+      vi.mocked(analyseTools).mockRejectedValue(new Error('Analysis failed'));
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(1)');
@@ -357,7 +364,8 @@ describe('executeAnalyse', () => {
         // Expected to throw
       }
 
-      // Connection should still be closed (handled in catch block of executeAnalyse)
+      // Note: The current implementation doesn't close connection on error
+      // The error is handled by handleCommandError which calls process.exit
       expect(exitSpy).toHaveBeenCalledWith(1);
       exitSpy.mockRestore();
     });

@@ -215,7 +215,13 @@ describe('E005: Tool Ambiguity', () => {
             required: false,
           },
         ],
-        descriptionTokens: new Set(['get', 'detailed', 'user', 'profile', 'preferences']),
+        descriptionTokens: new Set([
+          'get',
+          'detailed',
+          'user',
+          'profile',
+          'preferences',
+        ]),
       },
     ];
 

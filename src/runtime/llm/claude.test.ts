@@ -116,9 +116,7 @@ describe('ClaudeProvider', () => {
       );
 
       const request: LLMRequest = {
-        messages: [
-          { role: 'user', content: 'Hello' },
-        ],
+        messages: [{ role: 'user', content: 'Hello' }],
       };
 
       const response = await provider.chat(request);

@@ -141,7 +141,13 @@ describe('E006: Param Not In Description', () => {
             required: false,
           },
         ],
-        descriptionTokens: new Set(['get', 'user', 'information', 'by', 'userid']),
+        descriptionTokens: new Set([
+          'get',
+          'user',
+          'information',
+          'by',
+          'userid',
+        ]),
       },
     ];
 

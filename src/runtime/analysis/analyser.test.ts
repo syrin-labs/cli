@@ -40,8 +40,6 @@ describe('Analysis Engine - Output Formats', () => {
     const { normalizeTools } = await import('./normalizer');
     const { buildIndexes } = await import('./indexer');
     const { inferDependencies } = await import('./dependencies');
-    const { displayAnalysisResult } =
-      await import('@/presentation/analysis-ui');
 
     vi.mocked(loadMCPTools).mockResolvedValue([
       {
@@ -82,10 +80,14 @@ describe('Analysis Engine - Output Formats', () => {
 
     const result = await analyseTools(mockClient);
 
-    // Test CI mode
-    displayAnalysisResult(result, { ci: true });
-
-    expect(displayAnalysisResult).toHaveBeenCalledWith(result, { ci: true });
+    // Verify the result structure contains expected fields
+    expect(result).toHaveProperty('verdict');
+    expect(result).toHaveProperty('diagnostics');
+    expect(result).toHaveProperty('errors');
+    expect(result).toHaveProperty('warnings');
+    expect(result).toHaveProperty('dependencies');
+    expect(result).toHaveProperty('toolCount');
+    expect(result.toolCount).toBe(1);
   });
 
   it('should handle JSON mode output', async () => {
@@ -93,8 +95,6 @@ describe('Analysis Engine - Output Formats', () => {
     const { normalizeTools } = await import('./normalizer');
     const { buildIndexes } = await import('./indexer');
     const { inferDependencies } = await import('./dependencies');
-    const { displayAnalysisResult } =
-      await import('@/presentation/analysis-ui');
 
     vi.mocked(loadMCPTools).mockResolvedValue([
       {
@@ -135,10 +135,14 @@ describe('Analysis Engine - Output Formats', () => {
 
     const result = await analyseTools(mockClient);
 
-    // Test JSON mode
-    displayAnalysisResult(result, { json: true });
-
-    expect(displayAnalysisResult).toHaveBeenCalledWith(result, { json: true });
+    // Verify the result structure contains expected fields
+    expect(result).toHaveProperty('verdict');
+    expect(result).toHaveProperty('diagnostics');
+    expect(result).toHaveProperty('errors');
+    expect(result).toHaveProperty('warnings');
+    expect(result).toHaveProperty('dependencies');
+    expect(result).toHaveProperty('toolCount');
+    expect(result.toolCount).toBe(1);
   });
 
   it('should handle graph mode output', async () => {

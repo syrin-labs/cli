@@ -2,7 +2,7 @@
  * Tests for `syrin doctor` command.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
@@ -112,11 +112,13 @@ describe('executeDoctor', () => {
         value: 'test-value',
       });
 
-      // When all checks pass, function completes normally (no exit)
+      // When all checks pass, executeDoctor completes normally without calling process.exit
       await executeDoctor(tempDir);
+
+      expect(loadConfig).toHaveBeenCalledWith(tempDir);
     });
 
-    it('should exit with code 1 when checks fail', async () => {
+    it('should exit with code 1 when command check fails', async () => {
       const mockConfig: SyrinConfig = {
         version: '1.0.0' as any,
         project_name: 'test-project' as any,
@@ -133,6 +135,41 @@ describe('executeDoctor', () => {
 
       vi.mocked(loadConfig).mockReturnValue(mockConfig);
       vi.mocked(checkCommandExists).mockReturnValue(false);
+      vi.mocked(checkEnvVar).mockReturnValue({
+        isSet: true,
+        value: 'test-value',
+      });
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit(1)');
+      });
+
+      try {
+        await executeDoctor(tempDir);
+      } catch (error) {
+        // Expected to throw due to process.exit
+      }
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      exitSpy.mockRestore();
+    });
+
+    it('should exit with code 1 when env var check fails', async () => {
+      const mockConfig: SyrinConfig = {
+        version: '1.0.0' as any,
+        project_name: 'test-project' as any,
+        agent_name: 'test-agent' as any,
+        transport: TransportTypes.STDIO,
+        script: 'python server.py',
+        llm: {
+          openai: {
+            API_KEY: 'OPENAI_API_KEY' as any,
+            MODEL_NAME: 'OPENAI_MODEL' as any,
+          },
+        },
+      };
+
+      vi.mocked(loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(checkCommandExists).mockReturnValue(true);
       vi.mocked(checkEnvVar).mockReturnValue({
         isSet: false,
         errorMessage: 'Environment variable not set',

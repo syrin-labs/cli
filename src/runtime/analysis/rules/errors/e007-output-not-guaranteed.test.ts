@@ -179,7 +179,7 @@ describe('E007: Output Not Guaranteed', () => {
             name: 'data',
             type: 'string',
             required: false,
-            nullable: false, // Not nullable - guaranteed
+            nullable: true, // Nullable - not guaranteed
           },
         ],
         descriptionTokens: new Set(['get', 'optional', 'data']),

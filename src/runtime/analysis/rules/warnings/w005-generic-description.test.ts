@@ -140,7 +140,14 @@ describe('W005: Generic Description', () => {
             required: false,
           },
         ],
-        descriptionTokens: new Set(['process', 'invoice', 'data', 'extract', 'line', 'items']),
+        descriptionTokens: new Set([
+          'process',
+          'invoice',
+          'data',
+          'extract',
+          'line',
+          'items',
+        ]),
       },
     ];
 

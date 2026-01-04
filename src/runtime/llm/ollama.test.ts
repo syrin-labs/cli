@@ -436,9 +436,7 @@ describe('OllamaProvider', () => {
         },
       };
 
-      vi.mocked(mockOllamaClient.pull).mockResolvedValue(
-        mockPullStream as any
-      );
+      vi.mocked(mockOllamaClient.pull).mockResolvedValue(mockPullStream as any);
 
       // After download, model exists (second list call)
       vi.mocked(mockOllamaClient.list).mockResolvedValue({

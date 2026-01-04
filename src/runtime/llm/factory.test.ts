@@ -123,12 +123,12 @@ describe('LLM provider factory', () => {
     });
 
     it('should throw ConfigurationError if provider not found', () => {
-      expect(() =>
-        createLLMProvider('unknown', mockConfig, '/tmp')
-      ).toThrow(ConfigurationError);
-      expect(() =>
-        createLLMProvider('unknown', mockConfig, '/tmp')
-      ).toThrow('LLM provider "unknown" not found in configuration');
+      expect(() => createLLMProvider('unknown', mockConfig, '/tmp')).toThrow(
+        ConfigurationError
+      );
+      expect(() => createLLMProvider('unknown', mockConfig, '/tmp')).toThrow(
+        'LLM provider "unknown" not found in configuration'
+      );
     });
 
     it('should throw ConfigurationError if OpenAI missing API_KEY', () => {
@@ -290,12 +290,12 @@ describe('LLM provider factory', () => {
         llm: {},
       } as SyrinConfig;
 
-      expect(() =>
-        getDefaultLLMProvider(emptyConfig, '/tmp')
-      ).toThrow(ConfigurationError);
-      expect(() =>
-        getDefaultLLMProvider(emptyConfig, '/tmp')
-      ).toThrow('No LLM providers configured');
+      expect(() => getDefaultLLMProvider(emptyConfig, '/tmp')).toThrow(
+        ConfigurationError
+      );
+      expect(() => getDefaultLLMProvider(emptyConfig, '/tmp')).toThrow(
+        'No LLM providers configured'
+      );
     });
 
     it('should use process.cwd() as default projectRoot', () => {

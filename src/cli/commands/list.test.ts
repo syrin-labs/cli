@@ -23,7 +23,7 @@ vi.mock('@/cli/utils', async () => {
   return {
     ...actual,
     resolveTransportConfig: vi.fn(),
-    handleCommandError: vi.fn((error) => {
+    handleCommandError: vi.fn(error => {
       throw error;
     }),
   };
@@ -189,11 +189,7 @@ describe('executeList', () => {
 
       vi.mocked(listTools).mockRejectedValue(new Error('List failed'));
 
-      try {
-        await executeList({});
-      } catch (error) {
-        // Expected to throw
-      }
+      await expect(executeList({})).rejects.toThrow('List failed');
 
       expect(closeConnection).toHaveBeenCalledWith(mockTransport);
     });
@@ -212,16 +208,9 @@ describe('executeList', () => {
         new Error('fetch failed: ECONNREFUSED')
       );
 
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
-      try {
-        await executeList({});
-      } catch (error) {
-        // Expected to throw due to process.exit or ConfigurationError
-      }
-      exitSpy.mockRestore();
+      // handleCommandError is mocked to throw the error, so process.exit is not called
+      // The error should be thrown as a ConfigurationError
+      await expect(executeList({})).rejects.toThrow();
     });
 
     it('should handle stdio connection failures', async () => {
@@ -236,16 +225,9 @@ describe('executeList', () => {
         new Error('spawn nonexistent-command ENOENT')
       );
 
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
-      try {
-        await executeList({});
-      } catch (error) {
-        // Expected to throw due to process.exit or ConfigurationError
-      }
-      exitSpy.mockRestore();
+      // handleCommandError is mocked to throw the error, so process.exit is not called
+      // The error should be thrown as a ConfigurationError
+      await expect(executeList({})).rejects.toThrow();
     });
 
     it('should handle connection timeouts', async () => {
@@ -260,16 +242,9 @@ describe('executeList', () => {
         new Error('Connection timeout')
       );
 
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit called');
-      });
-
-      try {
-        await executeList({});
-      } catch (error) {
-        // Expected to throw due to process.exit or ConfigurationError
-      }
-      exitSpy.mockRestore();
+      // handleCommandError is mocked to throw the error, so process.exit is not called
+      // The error should be thrown as a ConfigurationError
+      await expect(executeList({})).rejects.toThrow();
     });
   });
 
