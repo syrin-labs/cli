@@ -11,7 +11,6 @@ import type { EventEmitter } from '@/events/emitter';
 import type { SyrinConfig } from '@/config/types';
 import {
   SessionLifecycleEventType,
-  LLMContextEventType,
   LLMProposalEventType,
   ValidationEventType,
   ToolExecutionEventType,
@@ -19,9 +18,10 @@ import {
 import { DataManager } from './data-manager';
 
 // Mock DataManager
-vi.mock('./data-manager', () => ({
-  DataManager: vi.fn(),
-}));
+vi.mock('./data-manager', () => {
+  const DataManager = vi.fn();
+  return { DataManager };
+});
 
 // Mock logger
 vi.mock('@/utils/logger', () => ({
@@ -73,11 +73,13 @@ describe('DevSession', () => {
     };
 
     // Mock DataManager constructor and static methods
-    vi.mocked(DataManager).mockImplementation(() => ({
-      store: vi.fn().mockReturnValue('data-ref-1'),
-      load: vi.fn().mockReturnValue({ data: 'loaded' }),
-      getReference: vi.fn(),
-    })) as any;
+    vi.mocked(DataManager).mockImplementation(function DataManagerMock() {
+      return {
+        store: vi.fn().mockReturnValue('data-ref-1'),
+        load: vi.fn().mockReturnValue({ data: 'loaded' }),
+        getReference: vi.fn(),
+      } as any;
+    });
 
     // Add static methods to the mock
     (DataManager as any).shouldExternalize = vi.fn(
@@ -455,7 +457,9 @@ describe('DevSession', () => {
         getReference: vi.fn(),
       };
 
-      vi.mocked(DataManager).mockImplementation(() => mockDataManager as any);
+      vi.mocked(DataManager).mockImplementation(function DataManagerMock() {
+        return mockDataManager as any;
+      });
 
       const newSession = new DevSession(sessionConfig);
       vi.mocked(mockMCPClientManager.getAvailableTools).mockResolvedValue([
@@ -637,7 +641,9 @@ describe('DevSession', () => {
         getReference: vi.fn(),
       };
 
-      vi.mocked(DataManager).mockImplementation(() => mockDataManager as any);
+      vi.mocked(DataManager).mockImplementation(function DataManagerMock() {
+        return mockDataManager as any;
+      });
 
       const newSession = new DevSession(sessionConfig);
 

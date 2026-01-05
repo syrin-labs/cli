@@ -36,17 +36,20 @@ vi.mock('@/utils/logger', () => ({
   },
 }));
 
-vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
-  Client: vi.fn(),
-}));
+vi.mock('@modelcontextprotocol/sdk/client/index.js', () => {
+  const Client = vi.fn();
+  return { Client };
+});
 
-vi.mock('@modelcontextprotocol/sdk/client/streamableHttp.js', () => ({
-  StreamableHTTPClientTransport: vi.fn(),
-}));
+vi.mock('@modelcontextprotocol/sdk/client/streamableHttp.js', () => {
+  const StreamableHTTPClientTransport = vi.fn();
+  return { StreamableHTTPClientTransport };
+});
 
-vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
-  StdioClientTransport: vi.fn(),
-}));
+vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => {
+  const StdioClientTransport = vi.fn();
+  return { StdioClientTransport };
+});
 
 vi.mock('child_process', () => ({
   spawn: vi.fn(),
@@ -87,12 +90,18 @@ describe('MCP Client Manager', () => {
       onerror: null,
     } as unknown as Client;
 
-    vi.mocked(Client).mockImplementation(() => mockClient);
+    vi.mocked(Client).mockImplementation(function ClientMock() {
+      return mockClient;
+    });
     vi.mocked(StreamableHTTPClientTransport).mockImplementation(
-      () => mockHTTPTransport
+      function StreamableHTTPClientTransportMock() {
+        return mockHTTPTransport;
+      }
     );
     vi.mocked(StdioClientTransport).mockImplementation(
-      () => mockStdioTransport
+      function StdioClientTransportMock() {
+        return mockStdioTransport;
+      }
     );
     vi.mocked(childProcess.spawn).mockReturnValue(mockProcess);
   });

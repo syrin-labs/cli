@@ -11,7 +11,6 @@ import {
   SessionLifecycleEventType,
   ToolExecutionEventType,
   ValidationEventType,
-  LLMProposalEventType,
 } from '@/events/event-type';
 
 describe('Stack Trace Generation', () => {

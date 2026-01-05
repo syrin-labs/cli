@@ -8,13 +8,13 @@ import * as childProcess from 'child_process';
 import { OllamaProvider } from './ollama';
 import { ConfigurationError } from '@/utils/errors';
 import { checkCommandExists } from '@/config/env-checker';
-import { logger, log } from '@/utils/logger';
 import type { LLMRequest } from './types';
 
 // Mock Ollama SDK
-vi.mock('ollama', () => ({
-  Ollama: vi.fn(),
-}));
+vi.mock('ollama', () => {
+  const Ollama = vi.fn();
+  return { Ollama };
+});
 
 // Mock child_process
 vi.mock('child_process', () => ({
@@ -63,9 +63,9 @@ describe('OllamaProvider', () => {
       chat: vi.fn(),
     };
 
-    vi.mocked(Ollama).mockImplementation(
-      () => mockOllamaClient as unknown as Ollama
-    );
+    vi.mocked(Ollama).mockImplementation(function OllamaMock() {
+      return mockOllamaClient as unknown as Ollama;
+    });
     vi.mocked(checkCommandExists).mockReturnValue(true);
   });
 
@@ -85,7 +85,7 @@ describe('OllamaProvider', () => {
     });
 
     it('should create provider with custom baseUrl', () => {
-      const provider = new OllamaProvider('llama3', 'http://custom:11434');
+      new OllamaProvider('llama3', 'http://custom:11434');
 
       expect(Ollama).toHaveBeenCalledWith({
         host: 'http://custom:11434',
@@ -93,7 +93,7 @@ describe('OllamaProvider', () => {
     });
 
     it('should remove trailing slash from baseUrl', () => {
-      const provider = new OllamaProvider('llama3', 'http://localhost:11434/');
+      new OllamaProvider('llama3', 'http://localhost:11434/');
 
       expect(Ollama).toHaveBeenCalledWith({
         host: 'http://localhost:11434',

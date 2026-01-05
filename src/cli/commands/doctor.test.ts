@@ -15,7 +15,7 @@ import {
 } from '@/config/env-checker';
 // Note: checkTransport, checkScript, checkLLMProviders are internal functions
 // We test them indirectly through executeDoctor
-import { TransportTypes, LLMProviders } from '@/constants';
+import { TransportTypes } from '@/constants';
 import type { SyrinConfig } from '@/config/types';
 
 // Mock dependencies
@@ -146,7 +146,7 @@ describe('executeDoctor', () => {
 
       try {
         await executeDoctor(tempDir);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to process.exit
       }
       expect(exitSpy).toHaveBeenCalledWith(1);
@@ -181,7 +181,7 @@ describe('executeDoctor', () => {
 
       try {
         await executeDoctor(tempDir);
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to process.exit
       }
       expect(exitSpy).toHaveBeenCalledWith(1);

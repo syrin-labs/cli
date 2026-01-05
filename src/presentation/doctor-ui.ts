@@ -102,7 +102,6 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
 
   // Script Section (if present)
   if (scriptCheck !== null && config.script) {
-    // eslint-disable-next-line @typescript-eslint/no-base-to-string
     const scriptText = String(config.script);
     log.heading('Script');
     if (scriptCheck.isValid) {

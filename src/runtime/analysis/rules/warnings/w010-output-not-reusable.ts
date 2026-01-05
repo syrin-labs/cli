@@ -51,17 +51,23 @@ function isNaturalLanguageOnly(output: {
 /**
  * Check if output is structured (object or array).
  */
-function isStructured(output: {
-  type: string;
-  properties?: Record<string, unknown>;
-}): boolean {
-  return (
-    output.type === 'object' ||
-    output.type === 'array' ||
-    (output.properties &&
-      typeof output.properties === 'object' &&
-      Object.keys(output.properties).length > 0)
-  );
+function isStructured(output: { type: string; properties?: unknown }): boolean {
+  if (output.type === 'object' || output.type === 'array') {
+    return true;
+  }
+  if (output.properties && typeof output.properties === 'object') {
+    if (Array.isArray(output.properties) && output.properties.length > 0) {
+      return true;
+    }
+    // Also check if it's a Record with keys
+    if (
+      !Array.isArray(output.properties) &&
+      Object.keys(output.properties).length > 0
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 class W010OutputNotReusableRule extends BaseRule {
@@ -81,10 +87,12 @@ class W010OutputNotReusableRule extends BaseRule {
       }
 
       // Check if all outputs are natural language only
-      const allNaturalLanguage = tool.outputs.every(output =>
+      const allNaturalLanguage: boolean = tool.outputs.every(output =>
         isNaturalLanguageOnly(output)
       );
-      const hasStructured = tool.outputs.some(output => isStructured(output));
+      const hasStructured: boolean = tool.outputs.some(output =>
+        isStructured(output)
+      );
 
       // If all outputs are natural language and none are structured
       if (allNaturalLanguage && !hasStructured) {

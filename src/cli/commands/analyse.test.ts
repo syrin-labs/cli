@@ -168,7 +168,7 @@ describe('executeAnalyse', () => {
 
       try {
         await executeAnalyse({ transport: TransportTypes.HTTP });
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to process.exit
       }
 
@@ -215,7 +215,7 @@ describe('executeAnalyse', () => {
           json: true,
           graph: true,
         });
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to process.exit
       }
 
@@ -263,7 +263,7 @@ describe('executeAnalyse', () => {
 
       try {
         await executeAnalyse({ ci: true });
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to process.exit
       }
 
@@ -327,7 +327,7 @@ describe('executeAnalyse', () => {
 
       try {
         await executeAnalyse({});
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to process.exit
       }
 
@@ -360,7 +360,7 @@ describe('executeAnalyse', () => {
 
       try {
         await executeAnalyse({});
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw
       }
 
@@ -408,7 +408,7 @@ describe('executeAnalyse', () => {
           transport: TransportTypes.HTTP,
           url: 'http://custom-url:9000',
         });
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to process.exit
       }
 
@@ -456,7 +456,7 @@ describe('executeAnalyse', () => {
           transport: TransportTypes.STDIO,
           script: 'custom-script.sh',
         });
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to process.exit
       }
 

@@ -30,6 +30,9 @@ export async function loadMCPTools(client: Client): Promise<RawTool[]> {
   // Validate each tool before mapping
   for (let i = 0; i < tools.length; i++) {
     const tool = tools[i];
+    if (!tool) {
+      throw new Error(`Tool at index ${i} is undefined`);
+    }
     if (!tool.name) {
       const toolSummary = JSON.stringify({
         description: tool.description,

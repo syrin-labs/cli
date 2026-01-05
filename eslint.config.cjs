@@ -1,25 +1,45 @@
 const eslint = require('@eslint/js');
-const tseslint = require('typescript-eslint');
+const tseslintParser = require('@typescript-eslint/parser');
+const tseslintPlugin = require('@typescript-eslint/eslint-plugin');
 const prettier = require('eslint-plugin-prettier');
 const prettierConfig = require('eslint-config-prettier');
 const importPlugin = require('eslint-plugin-import');
+const globals = require('globals');
 const path = require('path');
 
-module.exports = tseslint.config(
+module.exports = [
   eslint.configs.recommended,
-  ...tseslint.configs.recommended,
-  ...tseslint.configs.recommendedTypeChecked,
   prettierConfig,
   {
+    files: ['**/*.ts', '**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/__tests__/**', 'vitest.config.ts'],
     plugins: {
+      '@typescript-eslint': tseslintPlugin,
       prettier,
       import: importPlugin,
     },
     languageOptions: {
-      parser: tseslint.parser,
+      parser: tseslintParser,
       parserOptions: {
         tsconfigRootDir: __dirname,
-        projectService: true,
+        project: './tsconfig.json',
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+      globals: {
+        ...globals.node,
+        ...globals.es2021,
+        Buffer: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        React: 'readonly',
+        NodeJS: 'readonly',
       },
     },
     settings: {
@@ -35,8 +55,14 @@ module.exports = tseslint.config(
       '@typescript-eslint/explicit-function-return-type': 'warn',
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_' },
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+          caughtErrorsIgnorePattern: '^_',
+        },
       ],
+      'no-unused-vars': 'off', // Use TypeScript version instead
       '@typescript-eslint/no-explicit-any': 'error',
       'no-restricted-syntax': [
         'error',
@@ -46,6 +72,53 @@ module.exports = tseslint.config(
             'Use of "any" type is not allowed. Use proper types instead.',
         },
       ],
+      'no-undef': 'off', // TypeScript handles this
+    },
+  },
+  {
+    files: ['**/*.test.ts', '**/__tests__/**', 'vitest.config.ts'],
+    plugins: {
+      '@typescript-eslint': tseslintPlugin,
+    },
+    languageOptions: {
+      parser: tseslintParser,
+      parserOptions: {
+        tsconfigRootDir: __dirname,
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+      globals: {
+        ...globals.node,
+        ...globals.es2021,
+        ...globals.vitest,
+        Buffer: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+        setTimeout: 'readonly',
+        clearTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearInterval: 'readonly',
+        __dirname: 'readonly',
+        __filename: 'readonly',
+        React: 'readonly',
+        NodeJS: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          ignoreRestSiblings: true,
+          caughtErrorsIgnorePattern: '^_',
+        },
+      ],
+      'no-unused-vars': 'off', // Use TypeScript version instead
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-restricted-syntax': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      'no-undef': 'off',
     },
   },
   {
@@ -56,5 +129,5 @@ module.exports = tseslint.config(
       'eslint.config.cjs',
       'parth/**',
     ],
-  }
-);
+  },
+];

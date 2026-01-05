@@ -2,15 +2,20 @@
  * Shared test helpers for analysis rule tests.
  */
 
-import type { ToolSpec } from '../../types';
+import type { ToolSpec, FieldSpec } from '../types';
 
 /**
  * Build indexes from tools for testing.
  */
-export function buildIndexesFromTools(tools: ToolSpec[]) {
+export function buildIndexesFromTools(tools: ToolSpec[]): {
+  toolIndex: Map<string, ToolSpec>;
+  inputIndex: Map<string, FieldSpec[]>;
+  outputIndex: Map<string, FieldSpec[]>;
+  keywordIndex: Map<string, Set<string>>;
+} {
   const toolIndex = new Map<string, ToolSpec>();
-  const inputIndex = new Map<string, any[]>();
-  const outputIndex = new Map<string, any[]>();
+  const inputIndex = new Map<string, FieldSpec[]>();
+  const outputIndex = new Map<string, FieldSpec[]>();
   const keywordIndex = new Map<string, Set<string>>();
 
   for (const tool of tools) {
@@ -37,7 +42,7 @@ export function buildIndexesFromTools(tools: ToolSpec[]) {
     toolIndex,
     inputIndex,
     outputIndex,
-    keywordIndex: new Map(),
+    keywordIndex,
   };
 }
 

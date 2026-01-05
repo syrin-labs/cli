@@ -5,6 +5,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 import { Messages, Paths } from '@/constants';
 
 export interface EnvCheckResult {
@@ -138,10 +139,6 @@ export function checkEnvVar(
  */
 export function checkCommandExists(command: string): boolean {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { execSync } = require('child_process') as {
-      execSync: (command: string, options: { stdio: 'ignore' }) => void;
-    };
     // Try to find the command using 'which' or 'where' depending on platform
     if (process.platform === 'win32') {
       execSync(`where ${command}`, { stdio: 'ignore' });

@@ -6,6 +6,7 @@
 import * as https from 'https';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'node:url';
 import { PACKAGE_NAME } from '@/constants/app';
 
 export interface VersionInfo {
@@ -24,17 +25,33 @@ export interface RegistryPackageInfo {
 
 /**
  * Get the current version from package.json.
+ * Works in both development and installed package contexts.
  */
 export function getCurrentVersion(): string {
   try {
-    // Try to read from installed package location
-    const packageJsonPath = path.join(__dirname, '../../package.json');
-    if (fs.existsSync(packageJsonPath)) {
-      const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
-      const packageJson = JSON.parse(packageJsonContent) as {
-        version?: string;
-      };
-      return packageJson.version || '1.0.0';
+    // Get the directory of the current module (ESM-compatible)
+    const currentFile = fileURLToPath(import.meta.url);
+    const currentDir = path.dirname(currentFile);
+    
+    // Try multiple possible locations for package.json
+    // 1. From dist/utils/ to root (development)
+    // 2. From installed package root (when installed via npm)
+    const possiblePaths = [
+      path.join(currentDir, '../../package.json'), // dist/utils/ -> package.json
+      path.join(currentDir, '../../../package.json'), // node_modules/@ankan-ai/syrin/dist/utils/ -> package.json
+      path.resolve(currentDir, '../../package.json'), // Absolute path resolution
+    ];
+
+    for (const packageJsonPath of possiblePaths) {
+      if (fs.existsSync(packageJsonPath)) {
+        const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
+        const packageJson = JSON.parse(packageJsonContent) as {
+          version?: string;
+        };
+        if (packageJson.version) {
+          return packageJson.version;
+        }
+      }
     }
   } catch {
     // Fallback if package.json cannot be read

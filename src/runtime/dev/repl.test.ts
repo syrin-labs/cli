@@ -8,7 +8,6 @@ import * as path from 'path';
 import * as os from 'os';
 import * as readline from 'readline';
 import { InteractiveREPL, REPLCommand } from './repl';
-import type { EventEmitter } from '@/events/emitter';
 
 // Mock readline
 vi.mock('readline', () => ({
@@ -29,7 +28,6 @@ vi.mock('@/utils/logger', () => ({
 describe('InteractiveREPL', () => {
   let tempDir: string;
   let mockRl: any;
-  let repl: InteractiveREPL;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -152,7 +150,6 @@ describe('InteractiveREPL', () => {
       repl.start(vi.fn());
       // Add some history directly to test save functionality
       // The line handler is async, so we'll add history manually for this test
-      const history = repl.getHistory();
       // Manually add to history to test save
       (repl as any).history = ['test command'];
 
@@ -216,7 +213,7 @@ describe('InteractiveREPL', () => {
       const lineHandler = vi
         .mocked(mockRl.on)
         .mock.calls.find(call => call[0] === 'line')?.[1] as (
-        line: string
+        _line: string
       ) => void;
       lineHandler('command1');
       lineHandler('command2');
@@ -267,7 +264,7 @@ describe('InteractiveREPL', () => {
       const lineHandler = vi
         .mocked(mockRl.on)
         .mock.calls.find(call => call[0] === 'line')?.[1] as (
-        line: string
+        _line: string
       ) => void;
 
       // Add more than maxHistorySize commands

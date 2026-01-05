@@ -246,7 +246,7 @@ export async function executeDev(
     const addToHistory = session.addUserMessageToHistory.bind(session);
     // Declare event mapper variable (will be initialized after ChatUI starts)
     // We need it in the onExit closure, so declare it here before ChatUI constructor
-    // eslint-disable-next-line prefer-const
+
     let eventMapper: DevEventMapper | undefined;
     // Create ChatUI first (event mapper needs it)
     const chatUI = new ChatUI({

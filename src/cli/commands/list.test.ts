@@ -14,7 +14,6 @@ import {
 } from '@/runtime/mcp';
 import { resolveTransportConfig } from '@/cli/utils';
 import { ListTypes, TransportTypes } from '@/constants';
-import { ConfigurationError } from '@/utils/errors';
 
 // Mock dependencies
 vi.mock('@/runtime/mcp');

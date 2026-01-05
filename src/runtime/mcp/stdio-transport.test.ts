@@ -14,13 +14,15 @@ vi.mock('child_process', () => ({
 }));
 
 // Mock MCP SDK
-vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
-  Client: vi.fn(),
-}));
+vi.mock('@modelcontextprotocol/sdk/client/index.js', () => {
+  const Client = vi.fn();
+  return { Client };
+});
 
-vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
-  StdioClientTransport: vi.fn(),
-}));
+vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => {
+  const StdioClientTransport = vi.fn();
+  return { StdioClientTransport };
+});
 
 describe('stdio-transport', () => {
   let mockClient: Client;
@@ -45,8 +47,14 @@ describe('stdio-transport', () => {
       onerror: null,
     } as unknown as Client;
 
-    vi.mocked(Client).mockImplementation(() => mockClient);
-    vi.mocked(StdioClientTransport).mockImplementation(() => mockTransport);
+    vi.mocked(Client).mockImplementation(function ClientMock() {
+      return mockClient;
+    });
+    vi.mocked(StdioClientTransport).mockImplementation(
+      function StdioClientTransportMock() {
+        return mockTransport;
+      }
+    );
     vi.mocked(childProcess.spawn).mockReturnValue(mockProcess);
   });
 
@@ -168,7 +176,7 @@ describe('stdio-transport', () => {
     it('should use custom timeout when specified', async () => {
       vi.mocked(mockClient.connect).mockImplementation(
         () =>
-          new Promise((_, reject) => {
+          new Promise((_resolve, _reject) => {
             // Don't reject, let the timeout handle it
           })
       );

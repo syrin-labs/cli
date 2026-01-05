@@ -59,7 +59,7 @@ class E007OutputNotGuaranteedRule extends BaseRule {
       // Optional upstream always triggers when downstream requires it
       // Nullable upstream only triggers when downstream is required AND not nullable (can't handle null)
       if (
-        (fromField.optional === true && toField.required === true) ||
+        (!fromField.required && toField.required === true) ||
         (fromField.nullable === true &&
           toField.required === true &&
           toField.nullable !== true)

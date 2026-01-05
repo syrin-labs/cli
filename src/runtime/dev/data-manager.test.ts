@@ -32,7 +32,7 @@ describe('DataManager', () => {
   describe('constructor', () => {
     it('should create data directory if it does not exist', () => {
       const newDir = path.join(tempDir, 'new-project');
-      const manager = new DataManager(newDir);
+      void new DataManager(newDir);
 
       const expectedDataDir = path.join(newDir, '.syrin', 'data');
       expect(fs.existsSync(expectedDataDir)).toBe(true);
@@ -42,7 +42,7 @@ describe('DataManager', () => {
       const existingDir = path.join(tempDir, '.syrin', 'data');
       fs.mkdirSync(existingDir, { recursive: true });
 
-      const manager = new DataManager(tempDir);
+      void new DataManager(tempDir);
       expect(fs.existsSync(existingDir)).toBe(true);
     });
   });

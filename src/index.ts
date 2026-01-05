@@ -5,9 +5,22 @@
  */
 
 import { run } from './cli';
+import { pathToFileURL } from 'node:url';
 
 // Run CLI when this file is executed directly
-if (require.main === module) {
+// ESM equivalent of require.main === module
+const isMainModule = ((): boolean => {
+  try {
+    if (!process.argv[1]) {
+      return false;
+    }
+    return import.meta.url === pathToFileURL(process.argv[1]).href;
+  } catch {
+    return false;
+  }
+})();
+
+if (isMainModule) {
   run();
 }
 

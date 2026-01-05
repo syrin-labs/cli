@@ -10,7 +10,7 @@ import type { LLMProvider } from './provider';
 import type { LLMRequest, LLMResponse, ToolCall } from './types';
 import { ConfigurationError } from '@/utils/errors';
 import { logger, log } from '@/utils/logger';
-import { checkCommandExists } from '@/config/env-checker';
+import { checkCommandExists, checkEnvVar } from '@/config/env-checker';
 
 /**
  * Static process manager for Ollama service.
@@ -549,17 +549,6 @@ export class OllamaProvider implements LLMProvider {
     projectRoot: string = process.cwd(),
     baseUrl?: string
   ): OllamaProvider {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { checkEnvVar } = require('@/config/env-checker') as {
-      checkEnvVar: (
-        varName: string,
-        projectRoot: string
-      ) => {
-        isSet: boolean;
-        value?: string;
-        errorMessage?: string;
-      };
-    };
     const modelNameCheck = checkEnvVar(modelNameEnvVar, projectRoot);
 
     if (!modelNameCheck.isSet || !modelNameCheck.value) {

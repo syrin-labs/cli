@@ -11,8 +11,9 @@ import type { LLMRequest } from './types';
 
 // Mock OpenAI SDK
 vi.mock('openai', () => {
+  const OpenAI = vi.fn();
   return {
-    default: vi.fn(),
+    default: OpenAI,
   };
 });
 
@@ -41,9 +42,9 @@ describe('OpenAIProvider', () => {
       },
     };
 
-    vi.mocked(OpenAI).mockImplementation(
-      () => mockOpenAIClient as unknown as OpenAI
-    );
+    vi.mocked(OpenAI).mockImplementation(function OpenAIMock() {
+      return mockOpenAIClient as unknown as OpenAI;
+    });
   });
 
   describe('constructor', () => {

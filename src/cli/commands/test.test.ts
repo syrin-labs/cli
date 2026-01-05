@@ -249,7 +249,7 @@ describe('executeTest', () => {
 
       try {
         await executeTest({});
-      } catch (error) {
+      } catch (_error) {
         // Expected to throw due to process.exit
       }
       exitSpy.mockRestore();

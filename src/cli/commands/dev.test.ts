@@ -17,19 +17,35 @@ import { DevSession } from '@/runtime/dev/session';
 import { ChatUI } from '@/presentation/dev/chat-ui';
 import { DevEventMapper } from '@/runtime/dev/event-mapper';
 import { ConfigurationError } from '@/utils/errors';
-import { TransportTypes, Paths, FileExtensions } from '@/constants';
+import { TransportTypes } from '@/constants';
 import type { SyrinConfig } from '@/config/types';
+import type { EventStore } from '@/events/store';
 
 // Mock dependencies
 vi.mock('@/config/loader');
 vi.mock('@/runtime/llm/factory');
 vi.mock('@/runtime/mcp/client/manager');
 vi.mock('@/events/emitter');
-vi.mock('@/events/store/memory-store');
-vi.mock('@/events/store/file-store');
-vi.mock('@/runtime/dev/session');
-vi.mock('@/presentation/dev/chat-ui');
-vi.mock('@/runtime/dev/event-mapper');
+vi.mock('@/events/store/memory-store', () => {
+  const MemoryEventStore = vi.fn();
+  return { MemoryEventStore };
+});
+vi.mock('@/events/store/file-store', () => {
+  const FileEventStore = vi.fn();
+  return { FileEventStore };
+});
+vi.mock('@/runtime/dev/session', () => {
+  const DevSession = vi.fn();
+  return { DevSession };
+});
+vi.mock('@/presentation/dev/chat-ui', () => {
+  const ChatUI = vi.fn();
+  return { ChatUI };
+});
+vi.mock('@/runtime/dev/event-mapper', () => {
+  const DevEventMapper = vi.fn();
+  return { DevEventMapper };
+});
 vi.mock('@/cli/utils', async () => {
   const actual = await vi.importActual('@/cli/utils');
   return {
@@ -90,18 +106,18 @@ describe('executeDev', () => {
 
     // Setup default mocks
     mockConfig = {
-      version: '1.0.0' as any,
-      project_name: 'test-project' as any,
-      agent_name: 'test-agent' as any,
+      version: '1.0.0',
+      project_name: 'test-project',
+      agent_name: 'test-agent',
       transport: TransportTypes.STDIO,
       script: 'python server.py',
       llm: {
         openai: {
-          API_KEY: 'OPENAI_API_KEY' as any,
-          MODEL_NAME: 'OPENAI_MODEL' as any,
+          API_KEY: 'OPENAI_API_KEY',
+          MODEL_NAME: 'OPENAI_MODEL',
         },
       },
-    };
+    } satisfies SyrinConfig;
 
     mockLLMProvider = {
       getName: vi.fn(() => 'openai'),
@@ -151,17 +167,35 @@ describe('executeDev', () => {
     vi.mocked(loadConfig).mockReturnValue(mockConfig);
     vi.mocked(getLLMProvider).mockReturnValue(mockLLMProvider);
     vi.mocked(createMCPClientManager).mockReturnValue(mockMCPClientManager);
-    vi.mocked(RuntimeEventEmitter).mockImplementation(() => mockEventEmitter);
-    vi.mocked(MemoryEventStore).mockImplementation(() => ({}) as any);
-    vi.mocked(FileEventStore).mockImplementation(
-      () =>
-        ({
-          close: vi.fn().mockResolvedValue(undefined),
-        }) as any
+    vi.mocked(RuntimeEventEmitter).mockImplementation(
+      function RuntimeEventEmitterMock() {
+        return mockEventEmitter;
+      }
     );
-    vi.mocked(DevSession).mockImplementation(() => mockSession);
-    vi.mocked(ChatUI).mockImplementation(() => mockChatUI);
-    vi.mocked(DevEventMapper).mockImplementation(() => mockEventMapper);
+    vi.mocked(MemoryEventStore).mockImplementation(
+      function MemoryEventStoreMock() {
+        return {
+          append: vi.fn(),
+          load: vi.fn().mockReturnValue([]),
+        } satisfies Partial<EventStore>;
+      }
+    );
+    vi.mocked(FileEventStore).mockImplementation(function FileEventStoreMock() {
+      return {
+        append: vi.fn(),
+        load: vi.fn().mockResolvedValue([]),
+        close: vi.fn().mockResolvedValue(undefined),
+      } satisfies Partial<FileEventStore> & { close: () => Promise<void> };
+    });
+    vi.mocked(DevSession).mockImplementation(function DevSessionMock() {
+      return mockSession;
+    });
+    vi.mocked(ChatUI).mockImplementation(function ChatUIMock() {
+      return mockChatUI;
+    });
+    vi.mocked(DevEventMapper).mockImplementation(function DevEventMapperMock() {
+      return mockEventMapper;
+    });
 
     vi.clearAllMocks();
   });
@@ -221,7 +255,7 @@ describe('executeDev', () => {
       const httpConfig: SyrinConfig = {
         ...mockConfig,
         transport: TransportTypes.HTTP,
-        mcp_url: 'http://localhost:8000' as any,
+        mcp_url: 'http://localhost:8000',
         script: 'python server.py',
       };
 
@@ -242,7 +276,7 @@ describe('executeDev', () => {
       const httpConfig: SyrinConfig = {
         ...mockConfig,
         transport: TransportTypes.HTTP,
-        mcp_url: 'http://localhost:8000' as any,
+        mcp_url: 'http://localhost:8000',
       };
 
       vi.mocked(loadConfig).mockReturnValue(httpConfig);
@@ -274,7 +308,7 @@ describe('executeDev', () => {
       const httpConfig: SyrinConfig = {
         ...mockConfig,
         transport: TransportTypes.HTTP,
-        mcp_url: 'http://localhost:8000' as any,
+        mcp_url: 'http://localhost:8000',
         script: undefined,
       };
 
@@ -503,10 +537,16 @@ describe('executeDev', () => {
 
     it('should close FileEventStore on cleanup', async () => {
       const mockFileStore = {
+        append: vi.fn(),
+        load: vi.fn().mockResolvedValue([]),
         close: vi.fn().mockResolvedValue(undefined),
-      };
+      } satisfies Partial<FileEventStore> & { close: () => Promise<void> };
 
-      vi.mocked(FileEventStore).mockImplementation(() => mockFileStore as any);
+      vi.mocked(FileEventStore).mockImplementation(
+        function FileEventStoreMock() {
+          return mockFileStore;
+        }
+      );
 
       await executeDev({ saveEvents: true });
 

@@ -11,8 +11,9 @@ import type { LLMRequest } from './types';
 
 // Mock Anthropic SDK
 vi.mock('@anthropic-ai/sdk', () => {
+  const Anthropic = vi.fn();
   return {
-    default: vi.fn(),
+    default: Anthropic,
   };
 });
 
@@ -37,9 +38,9 @@ describe('ClaudeProvider', () => {
       },
     };
 
-    vi.mocked(Anthropic).mockImplementation(
-      () => mockAnthropicClient as unknown as Anthropic
-    );
+    vi.mocked(Anthropic).mockImplementation(function AnthropicMock() {
+      return mockAnthropicClient as unknown as Anthropic;
+    });
   });
 
   describe('constructor', () => {

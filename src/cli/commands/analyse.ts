@@ -22,6 +22,7 @@ interface AnalyseCommandOptions {
   transport?: TransportType;
   url?: string;
   script?: string;
+  projectRoot?: string;
 }
 
 /**

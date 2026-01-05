@@ -9,14 +9,6 @@
  * necessary for this approach to work with ESM modules in a CommonJS context.
  */
 
-/* eslint-disable
-   @typescript-eslint/no-unsafe-assignment,
-   @typescript-eslint/no-unsafe-call,
-   @typescript-eslint/no-unsafe-member-access,
-   @typescript-eslint/no-unsafe-return,
-   @typescript-eslint/no-unsafe-argument,
-   @typescript-eslint/no-implied-eval
-*/
 import * as fs from 'fs';
 import * as path from 'path';
 import type { ChatMessage, ChatUIOptions } from './chat-ui-types';
