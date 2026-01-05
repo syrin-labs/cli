@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v1.2.0
+
+### Features
+
+1. **Static Tool Contract Analysis (`syrin analyse`)** - New command to perform static analysis on MCP tool contracts, catching issues before runtime.
+2. **Comprehensive Analysis Rules** - 20 analysis rules (10 errors, 10 warnings) covering critical issues like missing output schemas, type mismatches, and circular dependencies.
+3. **CI Integration Support** - Added `--ci` flag for continuous integration pipelines with appropriate exit codes.
+4. **JSON Output Format** - Added `--json` flag to output analysis results in JSON format.
+5. **Dependency Graph Visualization** - Added `--graph` flag to visualize tool dependencies.
+6. **Tool Dependency Inference** - Automatic detection and analysis of implicit dependencies between MCP tools.
+
 ## v1.1.0
 
 ### Features
