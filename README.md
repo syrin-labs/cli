@@ -179,14 +179,14 @@ This workflow is designed to catch issues **before production**.
 
 ## Commands Overview
 
-| Command | Purpose |
-| ------ | ------- |
-| `syrin init` | Initialise a Syrin project |
-| `syrin doctor` | Validate configuration and environment |
-| `syrin analyse` | Static analysis of MCP tool contracts |
-| `syrin test` | Validate MCP protocol compliance |
-| `syrin list` | Inspect tools, resources, and prompts |
-| `syrin dev` | Interactive execution inspection |
+| Command         | Purpose                                |
+| --------------- | -------------------------------------- |
+| `syrin init`    | Initialise a Syrin project             |
+| `syrin doctor`  | Validate configuration and environment |
+| `syrin analyse` | Static analysis of MCP tool contracts  |
+| `syrin test`    | Validate MCP protocol compliance       |
+| `syrin list`    | Inspect tools, resources, and prompts  |
+| `syrin dev`     | Interactive execution inspection       |
 
 Full documentation: [https://docs.syrin.dev/commands](https://docs.syrin.dev/commands)
 

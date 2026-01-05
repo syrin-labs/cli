@@ -32,25 +32,20 @@ export function getCurrentVersion(): string {
     // Get the directory of the current module (ESM-compatible)
     const currentFile = fileURLToPath(import.meta.url);
     const currentDir = path.dirname(currentFile);
-    
-    // Try multiple possible locations for package.json
-    // 1. From dist/utils/ to root (development)
-    // 2. From installed package root (when installed via npm)
-    const possiblePaths = [
-      path.join(currentDir, '../../package.json'), // dist/utils/ -> package.json
-      path.join(currentDir, '../../../package.json'), // node_modules/@ankan-ai/syrin/dist/utils/ -> package.json
-      path.resolve(currentDir, '../../package.json'), // Absolute path resolution
-    ];
 
-    for (const packageJsonPath of possiblePaths) {
-      if (fs.existsSync(packageJsonPath)) {
-        const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
-        const packageJson = JSON.parse(packageJsonContent) as {
-          version?: string;
-        };
-        if (packageJson.version) {
-          return packageJson.version;
-        }
+    // Path to package.json: from dist/utils/ -> ../../package.json
+    // This works for both:
+    // - Development: dist/utils/ -> ../../package.json (root)
+    // - Installed: node_modules/@ankan-ai/syrin/dist/utils/ -> ../../package.json (package root)
+    const packageJsonPath = path.join(currentDir, '../../package.json');
+
+    if (fs.existsSync(packageJsonPath)) {
+      const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
+      const packageJson = JSON.parse(packageJsonContent) as {
+        version?: string;
+      };
+      if (packageJson.version) {
+        return packageJson.version;
       }
     }
   } catch {

@@ -5,6 +5,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'node:url';
+import { EventEmitter } from 'events';
 import {
   getCurrentVersion,
   compareVersions,
@@ -21,6 +23,17 @@ vi.mock('https', () => ({
   },
 }));
 
+/**
+ * Resolve package.json path using the same module-relative strategy as getCurrentVersion.
+ * This ensures tests resolve package.json the same way as the implementation,
+ * making tests work correctly in CI and different working directories.
+ */
+function resolveTestPackageJsonPath(): string {
+  const currentFile = fileURLToPath(import.meta.url);
+  const currentDir = path.dirname(currentFile);
+  return path.join(currentDir, '../../package.json');
+}
+
 describe('version-checker', () => {
   describe('getCurrentVersion', () => {
     it('should read version from package.json correctly', () => {
@@ -28,8 +41,9 @@ describe('version-checker', () => {
       // and returns the correct version, not the hardcoded fallback
       const actualVersion = getCurrentVersion();
 
-      // Read package.json directly to get the expected version
-      const packageJsonPath = path.resolve(process.cwd(), 'package.json');
+      // Resolve package.json the same way as getCurrentVersion does
+      // (using module-relative path instead of process.cwd())
+      const packageJsonPath = resolveTestPackageJsonPath();
       const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
       const packageJson = JSON.parse(packageJsonContent) as {
         version?: string;
@@ -96,21 +110,23 @@ describe('version-checker', () => {
   });
 
   describe('getLatestVersion', () => {
-    it.skip('should fetch latest version from npm registry', async () => {
-      // Skipped: Network mocking is complex and the main functionality
-      // (getCurrentVersion reading from package.json) is tested above
-    });
-
     it('should return undefined on network error', async () => {
       const https = await import('https');
-      vi.mocked(https.default.get).mockImplementation((_url, _callback) => {
-        const mockRes = {
-          statusCode: 500,
-          on: vi.fn(),
-          destroy: vi.fn(),
-        } as unknown as ReturnType<typeof https.default.get>;
 
-        return mockRes;
+      vi.mocked(https.default.get).mockImplementation((_url, callback) => {
+        const req = new EventEmitter();
+        req.destroy = vi.fn();
+
+        setTimeout(() => {
+          const res = new EventEmitter();
+          res.statusCode = 500;
+          res.on = res.addListener.bind(res);
+          if (callback) {
+            callback(res as any);
+          }
+        }, 0);
+
+        return req as any;
       });
 
       const latestVersion = await getLatestVersion(PACKAGE_NAME);
@@ -122,20 +138,28 @@ describe('version-checker', () => {
     it('should return version info with current version from package.json', async () => {
       // Mock network to return undefined (offline scenario)
       const https = await import('https');
-      vi.mocked(https.default.get).mockImplementation((_url, _callback) => {
-        const mockRes = {
-          statusCode: 500,
-          on: vi.fn(),
-          destroy: vi.fn(),
-        } as unknown as ReturnType<typeof https.default.get>;
 
-        return mockRes;
+      vi.mocked(https.default.get).mockImplementation((_url, callback) => {
+        const req = new EventEmitter();
+        req.destroy = vi.fn();
+
+        setTimeout(() => {
+          const res = new EventEmitter();
+          res.statusCode = 500;
+          res.on = res.addListener.bind(res);
+          if (callback) {
+            callback(res as any);
+          }
+        }, 0);
+
+        return req as any;
       });
 
       const versionInfo = await checkSyrinVersion();
 
-      // Verify that current version is actually read from package.json
-      const packageJsonPath = path.resolve(process.cwd(), 'package.json');
+      // Resolve package.json the same way as getCurrentVersion does
+      // (using module-relative path instead of process.cwd())
+      const packageJsonPath = resolveTestPackageJsonPath();
       const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf-8');
       const packageJson = JSON.parse(packageJsonContent) as {
         version?: string;
