@@ -13,9 +13,8 @@
 
 ### Bug Fixes
 
-1. **ESM Main Entry Point Detection** - Fixed issue where `run()` function was being called when the module was imported programmatically. Now correctly detects when the module is executed as the main entry point vs. imported as a library.
-2. **Vitest Dependency Versions** - Fixed incorrect version ranges for `@vitest/coverage-v8` and `@vitest/ui` (updated to stable 3.x release) to ensure proper installation.
-3. **Package Dependencies** - Moved TypeScript type definitions (`@types/inquirer`, `@types/js-yaml`) from `dependencies` to `devDependencies` to reduce unnecessary runtime dependencies and ensure clean installations.
+1. **ESM Main Entry Point Detection** - Fixed issue where `run()` function was being called when the module was imported programmatically.
+2. **Hardcoded Version in MCP Connection** - Fixed issue where `syrin test` always displayed "syrin v1.0.0" instead of the actual current version.
 
 ## v1.1.0
 
