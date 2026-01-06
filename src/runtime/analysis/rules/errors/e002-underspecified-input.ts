@@ -55,13 +55,15 @@ class E002UnderspecifiedRequiredInputRule extends BaseRule {
               )
             );
           } else {
-            // Optional parameter without constraints - also flag as error since it can still cause issues
+            // Optional parameter without constraints - flag as warning since it's less critical
             diagnostics.push(
               this.createDiagnostic(
-                `Optional parameter "${input.name}" in tool "${tool.name}" is underspecified. When provided, LLM may pass invalid or ambiguous values.`,
+                `Optional parameter "${input.name}" in tool "${tool.name}" is underspecified. LLM may pass invalid or ambiguous values.`,
                 tool.name,
                 input.name,
-                `Add constraints to "${input.name}": provide a description, enum values, regex pattern, or example.`
+                `Add constraints to "${input.name}": provide a description, enum values, regex pattern, or example.`,
+                undefined,
+                'warning'
               )
             );
           }

@@ -626,9 +626,9 @@ def help_guide() -> str:
         "Parth MCP Server Help\n"
         "====================\n\n"
         "Available Tools:\n"
-        "1. currentLocation - Ask user for their location\n"
-        "2. getWeather - Get weather for a location\n"
-        "3. orderFood - Order food based on weather\n\n"
+        "1. current_location - Ask user for their location\n"
+        "2. get_weather - Get weather for a location\n"
+        "3. order_food - Recommend food based on weather\n\n"
         "Available Prompts:\n"
         "1. weather_food_guide - Complete weather and food guide\n"
         "2. quick_weather_check - Quick weather check\n\n"
@@ -637,7 +637,6 @@ def help_guide() -> str:
         "2. parth://food-recommendations - Food recommendations\n"
         "3. parth://help - This help guide\n"
     )
-
 
 def main():
     """Main entry point."""

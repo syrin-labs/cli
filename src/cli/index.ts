@@ -16,6 +16,15 @@ import { logger, log } from '@/utils/logger';
 import { Messages, ListTypes, ListType } from '@/constants';
 import { getCurrentVersion } from '@/utils/version-checker';
 
+/**
+ * Report analyse command error with consolidated logging.
+ * Logs full error to internal logger and concise message to user.
+ */
+function reportAnalyseError(error: Error): void {
+  logger.error('Analyse command failed', error);
+  log.error(`Analyse command failed: ${error.message}`);
+}
+
 const program = new Command();
 
 /**
@@ -263,8 +272,7 @@ export function setupCLI(): void {
         } catch (error) {
           // Error handling is done in executeAnalyse, but ensure we log if something unexpected happens
           if (error instanceof Error) {
-            logger.error('Analyse command failed', error);
-            log.error('Analyse command failed: ' + error.message);
+            reportAnalyseError(error);
           }
           // Don't exit here - executeAnalyse handles exit codes
         }

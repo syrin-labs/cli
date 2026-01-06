@@ -43,11 +43,12 @@ export abstract class BaseRule implements Rule {
     tool?: string,
     field?: string,
     suggestion?: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
+    severity?: 'error' | 'warning'
   ): Diagnostic {
     return {
       code: this.id,
-      severity: this.severity,
+      severity: severity ?? this.severity,
       message,
       tool,
       field,

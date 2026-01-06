@@ -150,10 +150,10 @@ export function inferDependencies(tools: ToolSpec[]): Dependency[] {
           // This allows confidence to reach >= 0.8 for high-confidence rules
           // Exact name match (1.0) + exact type (0.3) = 0.4 + 0.09 = 0.49
           // With description overlap of 0.2, we get 0.49 + 0.2 = 0.69
-          // Bonus of 0.11 brings it to 0.8
+          // Bonus derived from type compatibility brings it to 0.8+
           if (nameSim === 1.0 && typeCompat >= 0.2) {
-            // Bonus scales with description overlap
-            const bonus = Math.min(0.15, descOverlap * 0.5 + 0.05);
+            // Bonus scales with type compatibility (not description overlap, which is already counted)
+            const bonus = Math.min(0.15, typeCompat * 0.1 + 0.05);
             confidence += bonus;
           }
 

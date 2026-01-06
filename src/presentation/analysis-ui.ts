@@ -165,7 +165,7 @@ interface JSONOutput {
 
 export function generateJSONOutput(
   result: AnalysisResult,
-  options: AnalysisOutputOptions
+  _options: AnalysisOutputOptions
 ): string {
   const output: JSONOutput = {
     verdict: result.verdict,
