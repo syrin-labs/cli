@@ -15,6 +15,7 @@ import type {
   MCPConnectionOptions,
 } from './types';
 import { ConfigurationError } from '@/utils/errors';
+import { getCurrentVersion } from '@/utils/version-checker';
 
 /**
  * Get a connected MCP client that stays open for operations.
@@ -39,7 +40,7 @@ export async function getConnectedClient(
   const client = new Client(
     {
       name: 'syrin',
-      version: '1.0.0',
+      version: getCurrentVersion(),
     },
     {
       capabilities: {},
@@ -98,7 +99,7 @@ export async function connectHTTP(
     client = new Client(
       {
         name: 'syrin',
-        version: '1.0.0',
+        version: getCurrentVersion(),
       },
       {
         capabilities: {},
@@ -192,7 +193,7 @@ export async function connectHTTP(
           capabilities: {},
           clientInfo: {
             name: 'syrin',
-            version: '1.0.0',
+            version: getCurrentVersion(),
           },
         },
       },
@@ -301,7 +302,7 @@ export async function getConnectedStdioClient(
   const client = new Client(
     {
       name: 'syrin',
-      version: '1.0.0',
+      version: getCurrentVersion(),
     },
     {
       capabilities: {},
@@ -368,7 +369,7 @@ export async function connectStdio(
     const client = new Client(
       {
         name: 'syrin',
-        version: '1.0.0',
+        version: getCurrentVersion(),
       },
       {
         capabilities: {},
