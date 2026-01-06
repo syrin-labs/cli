@@ -5,10 +5,19 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "syrin": "./dist/index.js"
+    "syrin": "dist/index.js"
   },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "sideEffects": false,
   "files": [
-    "dist/**/*",
+    "dist/**/*.js",
+    "dist/**/*.d.ts",
     "README.md",
     "LICENSE"
   ],

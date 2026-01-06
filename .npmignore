@@ -33,6 +33,9 @@ docs/
 *.log
 *.tmp
 
+# Source maps (not needed in published package, saves ~1.8MB)
+dist/**/*.map
+
 # IDE
 .vscode/
 .idea/
