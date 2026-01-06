@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## v1.2.1
+
+### Bug Fixes (Critical)
+
+1. **CLI Not Working After Global Install** - Fixed critical issue where syrin commands produced no output when installed globally via npm.
+
 ## v1.2.0
 
 ### Features

@@ -6,6 +6,7 @@
 
 import { run } from './cli';
 import { pathToFileURL } from 'node:url';
+import { realpathSync } from 'node:fs';
 
 // Run CLI when this file is executed directly
 // ESM equivalent of require.main === module
@@ -14,7 +15,10 @@ const isMainModule = ((): boolean => {
     if (!process.argv[1]) {
       return false;
     }
-    return import.meta.url === pathToFileURL(process.argv[1]).href;
+    // Resolve symlinks to get the actual file path
+    // This is necessary when running via npm global bin symlinks
+    const resolvedPath = realpathSync(process.argv[1]);
+    return import.meta.url === pathToFileURL(resolvedPath).href;
   } catch {
     return false;
   }
