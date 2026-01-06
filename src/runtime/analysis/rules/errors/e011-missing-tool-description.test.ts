@@ -1,5 +1,5 @@
 /**
- * Tests for E002: Underspecified Required Input rule.
+ * Tests for E011: Missing Tool Description rule.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -23,7 +23,7 @@ vi.mock('@/utils/logger', () => ({
   },
 }));
 
-describe('E002: Underspecified Required Input', () => {
+describe('E011: Missing Tool Description', () => {
   let mockClient: Client;
 
   beforeEach(() => {
@@ -31,7 +31,7 @@ describe('E002: Underspecified Required Input', () => {
     mockClient = {} as Client;
   });
 
-  it('should detect required input without description', async () => {
+  it('should detect tool with missing description', async () => {
     const { loadMCPTools } = await import('../../loader');
     const { normalizeTools } = await import('../../normalizer');
     const { buildIndexes } = await import('../../indexer');
@@ -40,13 +40,12 @@ describe('E002: Underspecified Required Input', () => {
     vi.mocked(loadMCPTools).mockResolvedValue([
       {
         name: 'process_data',
-        description: 'Process data',
+        description: '', // Empty description
         inputSchema: {
           type: 'object',
           properties: {
-            data: { type: 'string' }, // No description
+            data: { type: 'string', description: 'Input data' },
           },
-          required: ['data'],
         },
         outputSchema: {
           type: 'object',
@@ -60,14 +59,14 @@ describe('E002: Underspecified Required Input', () => {
     const normalizedTools = [
       {
         name: 'process_data',
-        description: 'Process data',
+        description: '', // Empty description
         inputs: [
           {
             tool: 'process_data',
             name: 'data',
             type: 'string',
             required: true,
-            // No description - should trigger E002
+            description: 'Input data',
           },
         ],
         outputs: [
@@ -78,7 +77,7 @@ describe('E002: Underspecified Required Input', () => {
             required: false,
           },
         ],
-        descriptionTokens: new Set(['process', 'data']),
+        descriptionTokens: new Set(),
       },
     ];
 
@@ -90,13 +89,13 @@ describe('E002: Underspecified Required Input', () => {
 
     const result = await analyseTools(mockClient);
 
-    const e002Errors = result.errors.filter(e => e.code === 'E002');
-    expect(e002Errors.length).toBeGreaterThan(0);
-    expect(e002Errors[0]?.tool).toBe('process_data');
-    expect(e002Errors[0]?.field).toBe('data');
+    const e011Errors = result.errors.filter(e => e.code === 'E011');
+    expect(e011Errors.length).toBeGreaterThan(0);
+    expect(e011Errors[0]?.tool).toBe('process_data');
+    expect(e011Errors[0]?.message).toContain('missing a description');
   });
 
-  it('should pass when required input has description', async () => {
+  it('should detect tool with whitespace-only description', async () => {
     const { loadMCPTools } = await import('../../loader');
     const { normalizeTools } = await import('../../normalizer');
     const { buildIndexes } = await import('../../indexer');
@@ -105,16 +104,12 @@ describe('E002: Underspecified Required Input', () => {
     vi.mocked(loadMCPTools).mockResolvedValue([
       {
         name: 'process_data',
-        description: 'Process data',
+        description: '   ', // Whitespace only
         inputSchema: {
           type: 'object',
           properties: {
-            data: {
-              type: 'string',
-              description: 'The data to process',
-            },
+            data: { type: 'string' },
           },
-          required: ['data'],
         },
         outputSchema: {
           type: 'object',
@@ -128,14 +123,13 @@ describe('E002: Underspecified Required Input', () => {
     const normalizedTools = [
       {
         name: 'process_data',
-        description: 'Process data',
+        description: '   ', // Whitespace only
         inputs: [
           {
             tool: 'process_data',
             name: 'data',
             type: 'string',
             required: true,
-            description: 'The data to process', // Has description
           },
         ],
         outputs: [
@@ -146,7 +140,7 @@ describe('E002: Underspecified Required Input', () => {
             required: false,
           },
         ],
-        descriptionTokens: new Set(['process', 'data']),
+        descriptionTokens: new Set(),
       },
     ];
 
@@ -158,11 +152,12 @@ describe('E002: Underspecified Required Input', () => {
 
     const result = await analyseTools(mockClient);
 
-    const e002Errors = result.errors.filter(e => e.code === 'E002');
-    expect(e002Errors).toHaveLength(0);
+    const e011Errors = result.errors.filter(e => e.code === 'E011');
+    expect(e011Errors.length).toBeGreaterThan(0);
+    expect(e011Errors[0]?.tool).toBe('process_data');
   });
 
-  it('should detect optional input without description (catches unannotated parameters)', async () => {
+  it('should pass when tool has valid description', async () => {
     const { loadMCPTools } = await import('../../loader');
     const { normalizeTools } = await import('../../normalizer');
     const { buildIndexes } = await import('../../indexer');
@@ -170,19 +165,18 @@ describe('E002: Underspecified Required Input', () => {
 
     vi.mocked(loadMCPTools).mockResolvedValue([
       {
-        name: 'order_food',
-        description: 'Recommend food based on weather conditions',
+        name: 'process_data',
+        description: 'Process and transform input data',
         inputSchema: {
           type: 'object',
           properties: {
-            weather: { type: 'string' }, // No description, optional (FastMCP makes unannotated params optional)
+            data: { type: 'string' },
           },
-          // Not in required array - optional
         },
         outputSchema: {
           type: 'object',
           properties: {
-            food: { type: 'string' },
+            result: { type: 'string' },
           },
         },
       },
@@ -190,32 +184,25 @@ describe('E002: Underspecified Required Input', () => {
 
     const normalizedTools = [
       {
-        name: 'order_food',
-        description: 'Recommend food based on weather conditions',
+        name: 'process_data',
+        description: 'Process and transform input data',
         inputs: [
           {
-            tool: 'order_food',
-            name: 'weather',
+            tool: 'process_data',
+            name: 'data',
             type: 'string',
-            required: false, // Optional parameter
-            // No description - should trigger E002
+            required: true,
           },
         ],
         outputs: [
           {
-            tool: 'order_food',
-            name: 'food',
+            tool: 'process_data',
+            name: 'result',
             type: 'string',
             required: false,
           },
         ],
-        descriptionTokens: new Set([
-          'recommend',
-          'food',
-          'based',
-          'weather',
-          'conditions',
-        ]),
+        descriptionTokens: new Set(['process', 'transform', 'input', 'data']),
       },
     ];
 
@@ -227,10 +214,7 @@ describe('E002: Underspecified Required Input', () => {
 
     const result = await analyseTools(mockClient);
 
-    const e002Errors = result.errors.filter(e => e.code === 'E002');
-    expect(e002Errors.length).toBeGreaterThan(0);
-    expect(e002Errors[0]?.tool).toBe('order_food');
-    expect(e002Errors[0]?.field).toBe('weather');
-    expect(e002Errors[0]?.message).toContain('Optional parameter');
+    const e011Errors = result.errors.filter(e => e.code === 'E011');
+    expect(e011Errors).toHaveLength(0);
   });
 });

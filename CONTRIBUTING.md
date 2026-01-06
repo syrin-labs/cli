@@ -211,10 +211,10 @@ describe('FeatureName', () => {
   it('should do something', () => {
     // Arrange
     const input = 'test';
-    
+
     // Act
     const result = functionUnderTest(input);
-    
+
     // Assert
     expect(result).toBe('expected');
   });

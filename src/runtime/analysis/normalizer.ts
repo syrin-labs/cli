@@ -113,11 +113,22 @@ async function extractFieldsFromSchema(
     const properties = resolvedSchema.properties;
 
     for (const [fieldName, fieldSchema] of Object.entries(properties)) {
-      if (!isJSONSchemaField(fieldSchema)) {
+      // Handle fields that might not have a type but have other properties (like title)
+      // In JSON Schema, fields without explicit type default to 'any'
+      if (typeof fieldSchema !== 'object' || fieldSchema === null) {
         continue;
       }
 
-      const field = fieldSchema;
+      // If field doesn't pass isJSONSchemaField check but is in properties,
+      // it might still be a valid field (e.g., only has 'title' but no 'type')
+      // We'll treat it as a field with type 'any' (undefined type normalizes to 'any')
+      // Create a field object that will work with our processing
+      const field: JSONSchemaField = isJSONSchemaField(fieldSchema)
+        ? fieldSchema
+        : ({
+            ...(fieldSchema as Record<string, unknown>),
+            type: undefined, // Will normalize to 'any'
+          } as JSONSchemaField);
 
       // Determine nullable: true if explicitly set, or if type is an array containing 'null'
       // Do not infer nullable from single type === 'null' (that means value must be null)

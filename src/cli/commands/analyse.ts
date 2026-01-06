@@ -74,6 +74,15 @@ export async function executeAnalyse(
     // Close connection
     await closeConnection(transport);
 
+    // Ensure all output is flushed before exiting
+    await new Promise<void>(resolve => {
+      if (process.stdout.writable) {
+        process.stdout.write('', () => resolve());
+      } else {
+        resolve();
+      }
+    });
+
     // Exit with appropriate code
     if (result.errors.length > 0) {
       process.exit(1);

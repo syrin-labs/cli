@@ -29,11 +29,6 @@ class E002UnderspecifiedRequiredInputRule extends BaseRule {
 
     for (const tool of ctx.tools) {
       for (const input of tool.inputs) {
-        // Only check required inputs
-        if (!input.required) {
-          continue;
-        }
-
         // Check if type is broad
         if (!broadTypes.has(input.type)) {
           continue;
@@ -49,14 +44,27 @@ class E002UnderspecifiedRequiredInputRule extends BaseRule {
 
         // If it's broad and has no constraints, it's underspecified
         if (!hasDescription && !hasEnum && !hasPattern && !hasExample) {
-          diagnostics.push(
-            this.createDiagnostic(
-              `Required parameter "${input.name}" in tool "${tool.name}" is underspecified. LLM may pass invalid or ambiguous values.`,
-              tool.name,
-              input.name,
-              `Add constraints to "${input.name}": provide a description, enum values, regex pattern, or example.`
-            )
-          );
+          if (input.required) {
+            // Required parameter without constraints - error
+            diagnostics.push(
+              this.createDiagnostic(
+                `Required parameter "${input.name}" in tool "${tool.name}" is underspecified. LLM may pass invalid or ambiguous values.`,
+                tool.name,
+                input.name,
+                `Add constraints to "${input.name}": provide a description, enum values, regex pattern, or example.`
+              )
+            );
+          } else {
+            // Optional parameter without constraints - also flag as error since it can still cause issues
+            diagnostics.push(
+              this.createDiagnostic(
+                `Optional parameter "${input.name}" in tool "${tool.name}" is underspecified. When provided, LLM may pass invalid or ambiguous values.`,
+                tool.name,
+                input.name,
+                `Add constraints to "${input.name}": provide a description, enum values, regex pattern, or example.`
+              )
+            );
+          }
         }
       }
     }

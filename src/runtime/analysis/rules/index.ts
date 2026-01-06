@@ -16,6 +16,7 @@ import { E007OutputNotGuaranteed } from './errors/e007-output-not-guaranteed';
 import { E008CircularDependency } from './errors/e008-circular-dependency';
 import { E009ImplicitUserInput } from './errors/e009-implicit-user-input';
 import { E010NonSerializable } from './errors/e010-non-serializable';
+import { E011MissingToolDescription } from './errors/e011-missing-tool-description';
 
 // Warning rules
 import { W001ImplicitDependency } from './warnings/w001-implicit-dependency';
@@ -44,6 +45,7 @@ export const ALL_RULES: Rule[] = [
   E008CircularDependency,
   E009ImplicitUserInput,
   E010NonSerializable,
+  E011MissingToolDescription,
   // Warning rules (non-blocking)
   W001ImplicitDependency,
   W002FreeTextWithoutNormalization,

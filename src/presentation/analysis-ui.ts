@@ -183,15 +183,14 @@ export function generateJSONOutput(
     })),
   };
 
-  if (options.graph) {
-    output.dependencies = result.dependencies.map(d => ({
-      fromTool: d.fromTool,
-      fromField: d.fromField,
-      toTool: d.toTool,
-      toField: d.toField,
-      confidence: d.confidence,
-    }));
-  }
+  // Always include dependencies in JSON output (not just when --graph is set)
+  output.dependencies = result.dependencies.map(d => ({
+    fromTool: d.fromTool,
+    fromField: d.fromField,
+    toTool: d.toTool,
+    toField: d.toField,
+    confidence: d.confidence,
+  }));
 
   return JSON.stringify(output, null, 2);
 }
@@ -199,7 +198,10 @@ export function generateJSONOutput(
 /**
  * Display CI output (minimal).
  */
-export function displayCIOutput(result: AnalysisResult): void {
+export function displayCIOutput(
+  result: AnalysisResult,
+  options: AnalysisOutputOptions
+): void {
   // CI mode: minimal output, exit codes handled by caller
   if (result.errors.length > 0) {
     console.log(
@@ -214,6 +216,11 @@ export function displayCIOutput(result: AnalysisResult): void {
     if (result.warnings.length > 0) {
       console.log(`  ${result.warnings.length} warning(s) (non-blocking)`);
     }
+  }
+
+  // Show graph if requested
+  if (options.graph) {
+    console.log(formatDependencyGraph(result.dependencies));
   }
 }
 
@@ -230,7 +237,7 @@ export function displayAnalysisResult(
   }
 
   if (options.ci) {
-    displayCIOutput(result);
+    displayCIOutput(result, options);
     return;
   }
 

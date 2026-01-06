@@ -261,10 +261,12 @@ export function setupCLI(): void {
             projectRoot: options.projectRoot,
           });
         } catch (error) {
-          // Error handling is done in executeAnalyse
+          // Error handling is done in executeAnalyse, but ensure we log if something unexpected happens
           if (error instanceof Error) {
             logger.error('Analyse command failed', error);
+            log.error('Analyse command failed: ' + error.message);
           }
+          // Don't exit here - executeAnalyse handles exit codes
         }
       }
     );
