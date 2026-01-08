@@ -1,6 +1,6 @@
 {
   "name": "@ankan-ai/syrin",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Syrin is a runtime intelligence system that makes MCP servers debuggable, testable, and safe to run in production.",
   "type": "module",
   "main": "dist/index.js",

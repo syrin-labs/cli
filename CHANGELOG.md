@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## v1.2.2
+
+### Bug Fixes
+
+1. **Updated STDIO test using script** - Fixed CLI test when script was passed
+
+## Features
+
+1. **Env Support for CLI** - Support for multiple ENV variables using (`--env`) for script in CLI
+2. **Auth Header Support for CLI** - Support for multiple auth headers using (`--auth-header`) for URL in CLI
+
 ## v1.2.1
 
 ### Bug Fixes (Critical)
