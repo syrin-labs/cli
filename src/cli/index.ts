@@ -118,6 +118,22 @@ export function setupCLI(): void {
       '--project-root <path>',
       'Project root directory (defaults to current directory)'
     )
+    .option(
+      '--env <key=value>',
+      'Environment variable to pass to MCP server (for stdio transport). Can be specified multiple times. Format: KEY=value or KEY (uses process.env[KEY])',
+      (value, previous: string[] = []) => {
+        previous.push(value);
+        return previous;
+      }
+    )
+    .option(
+      '--auth-header <header>',
+      'Authentication header (for HTTP transport). Can be specified multiple times. Format: "Header: Value" or "Header=Value" or token (treated as Bearer token)',
+      (value, previous: string[] = []) => {
+        previous.push(value);
+        return previous;
+      }
+    )
     .action(
       async (
         urlOrScript: string | undefined,
@@ -126,6 +142,8 @@ export function setupCLI(): void {
           url?: string;
           script?: string;
           projectRoot?: string;
+          env?: string[];
+          authHeader?: string[];
         }
       ) => {
         try {
@@ -145,11 +163,16 @@ export function setupCLI(): void {
             }
           }
 
+          const { parseEnvOptions, parseAuthHeaderOptions } =
+            await import('@/cli/utils/option-parsers');
+
           await executeTest({
             transport: options.transport as 'http' | 'stdio' | undefined,
             url: finalUrl,
             script: finalScript,
             projectRoot: options.projectRoot,
+            env: parseEnvOptions(options.env),
+            authHeaders: parseAuthHeaderOptions(options.authHeader),
           });
         } catch (error) {
           // Error handling is done in executeTest
@@ -185,6 +208,22 @@ export function setupCLI(): void {
       '--project-root <path>',
       'Project root directory (defaults to current directory)'
     )
+    .option(
+      '--env <key=value>',
+      'Environment variable to pass to MCP server (for stdio transport). Can be specified multiple times. Format: KEY=value or KEY (uses process.env[KEY])',
+      (value, previous: string[] = []) => {
+        previous.push(value);
+        return previous;
+      }
+    )
+    .option(
+      '--auth-header <header>',
+      'Authentication header (for HTTP transport). Can be specified multiple times. Format: "Header: Value" or "Header=Value" or token (treated as Bearer token)',
+      (value, previous: string[] = []) => {
+        previous.push(value);
+        return previous;
+      }
+    )
     .action(
       async (
         type: string,
@@ -193,6 +232,8 @@ export function setupCLI(): void {
           url?: string;
           script?: string;
           projectRoot?: string;
+          env?: string[];
+          authHeader?: string[];
         }
       ) => {
         try {
@@ -209,12 +250,17 @@ export function setupCLI(): void {
             process.exit(1);
           }
 
+          const { parseEnvOptions, parseAuthHeaderOptions } =
+            await import('@/cli/utils/option-parsers');
+
           await executeList({
             type: listType,
             transport: options.transport as 'http' | 'stdio' | undefined,
             url: options.url,
             script: options.script,
             projectRoot: options.projectRoot,
+            env: parseEnvOptions(options.env),
+            authHeaders: parseAuthHeaderOptions(options.authHeader),
           });
         } catch (error) {
           // Error handling is done in executeList
@@ -249,6 +295,22 @@ export function setupCLI(): void {
       '--project-root <path>',
       'Project root directory (defaults to current directory)'
     )
+    .option(
+      '--env <key=value>',
+      'Environment variable to pass to MCP server (for stdio transport). Can be specified multiple times. Format: KEY=value or KEY (uses process.env[KEY])',
+      (value, previous: string[] = []) => {
+        previous.push(value);
+        return previous;
+      }
+    )
+    .option(
+      '--auth-header <header>',
+      'Authentication header (for HTTP transport). Can be specified multiple times. Format: "Header: Value" or "Header=Value" or token (treated as Bearer token)',
+      (value, previous: string[] = []) => {
+        previous.push(value);
+        return previous;
+      }
+    )
     .action(
       async (options: {
         ci?: boolean;
@@ -258,8 +320,13 @@ export function setupCLI(): void {
         url?: string;
         script?: string;
         projectRoot?: string;
+        env?: string[];
+        authHeader?: string[];
       }) => {
         try {
+          const { parseEnvOptions, parseAuthHeaderOptions } =
+            await import('@/cli/utils/option-parsers');
+
           await executeAnalyse({
             ci: options.ci,
             json: options.json,
@@ -268,6 +335,8 @@ export function setupCLI(): void {
             url: options.url,
             script: options.script,
             projectRoot: options.projectRoot,
+            env: parseEnvOptions(options.env),
+            authHeaders: parseAuthHeaderOptions(options.authHeader),
           });
         } catch (error) {
           // Error handling is done in executeAnalyse, but ensure we log if something unexpected happens

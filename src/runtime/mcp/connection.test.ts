@@ -14,6 +14,7 @@ import {
   getConnectedStdioClient,
 } from './connection';
 import { ConfigurationError } from '@/utils/errors';
+import { getCurrentVersion } from '@/utils/version-checker';
 
 // Mock MCP SDK
 vi.mock('@modelcontextprotocol/sdk/client/index.js', () => {
@@ -87,13 +88,30 @@ describe('connection utilities', () => {
       const result = await getConnectedClient('http://localhost:3000');
 
       expect(Client).toHaveBeenCalledWith(
-        { name: 'syrin', version: '1.0.0' },
+        { name: 'syrin', version: getCurrentVersion() },
         { capabilities: {} }
       );
-      expect(StreamableHTTPClientTransport).toHaveBeenCalled();
+      expect(StreamableHTTPClientTransport).toHaveBeenCalledWith(
+        expect.any(URL),
+        { requestInit: undefined }
+      );
       expect(mockClient.connect).toHaveBeenCalledWith(mockHTTPTransport);
       expect(result.client).toBe(mockClient);
       expect(result.transport).toBe(mockHTTPTransport);
+    });
+
+    it('should pass headers to transport when provided', async () => {
+      const headers = { Authorization: 'Bearer token123' };
+      await getConnectedClient('http://localhost:3000', headers);
+
+      expect(StreamableHTTPClientTransport).toHaveBeenCalledWith(
+        expect.any(URL),
+        {
+          requestInit: {
+            headers,
+          },
+        }
+      );
     });
 
     it('should set client error handler', async () => {
@@ -111,10 +129,20 @@ describe('connection utilities', () => {
           })
       );
 
-      const promise = getConnectedClient('http://localhost:3000', 100);
+      const promise = getConnectedClient(
+        'http://localhost:3000',
+        undefined,
+        100
+      );
+
+      // Advance timers to trigger timeout
       vi.advanceTimersByTime(100);
 
+      // Wait for the rejection
       await expect(promise).rejects.toThrow('Connection timeout after 100ms');
+
+      // Clean up any remaining timers
+      vi.runAllTimers();
     });
 
     it('should handle invalid URL', async () => {
@@ -132,6 +160,20 @@ describe('connection utilities', () => {
       expect(result.details?.protocolVersion).toBe('2024-11-05');
       expect(result.details?.capabilities).toBeDefined();
       expect(mockHTTPTransport.close).toHaveBeenCalled();
+    });
+
+    it('should pass headers to transport when provided', async () => {
+      const headers = { Authorization: 'Bearer token123' };
+      await connectHTTP('http://localhost:3000', headers);
+
+      expect(StreamableHTTPClientTransport).toHaveBeenCalledWith(
+        expect.any(URL),
+        {
+          requestInit: {
+            headers,
+          },
+        }
+      );
     });
 
     it('should include session ID in details when available', async () => {
@@ -174,10 +216,15 @@ describe('connection utilities', () => {
           })
       );
 
-      const promise = connectHTTP('http://localhost:3000', 100);
+      const promise = connectHTTP('http://localhost:3000', undefined, 100);
+
+      // Advance timers to trigger timeout
       vi.advanceTimersByTime(100);
 
       const result = await promise;
+
+      // Clean up any remaining timers
+      vi.runAllTimers();
 
       expect(result.success).toBe(false);
       expect(result.transport).toBe('http');
@@ -255,13 +302,14 @@ describe('connection utilities', () => {
       const result = await getConnectedStdioClient('python server.py');
 
       expect(Client).toHaveBeenCalledWith(
-        { name: 'syrin', version: '1.0.0' },
+        { name: 'syrin', version: getCurrentVersion() },
         { capabilities: {} }
       );
+      // Check that env was passed (filtered process.env)
       expect(StdioClientTransport).toHaveBeenCalledWith({
         command: 'python',
         args: ['server.py'],
-        env: process.env,
+        env: expect.objectContaining({}),
       });
       expect(mockClient.connect).toHaveBeenCalledWith(mockStdioTransport);
       expect(result.client).toBe(mockClient);
@@ -274,8 +322,18 @@ describe('connection utilities', () => {
       expect(StdioClientTransport).toHaveBeenCalledWith({
         command: 'node',
         args: ['index.js', '--port', '3000'],
-        env: process.env,
+        env: expect.objectContaining({}),
       });
+    });
+
+    it('should merge provided env vars with process.env', async () => {
+      const customEnv = { API_KEY: 'test-key', CUSTOM_VAR: 'custom-value' };
+      await getConnectedStdioClient('python server.py', customEnv);
+
+      const callArgs = vi.mocked(StdioClientTransport).mock.calls[0][0];
+      expect(callArgs.env).toMatchObject(customEnv);
+      // Should also include process.env vars
+      expect(callArgs.env).toHaveProperty('PATH');
     });
 
     it('should throw error for empty command', async () => {
@@ -292,10 +350,20 @@ describe('connection utilities', () => {
           })
       );
 
-      const promise = getConnectedStdioClient('python server.py', 100);
+      const promise = getConnectedStdioClient(
+        'python server.py',
+        undefined,
+        100
+      );
+
+      // Advance timers to trigger timeout
       vi.advanceTimersByTime(100);
 
+      // Wait for the rejection
       await expect(promise).rejects.toThrow('Connection timeout after 100ms');
+
+      // Clean up any remaining timers
+      vi.runAllTimers();
     });
   });
 
@@ -310,6 +378,15 @@ describe('connection utilities', () => {
       expect(result.details?.sessionId).toBe('test-session-id');
       expect(result.details?.capabilities).toBeDefined();
       expect(mockStdioTransport.close).toHaveBeenCalled();
+    });
+
+    it('should merge provided env vars with process.env', async () => {
+      const customEnv = { API_KEY: 'test-key' };
+      const result = await connectStdio('python server.py', customEnv);
+
+      expect(result.success).toBe(true);
+      const callArgs = vi.mocked(StdioClientTransport).mock.calls[0][0];
+      expect(callArgs.env).toMatchObject(customEnv);
     });
 
     it('should return error for empty command', async () => {
@@ -328,10 +405,11 @@ describe('connection utilities', () => {
           })
       );
 
-      const promise = connectStdio('python server.py', 100);
-      vi.advanceTimersByTime(100);
+      const promise = connectStdio('python server.py', undefined, 100);
+      await vi.advanceTimersByTimeAsync(100);
 
       const result = await promise;
+      await vi.runAllTimersAsync();
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('timeout');
@@ -381,6 +459,24 @@ describe('connection utilities', () => {
       expect(result.transport).toBe('http');
     });
 
+    it('should pass headers to HTTP transport', async () => {
+      const headers = { Authorization: 'Bearer token123' };
+      await connectMCP({
+        transport: 'http',
+        url: 'http://localhost:3000',
+        headers,
+      });
+
+      expect(StreamableHTTPClientTransport).toHaveBeenCalledWith(
+        expect.any(URL),
+        {
+          requestInit: {
+            headers,
+          },
+        }
+      );
+    });
+
     it('should connect via stdio transport', async () => {
       const result = await connectMCP({
         transport: 'stdio',
@@ -389,6 +485,18 @@ describe('connection utilities', () => {
 
       expect(result.success).toBe(true);
       expect(result.transport).toBe('stdio');
+    });
+
+    it('should pass env vars to stdio transport', async () => {
+      const env = { API_KEY: 'test-key' };
+      await connectMCP({
+        transport: 'stdio',
+        command: 'python server.py',
+        env,
+      });
+
+      const callArgs = vi.mocked(StdioClientTransport).mock.calls[0][0];
+      expect(callArgs.env).toMatchObject(env);
     });
 
     it('should throw ConfigurationError for HTTP without URL', async () => {

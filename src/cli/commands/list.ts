@@ -3,18 +3,15 @@
  * Lists tools, resources, or prompts from an MCP server.
  */
 
+import { listTools, listResources, listPrompts } from '@/runtime/mcp';
 import {
-  getConnectedClient,
-  getConnectedStdioClient,
-  listTools,
-  listResources,
-  listPrompts,
-  closeConnection,
-} from '@/runtime/mcp';
-import { handleCommandError, resolveTransportConfig } from '@/cli/utils';
-import { ConfigurationError } from '@/utils/errors';
-import { Messages, ListTypes, TransportTypes } from '@/constants';
-import type { TransportType } from '@/config/types';
+  handleCommandError,
+  resolveTransportConfig,
+  establishConnection,
+  safeCloseConnection,
+  type TransportCommandOptions,
+} from '@/cli/utils';
+import { Messages, ListTypes } from '@/constants';
 import type { ListType } from '@/constants/list';
 import {
   displayTools,
@@ -22,12 +19,8 @@ import {
   displayPrompts,
 } from '@/presentation/list-ui';
 
-interface ListCommandOptions {
+interface ListCommandOptions extends TransportCommandOptions {
   type?: ListType;
-  transport?: TransportType;
-  url?: string;
-  script?: string;
-  projectRoot?: string;
 }
 
 /**
@@ -43,62 +36,19 @@ export async function executeList(options: ListCommandOptions): Promise<void> {
       url: mcpUrl,
       script: mcpCommand,
       urlSource,
+      env,
+      authHeaders,
     } = resolveTransportConfig(options);
 
-    // Connect to MCP server based on transport type
-    let client;
-    let mcpTransport;
-    try {
-      if (finalTransport === TransportTypes.HTTP) {
-        const connection = await getConnectedClient(mcpUrl!);
-        client = connection.client;
-        mcpTransport = connection.transport;
-      } else {
-        const connection = await getConnectedStdioClient(mcpCommand!);
-        client = connection.client;
-        mcpTransport = connection.transport;
-      }
-    } catch (connectionError) {
-      // Provide helpful error messages for connection failures
-      const errorMessage =
-        connectionError instanceof Error
-          ? connectionError.message
-          : String(connectionError);
-
-      if (finalTransport === TransportTypes.HTTP) {
-        // Check for common HTTP connection errors
-        if (
-          errorMessage.includes('fetch failed') ||
-          errorMessage.includes('ECONNREFUSED') ||
-          errorMessage.includes('NetworkError') ||
-          errorMessage.includes('ENOTFOUND')
-        ) {
-          const configSource =
-            urlSource === 'config'
-              ? Messages.LIST_SOURCE_CONFIG
-              : Messages.LIST_SOURCE_CLI_URL;
-
-          throw new ConfigurationError(
-            Messages.CONNECTION_FAILED(mcpUrl!, configSource)
-          );
-        } else if (errorMessage.includes('timeout')) {
-          throw new ConfigurationError(
-            Messages.CONNECTION_TIMEOUT_HTTP(mcpUrl!)
-          );
-        }
-      } else {
-        // stdio transport errors
-        if (errorMessage.includes('spawn') || errorMessage.includes('ENOENT')) {
-          throw new ConfigurationError(
-            Messages.CONNECTION_FAILED_STDIO(mcpCommand!)
-          );
-        } else if (errorMessage.includes('timeout')) {
-          throw new ConfigurationError(Messages.CONNECTION_TIMEOUT_STDIO);
-        }
-      }
-      // Re-throw if we don't have a specific handler
-      throw connectionError;
-    }
+    // Connect to MCP server with centralized error handling
+    const { client, transport: mcpTransport } = await establishConnection({
+      transport: finalTransport,
+      url: mcpUrl,
+      script: mcpCommand,
+      urlSource,
+      env,
+      authHeaders,
+    });
 
     try {
       // List based on type
@@ -113,8 +63,8 @@ export async function executeList(options: ListCommandOptions): Promise<void> {
         await displayPrompts(promptsResult.prompts);
       }
     } finally {
-      // Always close the connection
-      await closeConnection(mcpTransport);
+      // Always close the connection safely
+      await safeCloseConnection(mcpTransport);
     }
   } catch (error) {
     handleCommandError(

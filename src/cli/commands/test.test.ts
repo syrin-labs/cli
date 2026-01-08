@@ -50,6 +50,8 @@ describe('executeTest', () => {
         url: undefined,
         script: 'python server.py',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
       vi.mocked(connectMCP).mockResolvedValue(mockResult);
@@ -62,6 +64,8 @@ describe('executeTest', () => {
         transport: 'stdio',
         url: undefined,
         command: 'python server.py',
+        env: undefined,
+        headers: undefined,
       });
     });
 
@@ -78,6 +82,8 @@ describe('executeTest', () => {
         url: 'http://localhost:8000',
         script: undefined,
         urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
       });
 
       vi.mocked(connectMCP).mockResolvedValue(mockResult);
@@ -104,6 +110,8 @@ describe('executeTest', () => {
         url: 'http://localhost:8000',
         script: undefined,
         urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
       });
 
       vi.mocked(connectMCP).mockResolvedValue(mockResult);
@@ -121,6 +129,8 @@ describe('executeTest', () => {
         transport: 'http',
         url: 'http://localhost:8000',
         command: undefined,
+        env: undefined,
+        headers: undefined,
       });
 
       expect(exitSpy).not.toHaveBeenCalled();
@@ -139,6 +149,8 @@ describe('executeTest', () => {
         url: undefined,
         script: 'python server.py',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
       vi.mocked(connectMCP).mockResolvedValue(mockResult);
@@ -156,6 +168,8 @@ describe('executeTest', () => {
         transport: 'stdio',
         url: undefined,
         command: 'python server.py',
+        env: undefined,
+        headers: undefined,
       });
 
       exitSpy.mockRestore();
@@ -173,6 +187,8 @@ describe('executeTest', () => {
         url: 'http://custom-url:9000',
         script: undefined,
         urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
       });
 
       vi.mocked(connectMCP).mockResolvedValue(mockResult);
@@ -204,6 +220,8 @@ describe('executeTest', () => {
         url: undefined,
         script: 'custom-script.sh',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
       vi.mocked(connectMCP).mockResolvedValue(mockResult);
@@ -231,6 +249,8 @@ describe('executeTest', () => {
         url: 'http://localhost:8000',
         script: undefined,
         urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
       });
 
       vi.mocked(connectMCP).mockRejectedValue(new Error('Connection failed'));
@@ -253,6 +273,68 @@ describe('executeTest', () => {
         // Expected to throw due to process.exit
       }
       exitSpy.mockRestore();
+    });
+
+    it('should pass env vars to stdio transport', async () => {
+      const mockResult = {
+        success: true,
+        transport: 'stdio' as const,
+        message: 'Connection successful',
+      };
+
+      const env = { API_KEY: 'test-key' };
+
+      vi.mocked(resolveTransportConfig).mockReturnValue({
+        transport: 'stdio' as const,
+        url: undefined,
+        script: 'python server.py',
+        urlSource: 'config',
+        env,
+        authHeaders: undefined,
+      });
+
+      vi.mocked(connectMCP).mockResolvedValue(mockResult);
+
+      await executeTest({ env });
+
+      expect(connectMCP).toHaveBeenCalledWith({
+        transport: 'stdio',
+        url: undefined,
+        command: 'python server.py',
+        env,
+        headers: undefined,
+      });
+    });
+
+    it('should pass auth headers to HTTP transport', async () => {
+      const mockResult = {
+        success: true,
+        transport: 'http' as const,
+        message: 'Connection successful',
+      };
+
+      const authHeaders = { Authorization: 'Bearer token123' };
+
+      vi.mocked(resolveTransportConfig).mockReturnValue({
+        transport: 'http' as const,
+        url: 'http://localhost:8000',
+        script: undefined,
+        urlSource: 'cli',
+        env: undefined,
+        authHeaders,
+      });
+
+      vi.mocked(connectMCP).mockResolvedValue(mockResult);
+
+      await executeTest({ authHeaders });
+
+      expect(connectMCP).toHaveBeenCalledWith({
+        transport: 'http',
+        url: 'http://localhost:8000',
+        command: undefined,
+        env: undefined,
+        headers: authHeaders,
+      });
     });
   });
 });

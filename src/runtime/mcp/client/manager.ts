@@ -119,7 +119,11 @@ export class HTTPMCPClientManager
         }
       );
 
-      const connection = await getConnectedClient(this.mcpUrl, 10000);
+      const connection = await getConnectedClient(
+        this.mcpUrl,
+        undefined,
+        10000
+      );
       this.client = connection.client;
       this.transport = connection.transport;
       this.connected = true;

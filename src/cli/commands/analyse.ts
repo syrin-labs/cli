@@ -3,26 +3,23 @@
  * Performs static analysis on MCP tool contracts.
  */
 
-import {
-  getConnectedClient,
-  getConnectedStdioClient,
-  closeConnection,
-} from '@/runtime/mcp';
-import { handleCommandError, resolveTransportConfig } from '@/cli/utils';
 import { analyseTools } from '@/runtime/analysis';
 import { displayAnalysisResult } from '@/presentation/analysis-ui';
-import { Messages, TransportTypes } from '@/constants';
-import type { TransportType } from '@/config/types';
+import {
+  handleCommandError,
+  resolveTransportConfig,
+  establishConnection,
+  safeCloseConnection,
+  flushOutput,
+  type TransportCommandOptions,
+} from '@/cli/utils';
+import { Messages } from '@/constants';
 import { log } from '@/utils/logger';
 
-interface AnalyseCommandOptions {
+interface AnalyseCommandOptions extends TransportCommandOptions {
   ci?: boolean;
   json?: boolean;
   graph?: boolean;
-  transport?: TransportType;
-  url?: string;
-  script?: string;
-  projectRoot?: string;
 }
 
 /**
@@ -37,57 +34,52 @@ export async function executeAnalyse(
       transport: finalTransport,
       url: mcpUrl,
       script: mcpCommand,
+      urlSource,
+      env,
+      authHeaders,
     } = resolveTransportConfig(options);
-
-    // Connect to MCP server
-    let client;
-    let transport;
 
     if (!options.ci && !options.json) {
       log.info(Messages.ANALYSE_CONNECTING);
     }
 
-    if (finalTransport === TransportTypes.HTTP) {
-      const connection = await getConnectedClient(mcpUrl!);
-      client = connection.client;
-      transport = connection.transport;
-    } else {
-      const connection = await getConnectedStdioClient(mcpCommand!);
-      client = connection.client;
-      transport = connection.transport;
-    }
-
-    if (!options.ci && !options.json) {
-      log.info(Messages.ANALYSE_LOADING_TOOLS);
-    }
-
-    // Run analysis
-    const result = await analyseTools(client);
-
-    // Display results
-    displayAnalysisResult(result, {
-      ci: options.ci,
-      json: options.json,
-      graph: options.graph,
+    // Connect to MCP server with centralized error handling
+    const { client, transport } = await establishConnection({
+      transport: finalTransport,
+      url: mcpUrl,
+      script: mcpCommand,
+      urlSource,
+      env,
+      authHeaders,
     });
 
-    // Close connection
-    await closeConnection(transport);
-
-    // Ensure all output is flushed before exiting
-    await new Promise<void>(resolve => {
-      if (process.stdout.writable) {
-        process.stdout.write('', () => resolve());
-      } else {
-        resolve();
+    try {
+      if (!options.ci && !options.json) {
+        log.info(Messages.ANALYSE_LOADING_TOOLS);
       }
-    });
 
-    // Exit with appropriate code
-    if (result.errors.length > 0) {
-      process.exit(1);
-    } else {
-      process.exit(0);
+      // Run analysis
+      const result = await analyseTools(client);
+
+      // Display results
+      displayAnalysisResult(result, {
+        ci: options.ci,
+        json: options.json,
+        graph: options.graph,
+      });
+
+      // Ensure all output is flushed before exiting
+      await flushOutput();
+
+      // Exit with appropriate code
+      if (result.errors.length > 0) {
+        process.exit(1);
+      } else {
+        process.exit(0);
+      }
+    } finally {
+      // Always close the connection safely, even if errors occur
+      await safeCloseConnection(transport);
     }
   } catch (error) {
     handleCommandError(error, Messages.ANALYSE_ERROR_FAILED);

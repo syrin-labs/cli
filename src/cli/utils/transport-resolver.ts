@@ -13,6 +13,8 @@ export interface TransportOptions {
   url?: string;
   script?: string;
   projectRoot?: string;
+  env?: Record<string, string>;
+  authHeaders?: Record<string, string>;
 }
 
 export interface ResolvedTransportConfig {
@@ -22,6 +24,8 @@ export interface ResolvedTransportConfig {
   config: SyrinConfig;
   urlSource?: 'config' | 'cli';
   scriptSource?: 'config' | 'cli';
+  env?: Record<string, string>;
+  authHeaders?: Record<string, string>;
 }
 
 /**
@@ -41,7 +45,18 @@ export function resolveTransportConfig(
   const config = loadConfig(projectRoot);
 
   // Determine transport type
-  const transportType: TransportType = transport || config.transport;
+  // If --script is provided, force stdio transport
+  // If --url is provided, force http transport
+  // Otherwise use explicit transport option or config default
+  let transportType: TransportType;
+  if (script) {
+    transportType = TransportTypes.STDIO;
+  } else if (url) {
+    transportType = TransportTypes.HTTP;
+  } else {
+    transportType = transport || config.transport;
+  }
+
   let mcpUrl: string | undefined;
   let mcpScript: string | undefined;
   let urlSource: 'config' | 'cli' | undefined;
@@ -87,5 +102,7 @@ export function resolveTransportConfig(
     config,
     urlSource,
     scriptSource,
+    env: options.env,
+    authHeaders: options.authHeaders,
   };
 }

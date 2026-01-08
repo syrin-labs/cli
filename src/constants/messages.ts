@@ -64,15 +64,25 @@ export const Messages = {
     'script is required when using --run-script flag',
   TRANSPORT_URL_REQUIRED_CONFIG:
     'MCP URL is required for HTTP transport. Set it in config.yaml.',
-  CONNECTION_FAILED: (mcpUrl: string, source: string) =>
-    `Cannot connect to MCP server at ${mcpUrl}${source}.\n` +
+  CONNECTION_FAILED: (
+    mcpUrl: string,
+    source: string,
+    transportType: string = 'http'
+  ) =>
+    `Cannot connect to MCP server using ${transportType.toUpperCase()} transport.\n` +
+    `\n` +
+    `MCP URL: ${mcpUrl}${source}\n` +
+    `Transport: ${transportType.toUpperCase()}\n` +
     `\n` +
     `The server appears to be not running or unreachable.\n` +
     `\n` +
     `To fix this:\n` +
     `  1. Make sure the MCP server is running\n` +
     `  2. Verify the URL is correct: ${mcpUrl}\n` +
-    `  3. Check if the server is listening on the expected port\n`,
+    `  3. Check if the server is listening on the expected port\n` +
+    (transportType === 'http' && source.includes('config')
+      ? `  4. If you intended to use stdio transport, use --script instead of --url\n`
+      : ''),
   CONNECTION_TIMEOUT_HTTP: (mcpUrl: string) =>
     `Connection to MCP server at ${mcpUrl} timed out.\n` +
     `The server may be slow to respond or not running.`,

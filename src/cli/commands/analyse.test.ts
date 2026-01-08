@@ -4,19 +4,17 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { executeAnalyse } from './analyse';
-import {
-  getConnectedClient,
-  getConnectedStdioClient,
-  closeConnection,
-} from '@/runtime/mcp';
-import { resolveTransportConfig } from '@/cli/utils';
 import { analyseTools } from '@/runtime/analysis';
 import { displayAnalysisResult } from '@/presentation/analysis-ui';
+import {
+  resolveTransportConfig,
+  establishConnection,
+  safeCloseConnection,
+} from '@/cli/utils';
 import { TransportTypes } from '@/constants';
 import { log } from '@/utils/logger';
 
 // Mock dependencies
-vi.mock('@/runtime/mcp');
 vi.mock('@/cli/utils');
 vi.mock('@/runtime/analysis');
 vi.mock('@/presentation/analysis-ui', () => ({
@@ -56,15 +54,17 @@ describe('executeAnalyse', () => {
         url: undefined,
         script: 'python server.py',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedStdioClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
 
       vi.mocked(analyseTools).mockResolvedValue(mockResult);
-      vi.mocked(closeConnection).mockResolvedValue(undefined);
+      vi.mocked(safeCloseConnection).mockResolvedValue(undefined);
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(0)');
@@ -73,14 +73,21 @@ describe('executeAnalyse', () => {
       await expect(executeAnalyse({})).rejects.toThrow('process.exit(0)');
 
       expect(resolveTransportConfig).toHaveBeenCalled();
-      expect(getConnectedStdioClient).toHaveBeenCalledWith('python server.py');
+      expect(establishConnection).toHaveBeenCalledWith({
+        transport: TransportTypes.STDIO,
+        url: undefined,
+        script: 'python server.py',
+        urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
+      });
       expect(analyseTools).toHaveBeenCalledWith(mockClient);
       expect(displayAnalysisResult).toHaveBeenCalledWith(mockResult, {
         ci: undefined,
         json: undefined,
         graph: undefined,
       });
-      expect(closeConnection).toHaveBeenCalledWith(mockTransport);
+      expect(safeCloseConnection).toHaveBeenCalledWith(mockTransport);
       expect(exitSpy).toHaveBeenCalledWith(0);
 
       exitSpy.mockRestore();
@@ -115,15 +122,17 @@ describe('executeAnalyse', () => {
         url: 'http://localhost:8000',
         script: undefined,
         urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
 
       vi.mocked(analyseTools).mockResolvedValue(mockResult);
-      vi.mocked(closeConnection).mockResolvedValue(undefined);
+      vi.mocked(safeCloseConnection).mockResolvedValue(undefined);
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(1)');
@@ -152,15 +161,17 @@ describe('executeAnalyse', () => {
         url: 'http://localhost:8000',
         script: undefined,
         urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
 
       vi.mocked(analyseTools).mockResolvedValue(mockResult);
-      vi.mocked(closeConnection).mockResolvedValue(undefined);
+      vi.mocked(safeCloseConnection).mockResolvedValue(undefined);
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(0)');
@@ -172,8 +183,14 @@ describe('executeAnalyse', () => {
         // Expected to throw due to process.exit
       }
 
-      expect(getConnectedClient).toHaveBeenCalledWith('http://localhost:8000');
-      expect(getConnectedStdioClient).not.toHaveBeenCalled();
+      expect(establishConnection).toHaveBeenCalledWith({
+        transport: TransportTypes.HTTP,
+        url: 'http://localhost:8000',
+        script: undefined,
+        urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
+      });
 
       exitSpy.mockRestore();
     });
@@ -195,15 +212,17 @@ describe('executeAnalyse', () => {
         url: undefined,
         script: 'python server.py',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedStdioClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
 
       vi.mocked(analyseTools).mockResolvedValue(mockResult);
-      vi.mocked(closeConnection).mockResolvedValue(undefined);
+      vi.mocked(safeCloseConnection).mockResolvedValue(undefined);
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(0)');
@@ -245,15 +264,17 @@ describe('executeAnalyse', () => {
         url: undefined,
         script: 'python server.py',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedStdioClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
 
       vi.mocked(analyseTools).mockResolvedValue(mockResult);
-      vi.mocked(closeConnection).mockResolvedValue(undefined);
+      vi.mocked(safeCloseConnection).mockResolvedValue(undefined);
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(0)');
@@ -287,9 +308,11 @@ describe('executeAnalyse', () => {
         url: 'http://localhost:8000',
         script: undefined,
         urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedClient).mockRejectedValue(
+      vi.mocked(establishConnection).mockRejectedValue(
         new Error('Connection failed')
       );
 
@@ -312,9 +335,11 @@ describe('executeAnalyse', () => {
         url: undefined,
         script: 'python server.py',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedStdioClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
@@ -345,9 +370,11 @@ describe('executeAnalyse', () => {
         url: undefined,
         script: 'python server.py',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedStdioClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
@@ -389,15 +416,17 @@ describe('executeAnalyse', () => {
         url: 'http://custom-url:9000',
         script: undefined,
         urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
 
       vi.mocked(analyseTools).mockResolvedValue(mockResult);
-      vi.mocked(closeConnection).mockResolvedValue(undefined);
+      vi.mocked(safeCloseConnection).mockResolvedValue(undefined);
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(0)');
@@ -437,15 +466,17 @@ describe('executeAnalyse', () => {
         url: undefined,
         script: 'custom-script.sh',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedStdioClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
 
       vi.mocked(analyseTools).mockResolvedValue(mockResult);
-      vi.mocked(closeConnection).mockResolvedValue(undefined);
+      vi.mocked(safeCloseConnection).mockResolvedValue(undefined);
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(0)');
@@ -463,6 +494,110 @@ describe('executeAnalyse', () => {
       expect(resolveTransportConfig).toHaveBeenCalledWith({
         transport: TransportTypes.STDIO,
         script: 'custom-script.sh',
+      });
+
+      exitSpy.mockRestore();
+    });
+
+    it('should pass env vars to stdio transport', async () => {
+      const mockClient = { id: 'mock-client' };
+      const mockTransport = { id: 'mock-transport' };
+      const mockResult = {
+        verdict: 'pass' as const,
+        diagnostics: [],
+        errors: [],
+        warnings: [],
+        dependencies: [],
+        toolCount: 1,
+      };
+      const env = { API_KEY: 'test-key' };
+
+      vi.mocked(resolveTransportConfig).mockReturnValue({
+        transport: TransportTypes.STDIO,
+        url: undefined,
+        script: 'python server.py',
+        urlSource: 'config',
+        env,
+        authHeaders: undefined,
+      });
+
+      vi.mocked(establishConnection).mockResolvedValue({
+        client: mockClient as any,
+        transport: mockTransport as any,
+      });
+
+      vi.mocked(analyseTools).mockResolvedValue(mockResult);
+      vi.mocked(safeCloseConnection).mockResolvedValue(undefined);
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit(0)');
+      });
+
+      try {
+        await executeAnalyse({ env });
+      } catch (_error) {
+        // Expected to throw due to process.exit
+      }
+
+      expect(establishConnection).toHaveBeenCalledWith({
+        transport: TransportTypes.STDIO,
+        url: undefined,
+        script: 'python server.py',
+        urlSource: 'config',
+        env,
+        authHeaders: undefined,
+      });
+
+      exitSpy.mockRestore();
+    });
+
+    it('should pass auth headers to HTTP transport', async () => {
+      const mockClient = { id: 'mock-client' };
+      const mockTransport = { id: 'mock-transport' };
+      const mockResult = {
+        verdict: 'pass' as const,
+        diagnostics: [],
+        errors: [],
+        warnings: [],
+        dependencies: [],
+        toolCount: 1,
+      };
+      const authHeaders = { Authorization: 'Bearer token123' };
+
+      vi.mocked(resolveTransportConfig).mockReturnValue({
+        transport: TransportTypes.HTTP,
+        url: 'http://localhost:8000',
+        script: undefined,
+        urlSource: 'cli',
+        env: undefined,
+        authHeaders,
+      });
+
+      vi.mocked(establishConnection).mockResolvedValue({
+        client: mockClient as any,
+        transport: mockTransport as any,
+      });
+
+      vi.mocked(analyseTools).mockResolvedValue(mockResult);
+      vi.mocked(safeCloseConnection).mockResolvedValue(undefined);
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit(0)');
+      });
+
+      try {
+        await executeAnalyse({ authHeaders });
+      } catch (_error) {
+        // Expected to throw due to process.exit
+      }
+
+      expect(establishConnection).toHaveBeenCalledWith({
+        transport: TransportTypes.HTTP,
+        url: 'http://localhost:8000',
+        script: undefined,
+        urlSource: 'cli',
+        env: undefined,
+        authHeaders,
       });
 
       exitSpy.mockRestore();

@@ -28,6 +28,7 @@ import { getCurrentVersion } from '@/utils/version-checker';
  */
 export async function getConnectedClient(
   mcpUrl: string,
+  headers?: Record<string, string>,
   timeout: number = 10000
 ): Promise<{
   client: Client;
@@ -47,9 +48,18 @@ export async function getConnectedClient(
     }
   );
 
+  // Prepare request init with headers if provided
+  const requestInit: RequestInit | undefined = headers
+    ? {
+        headers,
+      }
+    : undefined;
+
   // Create HTTP transport using StreamableHTTPClientTransport
   // This properly handles SSE protocol and session requirements
-  const transport = new StreamableHTTPClientTransport(parsedUrl);
+  const transport = new StreamableHTTPClientTransport(parsedUrl, {
+    requestInit,
+  });
 
   // Set up error handler
   client.onerror = (): void => {
@@ -82,6 +92,7 @@ export async function getConnectedClient(
  */
 export async function connectHTTP(
   mcpUrl: string,
+  headers?: Record<string, string>,
   timeout: number = 5000
 ): Promise<MCPConnectionResult> {
   let client: Client | null = null;
@@ -106,9 +117,18 @@ export async function connectHTTP(
       }
     );
 
+    // Prepare request init with headers if provided
+    const requestInit: RequestInit | undefined = headers
+      ? {
+          headers,
+        }
+      : undefined;
+
     // Create HTTP transport using StreamableHTTPClientTransport
     // This properly handles SSE protocol and session requirements
-    transport = new StreamableHTTPClientTransport(parsedUrl);
+    transport = new StreamableHTTPClientTransport(parsedUrl, {
+      requestInit,
+    });
 
     // Set up error handler
     client.onerror = (): void => {
@@ -284,6 +304,7 @@ export async function connectHTTP(
  */
 export async function getConnectedStdioClient(
   command: string,
+  env?: Record<string, string>,
   timeout: number = 10000
 ): Promise<{
   client: Client;
@@ -309,11 +330,23 @@ export async function getConnectedStdioClient(
     }
   );
 
+  // Merge provided env vars with process.env (provided vars take precedence)
+  // Filter out undefined values from process.env
+  const processEnvFiltered: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined) {
+      processEnvFiltered[key] = value;
+    }
+  }
+  const mergedEnv = env
+    ? { ...processEnvFiltered, ...env }
+    : processEnvFiltered;
+
   // Create stdio transport
   const transport = new StdioClientTransport({
     command: executable,
     args,
-    env: process.env as Record<string, string>,
+    env: mergedEnv,
   });
 
   // Set up error handler
@@ -347,6 +380,7 @@ export async function getConnectedStdioClient(
  */
 export async function connectStdio(
   command: string,
+  env?: Record<string, string>,
   timeout: number = 5000
 ): Promise<MCPConnectionResult> {
   let transport: StdioClientTransport | null = null;
@@ -376,11 +410,23 @@ export async function connectStdio(
       }
     );
 
+    // Merge provided env vars with process.env (provided vars take precedence)
+    // Filter out undefined values from process.env
+    const processEnvFiltered: Record<string, string> = {};
+    for (const [key, value] of Object.entries(process.env)) {
+      if (value !== undefined) {
+        processEnvFiltered[key] = value;
+      }
+    }
+    const mergedEnv = env
+      ? { ...processEnvFiltered, ...env }
+      : processEnvFiltered;
+
     // Create stdio transport
     transport = new StdioClientTransport({
       command: executable,
       args,
-      env: process.env as Record<string, string>,
+      env: mergedEnv,
     });
 
     // Set up error handler
@@ -483,14 +529,24 @@ export async function connectMCP(
     if (!url) {
       throw new ConfigurationError('MCP URL is required for HTTP transport');
     }
-    return connectHTTP(url, timeout);
+    // Extract headers from options if available
+    const headers =
+      'headers' in options && options.headers
+        ? (options.headers as Record<string, string>)
+        : undefined;
+    return connectHTTP(url, headers, timeout);
   }
 
   if (transport === 'stdio') {
     if (!command) {
       throw new ConfigurationError('Command is required for stdio transport');
     }
-    return connectStdio(command, timeout);
+    // Extract env from options if available
+    const env =
+      'env' in options && options.env
+        ? (options.env as Record<string, string>)
+        : undefined;
+    return connectStdio(command, env, timeout);
   }
 
   throw new ConfigurationError(

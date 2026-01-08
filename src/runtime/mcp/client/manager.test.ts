@@ -127,6 +127,7 @@ describe('MCP Client Manager', () => {
 
         expect(getConnectedClient).toHaveBeenCalledWith(
           'http://localhost:3000',
+          undefined,
           10000
         );
         expect(mockEventEmitter.emit).toHaveBeenCalledWith(

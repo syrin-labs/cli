@@ -83,4 +83,8 @@ export interface MCPConnectionOptions {
   command?: Command | string;
   /** Timeout in milliseconds */
   timeout?: number;
+  /** Environment variables (for stdio transport) */
+  env?: Record<string, string>;
+  /** Authentication headers (for http transport) */
+  headers?: Record<string, string>;
 }

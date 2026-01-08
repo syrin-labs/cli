@@ -4,16 +4,14 @@
  */
 
 import { connectMCP } from '@/runtime/mcp';
-import { handleCommandError, resolveTransportConfig } from '@/cli/utils';
-import type { TransportType } from '@/config/types';
+import {
+  handleCommandError,
+  resolveTransportConfig,
+  type TransportCommandOptions,
+} from '@/cli/utils';
 import { displayTestResults } from '@/presentation/test-ui';
 
-interface TestCommandOptions {
-  transport?: TransportType;
-  url?: string;
-  script?: string;
-  projectRoot?: string;
-}
+interface TestCommandOptions extends TransportCommandOptions {}
 
 /**
  * Execute the test command.
@@ -23,13 +21,16 @@ interface TestCommandOptions {
 export async function executeTest(options: TestCommandOptions): Promise<void> {
   try {
     // Resolve transport configuration from options and config
-    const { transport, url, script } = resolveTransportConfig(options);
+    const { transport, url, script, env, authHeaders } =
+      resolveTransportConfig(options);
 
     // Perform the test
     const result = await connectMCP({
       transport,
       url,
       command: script,
+      env,
+      headers: authHeaders,
     });
 
     // Display results using Ink UI

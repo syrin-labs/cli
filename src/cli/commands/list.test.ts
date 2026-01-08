@@ -4,15 +4,12 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { executeList } from './list';
+import { listTools, listResources, listPrompts } from '@/runtime/mcp';
 import {
-  getConnectedClient,
-  getConnectedStdioClient,
-  listTools,
-  listResources,
-  listPrompts,
-  closeConnection,
-} from '@/runtime/mcp';
-import { resolveTransportConfig } from '@/cli/utils';
+  resolveTransportConfig,
+  establishConnection,
+  safeCloseConnection,
+} from '@/cli/utils';
 import { ListTypes, TransportTypes } from '@/constants';
 
 // Mock dependencies
@@ -22,6 +19,8 @@ vi.mock('@/cli/utils', async () => {
   return {
     ...actual,
     resolveTransportConfig: vi.fn(),
+    establishConnection: vi.fn(),
+    safeCloseConnection: vi.fn(),
     handleCommandError: vi.fn(error => {
       throw error;
     }),
@@ -58,9 +57,11 @@ describe('executeList', () => {
         url: undefined,
         script: 'python server.py',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedStdioClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
@@ -75,14 +76,21 @@ describe('executeList', () => {
         ],
       });
 
-      vi.mocked(closeConnection).mockResolvedValue(undefined);
+      vi.mocked(safeCloseConnection).mockResolvedValue(undefined);
 
       await executeList({});
 
       expect(resolveTransportConfig).toHaveBeenCalled();
-      expect(getConnectedStdioClient).toHaveBeenCalledWith('python server.py');
+      expect(establishConnection).toHaveBeenCalledWith({
+        transport: TransportTypes.STDIO,
+        url: undefined,
+        script: 'python server.py',
+        urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
+      });
       expect(listTools).toHaveBeenCalledWith(mockClient);
-      expect(closeConnection).toHaveBeenCalledWith(mockTransport);
+      expect(safeCloseConnection).toHaveBeenCalledWith(mockTransport);
     });
 
     it('should list resources when type is specified', async () => {
@@ -96,7 +104,7 @@ describe('executeList', () => {
         urlSource: 'cli',
       });
 
-      vi.mocked(getConnectedClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
@@ -127,7 +135,7 @@ describe('executeList', () => {
         urlSource: 'config',
       });
 
-      vi.mocked(getConnectedStdioClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
@@ -155,9 +163,11 @@ describe('executeList', () => {
         url: 'http://localhost:8000',
         script: undefined,
         urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
@@ -166,8 +176,14 @@ describe('executeList', () => {
 
       await executeList({ transport: TransportTypes.HTTP });
 
-      expect(getConnectedClient).toHaveBeenCalledWith('http://localhost:8000');
-      expect(getConnectedStdioClient).not.toHaveBeenCalled();
+      expect(establishConnection).toHaveBeenCalledWith({
+        transport: TransportTypes.HTTP,
+        url: 'http://localhost:8000',
+        script: undefined,
+        urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
+      });
     });
 
     it('should always close connection even if listing fails', async () => {
@@ -179,9 +195,11 @@ describe('executeList', () => {
         url: undefined,
         script: 'python server.py',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedStdioClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
@@ -190,7 +208,7 @@ describe('executeList', () => {
 
       await expect(executeList({})).rejects.toThrow('List failed');
 
-      expect(closeConnection).toHaveBeenCalledWith(mockTransport);
+      expect(safeCloseConnection).toHaveBeenCalledWith(mockTransport);
     });
   });
 
@@ -203,7 +221,7 @@ describe('executeList', () => {
         urlSource: 'cli',
       });
 
-      vi.mocked(getConnectedClient).mockRejectedValue(
+      vi.mocked(establishConnection).mockRejectedValue(
         new Error('fetch failed: ECONNREFUSED')
       );
 
@@ -220,7 +238,7 @@ describe('executeList', () => {
         urlSource: 'config',
       });
 
-      vi.mocked(getConnectedStdioClient).mockRejectedValue(
+      vi.mocked(establishConnection).mockRejectedValue(
         new Error('spawn nonexistent-command ENOENT')
       );
 
@@ -237,7 +255,7 @@ describe('executeList', () => {
         urlSource: 'cli',
       });
 
-      vi.mocked(getConnectedClient).mockRejectedValue(
+      vi.mocked(establishConnection).mockRejectedValue(
         new Error('Connection timeout')
       );
 
@@ -257,9 +275,11 @@ describe('executeList', () => {
         url: 'http://custom-url:9000',
         script: undefined,
         urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
@@ -286,9 +306,11 @@ describe('executeList', () => {
         url: undefined,
         script: 'custom-script.sh',
         urlSource: 'config',
+        env: undefined,
+        authHeaders: undefined,
       });
 
-      vi.mocked(getConnectedStdioClient).mockResolvedValue({
+      vi.mocked(establishConnection).mockResolvedValue({
         client: mockClient as any,
         transport: mockTransport as any,
       });
@@ -303,6 +325,72 @@ describe('executeList', () => {
       expect(resolveTransportConfig).toHaveBeenCalledWith({
         transport: TransportTypes.STDIO,
         script: 'custom-script.sh',
+      });
+    });
+
+    it('should pass env vars to stdio transport', async () => {
+      const mockClient = { id: 'mock-client' };
+      const mockTransport = { id: 'mock-transport' };
+      const env = { API_KEY: 'test-key' };
+
+      vi.mocked(resolveTransportConfig).mockReturnValue({
+        transport: TransportTypes.STDIO,
+        url: undefined,
+        script: 'python server.py',
+        urlSource: 'config',
+        env,
+        authHeaders: undefined,
+      });
+
+      vi.mocked(establishConnection).mockResolvedValue({
+        client: mockClient as any,
+        transport: mockTransport as any,
+      });
+
+      vi.mocked(listTools).mockResolvedValue({ tools: [] });
+
+      await executeList({ env });
+
+      expect(establishConnection).toHaveBeenCalledWith({
+        transport: TransportTypes.STDIO,
+        url: undefined,
+        script: 'python server.py',
+        urlSource: 'config',
+        env,
+        authHeaders: undefined,
+      });
+    });
+
+    it('should pass auth headers to HTTP transport', async () => {
+      const mockClient = { id: 'mock-client' };
+      const mockTransport = { id: 'mock-transport' };
+      const authHeaders = { Authorization: 'Bearer token123' };
+
+      vi.mocked(resolveTransportConfig).mockReturnValue({
+        transport: TransportTypes.HTTP,
+        url: 'http://localhost:8000',
+        script: undefined,
+        urlSource: 'cli',
+        env: undefined,
+        authHeaders,
+      });
+
+      vi.mocked(establishConnection).mockResolvedValue({
+        client: mockClient as any,
+        transport: mockTransport as any,
+      });
+
+      vi.mocked(listTools).mockResolvedValue({ tools: [] });
+
+      await executeList({ authHeaders });
+
+      expect(establishConnection).toHaveBeenCalledWith({
+        transport: TransportTypes.HTTP,
+        url: 'http://localhost:8000',
+        script: undefined,
+        urlSource: 'cli',
+        env: undefined,
+        authHeaders,
       });
     });
   });

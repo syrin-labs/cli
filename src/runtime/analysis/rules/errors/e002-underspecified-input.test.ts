@@ -227,10 +227,11 @@ describe('E002: Underspecified Required Input', () => {
 
     const result = await analyseTools(mockClient);
 
-    const e002Errors = result.errors.filter(e => e.code === 'E002');
-    expect(e002Errors.length).toBeGreaterThan(0);
-    expect(e002Errors[0]?.tool).toBe('order_food');
-    expect(e002Errors[0]?.field).toBe('weather');
-    expect(e002Errors[0]?.message).toContain('Optional parameter');
+    // Optional parameters without descriptions are flagged as warnings, not errors
+    const e002Warnings = result.warnings.filter(e => e.code === 'E002');
+    expect(e002Warnings.length).toBeGreaterThan(0);
+    expect(e002Warnings[0]?.tool).toBe('order_food');
+    expect(e002Warnings[0]?.field).toBe('weather');
+    expect(e002Warnings[0]?.message).toContain('Optional parameter');
   });
 });
