@@ -37,19 +37,19 @@ Most problems are discovered **after** deployment.
 ### Quick start
 
 ```bash
-npx @syrin/syrin init
+npx @syrin/cli init
 ```
 
 ### Global install
 
 ```bash
-npm install -g @syrin/syrin
+npm install -g @syrin/cli
 ```
 
 ### Local install (recommended for CI)
 
 ```bash
-npm install @syrin/syrin
+npm install @syrin/cli
 ```
 
 Requirements:
