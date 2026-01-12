@@ -94,7 +94,7 @@ describe('executeInit', () => {
 
         vi.mocked(getDefaultInitOptions).mockReturnValue(defaultOptions);
         vi.mocked(generateConfigFile).mockReturnValue(
-          path.join(tempDir, Paths.SYRIN_DIR, Paths.CONFIG_FILE)
+          path.join(tempDir, Paths.CONFIG_FILE)
         );
         vi.mocked(ensureGitignorePattern).mockResolvedValue(true);
 
@@ -106,7 +106,7 @@ describe('executeInit', () => {
         expect(promptInitOptions).not.toHaveBeenCalled();
         expect(generateConfigFile).toHaveBeenCalledWith(
           defaultOptions,
-          expect.stringContaining(Paths.SYRIN_DIR)
+          expect.stringContaining(path.basename(tempDir))
         );
       });
 
@@ -121,7 +121,7 @@ describe('executeInit', () => {
 
         vi.mocked(getDefaultInitOptions).mockReturnValue(defaultOptions);
         vi.mocked(generateConfigFile).mockReturnValue(
-          path.join(tempDir, Paths.SYRIN_DIR, Paths.CONFIG_FILE)
+          path.join(tempDir, Paths.CONFIG_FILE)
         );
         vi.mocked(ensureGitignorePattern).mockResolvedValue(true);
 
@@ -152,7 +152,7 @@ describe('executeInit', () => {
 
         vi.mocked(getDefaultInitOptions).mockReturnValue(defaultOptions);
         vi.mocked(generateConfigFile).mockReturnValue(
-          path.join(tempDir, Paths.SYRIN_DIR, Paths.CONFIG_FILE)
+          path.join(tempDir, Paths.CONFIG_FILE)
         );
         vi.mocked(ensureGitignorePattern).mockRejectedValue(
           new Error('Permission denied')
@@ -176,7 +176,7 @@ describe('executeInit', () => {
 
         vi.mocked(promptInitOptions).mockResolvedValue(userOptions);
         vi.mocked(generateConfigFile).mockReturnValue(
-          path.join(tempDir, Paths.SYRIN_DIR, Paths.CONFIG_FILE)
+          path.join(tempDir, Paths.CONFIG_FILE)
         );
         vi.mocked(ensureGitignorePattern).mockResolvedValue(true);
 
@@ -185,7 +185,7 @@ describe('executeInit', () => {
         expect(promptInitOptions).toHaveBeenCalled();
         expect(generateConfigFile).toHaveBeenCalledWith(
           userOptions,
-          expect.stringContaining(Paths.SYRIN_DIR)
+          expect.stringContaining(path.basename(tempDir))
         );
       });
 
@@ -223,7 +223,7 @@ describe('executeInit', () => {
 
         vi.mocked(getDefaultInitOptions).mockReturnValue(defaultOptions);
         vi.mocked(generateConfigFile).mockReturnValue(
-          path.join(customRoot, Paths.SYRIN_DIR, Paths.CONFIG_FILE)
+          path.join(customRoot, Paths.CONFIG_FILE)
         );
         vi.mocked(ensureGitignorePattern).mockResolvedValue(true);
 
@@ -232,7 +232,7 @@ describe('executeInit', () => {
         expect(isProjectInitialized).toHaveBeenCalledWith(customRoot);
         expect(generateConfigFile).toHaveBeenCalledWith(
           defaultOptions,
-          path.join(customRoot, Paths.SYRIN_DIR)
+          customRoot
         );
       });
     });

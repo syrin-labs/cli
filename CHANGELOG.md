@@ -1,5 +1,55 @@
 # CHANGELOG
 
+## v1.3.0
+
+### Breaking Changes
+
+1. **Config File Location Changed** - The configuration file has been moved from `.syrin/config.yaml` to `syrin.yaml` at the project root. This is the first breaking change in Syrin.
+   - When running `syrin init`, the config file will now be created as `syrin.yaml` in the project root
+   - Existing projects using `.syrin/config.yaml` will need to migrate their config file to the new location
+   - The `.syrin` directory is still used for events, dev history, and data files
+
+### Features
+
+1. **Tool-Level Structural Safety Validation (`syrin test`)** - New default behavior for `syrin test` command that validates tool contracts through sandboxed execution.
+   - **Tool Unit Contracts**: Define behavioral guarantees for each tool in YAML files (`tools/<tool-name>.yaml`)
+   - **Sandboxed Execution**: Tools are tested in isolated environments with resource limits and I/O monitoring
+   - **Behavioral Observation**: Detects side effects, non-determinism, output explosions, hidden dependencies, and unbounded execution
+   - **Process Reuse**: Optimized for performance - MCP server started once, all tools tested, then closed (critical for 100+ tools)
+   - **Synthetic Input Generation**: Automatically generates test inputs from JSON Schema definitions
+   - **Contract-Defined Tests**: Support for explicit test cases in contract files
+   - **CI-Friendly**: JSON output format and proper exit codes for CI/CD integration
+
+2. **New Behavioral Error Rules (E012-E016)**:
+   - **E012: Side Effect Detected** - Tool attempts filesystem writes to project files
+   - **E013: Non-Deterministic Output** - Tool produces different outputs for same input
+   - **E014: Output Explosion** - Tool output exceeds declared size limit
+   - **E015: Hidden Dependency** - Tool calls other tools without declaring them
+   - **E016: Unbounded Execution** - Tool execution timed out or failed to terminate
+
+3. **New Behavioral Warning Rules (W021-W023)**:
+   - **W021: Weak Schema** - Contract schema is too loose or doesn't match MCP tool schema
+   - **W022: High Entropy Output** - Tool output has high entropy (random, unpredictable)
+   - **W023: Unstable Defaults** - Tool behavior changes significantly with default values
+
+4. **Enhanced `syrin test` Command**:
+   - **Default Mode**: Tool validation (new default behavior)
+   - **Connection Testing**: Available via `--connection` flag (legacy behavior)
+   - **Options**: `--tool`, `--strict`, `--json`, `--mcp-root`, `--timeout`, `--memory-limit`, `--max-output-size`, `--determinism-runs`
+   - **Strict Mode**: `--strict` flag treats warnings as errors
+   - **JSON Output**: `--json` flag for CI integration
+
+5. **Configuration Enhancements**:
+   - New `check` section in `syrin.yaml` for tool validation configuration
+   - Configurable parameters: `timeout_ms`, `memory_limit_mb`, `mcp_root`, `tools_dir`, `max_output_size_kb`, `determinism_runs`, `strict_mode`
+
+### Improvements
+
+1. **Performance**: Process reuse strategy significantly reduces overhead when testing many tools (100+ tools in 1-3 minutes)
+2. **Safety**: Network calls are allowed but monitored for side effects and non-determinism (does not block legitimate API calls)
+3. **Flexibility**: Supports both contract-defined tests and synthetic input generation from schemas
+4. **Developer Experience**: Clear error messages with suggestions for fixing issues
+
 ## v1.2.2
 
 ### Bug Fixes

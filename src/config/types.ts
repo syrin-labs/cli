@@ -1,6 +1,6 @@
 /**
  * Configuration type definitions for Syrin.
- * These types represent the structure of the .syrin/config.yaml file.
+ * These types represent the structure of the syrin.yaml file.
  */
 
 import type {
@@ -24,6 +24,27 @@ export interface LLMProviderConfig {
   default?: boolean;
 }
 
+export interface CheckConfig {
+  /** Timeout for tool execution in milliseconds */
+  timeout_ms?: number;
+  /** Memory limit for sandboxed processes in MB */
+  memory_limit_mb?: number;
+  /** Tools directory name (relative to project root, default: "tools") */
+  tools_dir?: string;
+  /** Maximum output size in KB (default: 50) */
+  max_output_size_kb?: number;
+  /** Number of runs for determinism checking (default: 3) */
+  determinism_runs?: number;
+  /** Enable retry scenario testing (default: true) */
+  test_retries?: boolean;
+  /** Maximum retries to test (default: 3) */
+  max_retries?: number;
+  /** Retry delay in milliseconds (default: 100) */
+  retry_delay_ms?: number;
+  /** Strict mode: warnings become errors (default: false) */
+  strict_mode?: boolean;
+}
+
 export interface SyrinConfig {
   /** Configuration version */
   version: SyrinVersion;
@@ -39,6 +60,8 @@ export interface SyrinConfig {
   script?: ScriptCommand;
   /** LLM provider configurations */
   llm: Record<string, LLMProviderConfig>;
+  /** Tool testing configuration (v1.3.0) */
+  check?: CheckConfig;
 }
 
 /**

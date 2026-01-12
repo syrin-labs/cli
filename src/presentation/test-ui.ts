@@ -1,12 +1,30 @@
 /**
- * Test Results UI for MCP Connection Testing.
- * Provides a minimalistic, easy-to-read display of connection test results.
+ * Test Results UI for MCP Connection Testing and Tool Validation.
+ * Provides a minimalistic, easy-to-read display of connection test results
+ * and tool validation results.
  */
 
 import type { MCPConnectionResult } from '@/runtime/mcp/types';
 import type { TransportType } from '@/config/types';
+import type { TestOrchestratorResult } from '@/runtime/test/orchestrator';
 import { getVersionDisplayString } from '@/utils/version-display';
 import { log } from '@/utils/logger';
+
+/**
+ * Context information for tool errors.
+ */
+export interface ToolErrorContext {
+  testName?: string;
+  testInput?: Record<string, unknown>;
+  expectedOutputSchema?: string;
+  parsedError?: {
+    field?: string;
+    message?: string;
+    inputValue?: string;
+    inputType?: string;
+    errorType?: string;
+  };
+}
 
 export interface TestResultsUIOptions {
   /** Connection test result to display */
@@ -266,4 +284,221 @@ export async function displayTestResults(
     }
   }
   log.blank();
+}
+
+/**
+ * Format test results for CI output (minimal).
+ */
+export function formatCIResults(result: TestOrchestratorResult): void {
+  const errors = result.diagnostics.filter(d => d.severity === 'error');
+  const warnings = result.diagnostics.filter(d => d.severity === 'warning');
+
+  // CI mode: minimal output, exit codes handled by caller
+  if (result.verdict === 'fail') {
+    console.log(
+      `✗ Test failed: ${result.toolsFailed} tool(s) failed, ${errors.length} error(s), ${warnings.length} warning(s)`
+    );
+    // Print errors only (no warnings in CI)
+    for (const error of errors) {
+      console.log(`${error.code}: ${error.message}`);
+    }
+  } else {
+    console.log(
+      `✓ Test passed: ${result.toolsTested} tool(s) tested, ${result.toolsPassed} passed`
+    );
+    if (warnings.length > 0) {
+      console.log(`  ${warnings.length} warning(s) (non-blocking)`);
+    }
+  }
+}
+
+/**
+ * Format test results for CLI output.
+ */
+export function formatCLIResults(result: TestOrchestratorResult): void {
+  log.blank();
+  log.heading('Tool Validation Results');
+  log.blank();
+
+  // Overall verdict
+  if (result.verdict === 'pass') {
+    log.checkmark('All tools passed validation');
+  } else if (result.verdict === 'pass-with-warnings') {
+    log.warn('Tools passed with warnings');
+  } else {
+    log.xmark('Tool validation failed');
+  }
+
+  log.blank();
+
+  // Summary
+  log.heading('Summary:');
+  log.labelValue('  Tools tested:', String(result.toolsTested));
+  log.labelValue('  Tools passed:', String(result.toolsPassed));
+  log.labelValue('  Tools failed:', String(result.toolsFailed));
+
+  const errors = result.diagnostics.filter(d => d.severity === 'error');
+  const warnings = result.diagnostics.filter(d => d.severity === 'warning');
+
+  if (errors.length > 0) {
+    log.labelValue('  Errors:', String(errors.length));
+  }
+  if (warnings.length > 0) {
+    log.labelValue('  Warnings:', String(warnings.length));
+  }
+
+  log.blank();
+
+  // Tool results
+  if (result.toolResults.length > 0) {
+    log.heading('Tool Results:');
+    for (const toolResult of result.toolResults) {
+      log.blank();
+      const status = toolResult.passed ? log.tick() : log.cross();
+      log.plain(`  ${status} ${log.styleText(toolResult.toolName, 'bold')}`);
+
+      // Summary
+      log.labelValue(
+        '    Executions:',
+        `${toolResult.summary.successfulExecutions}/${toolResult.summary.totalExecutions} successful`
+      );
+      if (
+        toolResult.summary.testsPassed !== undefined &&
+        toolResult.summary.testsFailed !== undefined
+      ) {
+        const totalTests =
+          toolResult.summary.testsPassed + toolResult.summary.testsFailed;
+        log.labelValue(
+          '    Tests:',
+          `${toolResult.summary.testsPassed}/${totalTests} passed (expectations matched)`
+        );
+      }
+      if (toolResult.summary.failedExecutions > 0) {
+        log.labelValue(
+          '    Failed:',
+          String(toolResult.summary.failedExecutions)
+        );
+      }
+      if (toolResult.summary.timedOutExecutions > 0) {
+        log.labelValue(
+          '    Timed out:',
+          String(toolResult.summary.timedOutExecutions)
+        );
+      }
+
+      // Diagnostics
+      if (toolResult.diagnostics.length > 0) {
+        const toolErrors = toolResult.diagnostics.filter(
+          d => d.severity === 'error'
+        );
+        const toolWarnings = toolResult.diagnostics.filter(
+          d => d.severity === 'warning'
+        );
+
+        if (toolErrors.length > 0) {
+          log.plain('    Errors:');
+          for (const error of toolErrors) {
+            log.error(`      ${error.code}: ${error.message}`);
+
+            // Show test context if available
+            const context = error.context as ToolErrorContext | undefined;
+
+            if (context?.testName) {
+              log.plain(`        Test: ${context.testName}`);
+            }
+
+            if (
+              context?.testInput &&
+              Object.keys(context.testInput).length > 0
+            ) {
+              const inputStr = JSON.stringify(context.testInput, null, 2)
+                .split('\n')
+                .map((line, idx) => (idx === 0 ? line : `        ${line}`))
+                .join('\n');
+              log.plain(`        Input: ${inputStr}`);
+            }
+
+            if (context?.expectedOutputSchema) {
+              log.plain(
+                `        Expected output schema: ${context.expectedOutputSchema}`
+              );
+            }
+
+            // Show parsed error details if available
+            if (context?.parsedError) {
+              const parsed = context.parsedError;
+              if (parsed.field) {
+                if (parsed.errorType === 'missing_argument') {
+                  log.plain(
+                    `        Field "${parsed.field}" is required but was not provided`
+                  );
+                } else if (parsed.inputType) {
+                  log.plain(
+                    `        Field "${parsed.field}" received ${parsed.inputType}${parsed.inputValue && parsed.inputValue !== '{}' ? ` (${parsed.inputValue})` : ''}`
+                  );
+                }
+              }
+            }
+
+            if (error.suggestion) {
+              log.plain(`        Suggestion: ${error.suggestion}`);
+            }
+
+            log.blank();
+          }
+        }
+
+        if (toolWarnings.length > 0) {
+          log.plain('    Warnings:');
+          for (const warning of toolWarnings) {
+            log.warn(`      ${warning.code}: ${warning.message}`);
+            if (warning.suggestion) {
+              log.plain(`        Suggestion: ${warning.suggestion}`);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  log.blank();
+}
+
+/**
+ * Format test results as JSON.
+ */
+export function formatJSONResults(result: TestOrchestratorResult): string {
+  const json = {
+    verdict: result.verdict,
+    summary: {
+      toolsTested: result.toolsTested,
+      toolsPassed: result.toolsPassed,
+      toolsFailed: result.toolsFailed,
+      errors: result.diagnostics.filter(d => d.severity === 'error').length,
+      warnings: result.diagnostics.filter(d => d.severity === 'warning').length,
+    },
+    diagnostics: result.diagnostics.map(d => ({
+      code: d.code,
+      severity: d.severity,
+      message: d.message,
+      tool: d.tool,
+      field: d.field,
+      suggestion: d.suggestion,
+      context: d.context,
+    })),
+    tools: result.toolResults.map(tr => ({
+      toolName: tr.toolName,
+      passed: tr.passed,
+      summary: tr.summary,
+      diagnostics: tr.diagnostics.map(d => ({
+        code: d.code,
+        severity: d.severity,
+        message: d.message,
+        suggestion: d.suggestion,
+        context: d.context,
+      })),
+    })),
+  };
+
+  return JSON.stringify(json, null, 2);
 }

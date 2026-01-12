@@ -36,7 +36,7 @@ export function getCurrentVersion(): string {
     // Path to package.json: from dist/utils/ -> ../../package.json
     // This works for both:
     // - Development: dist/utils/ -> ../../package.json (root)
-    // - Installed: node_modules/@ankan-ai/syrin/dist/utils/ -> ../../package.json (package root)
+    // - Installed: node_modules/@syrin/cli/dist/utils/ -> ../../package.json (package root)
     const packageJsonPath = path.join(currentDir, '../../package.json');
 
     if (fs.existsSync(packageJsonPath)) {

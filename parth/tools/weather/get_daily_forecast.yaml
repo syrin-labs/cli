@@ -1,0 +1,81 @@
+# Tool contract for get_daily_forecast
+# This tool retrieves daily weather forecast for a location using Open-Meteo API
+
+version: 1
+tool: get_daily_forecast
+
+contract:
+  input_schema: GetDailyForecastRequest
+  output_schema: DailyForecastResponse
+
+guarantees:
+  side_effects: none
+  max_output_size: 50kb
+  timeout: 10s
+
+tests:
+  # Test: Get daily forecast for a city (default 7 days)
+  - name: get_daily_forecast_city
+    input:
+      location: 'New York'
+    expect:
+      output_schema: DailyForecastResponse
+
+  # Test: Get daily forecast for coordinates with custom days
+  - name: get_daily_forecast_coordinates_custom_days
+    input:
+      location: '52.52,13.405'
+      days: 5
+    expect:
+      output_schema: DailyForecastResponse
+
+  # Test: Get daily forecast for 1 day (minimum)
+  - name: get_daily_forecast_one_day
+    input:
+      location: 'Tokyo'
+      days: 1
+    expect:
+      output_schema: DailyForecastResponse
+
+  # Test: Get daily forecast for 16 days (maximum)
+  - name: get_daily_forecast_max_days
+    input:
+      location: 'London'
+      days: 16
+    expect:
+      output_schema: DailyForecastResponse
+
+  # Test: Invalid days value (boundary: 17 days, first invalid value after maximum)
+  - name: get_daily_forecast_invalid_days_boundary
+    input:
+      location: 'London'
+      days: 17
+    expect:
+      error:
+        type: input_validation
+
+  # Test: Invalid days value (too high) should raise error
+  - name: get_daily_forecast_invalid_days_high
+    input:
+      location: 'New York'
+      days: 20
+    expect:
+      error:
+        type: input_validation
+
+  # Test: Invalid days value (too low) should raise error
+  - name: get_daily_forecast_invalid_days_low
+    input:
+      location: 'New York'
+      days: 0
+    expect:
+      error:
+        type: input_validation
+
+  # Test: Invalid location should raise error
+  - name: get_daily_forecast_invalid_location
+    input:
+      location: '999,999'
+    expect:
+      error:
+        type: execution_error

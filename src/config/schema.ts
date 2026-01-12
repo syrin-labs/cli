@@ -47,6 +47,23 @@ const LLMProviderSchema = z
   );
 
 /**
+ * Schema for check configuration (v1.3.0).
+ */
+const CheckConfigSchema = z
+  .object({
+    timeout_ms: z.number().int().positive().optional(),
+    memory_limit_mb: z.number().int().positive().optional(),
+    tools_dir: z.string().min(1).optional(),
+    max_output_size_kb: z.number().int().positive().optional(),
+    determinism_runs: z.number().int().positive().min(2).optional(),
+    test_retries: z.boolean().optional(),
+    max_retries: z.number().int().min(1).max(10).optional(),
+    retry_delay_ms: z.number().int().nonnegative().optional(),
+    strict_mode: z.boolean().optional(),
+  })
+  .optional();
+
+/**
  * Main configuration schema.
  */
 export const ConfigSchema = z
@@ -62,6 +79,7 @@ export const ConfigSchema = z
       .refine(obj => Object.keys(obj).length > 0, {
         message: 'At least one LLM provider is required',
       }),
+    check: CheckConfigSchema,
   })
   .refine(
     data => {
@@ -195,6 +213,7 @@ export function validateConfig(config: unknown): SyrinConfig {
           },
         ])
       ),
+      check: parsed.check,
     };
 
     return validated;

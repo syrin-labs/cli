@@ -1,6 +1,6 @@
 /**
  * Configuration file loader.
- * Loads and parses the .syrin/config.yaml file.
+ * Loads and parses the syrin.yaml file.
  */
 
 import * as fs from 'fs';
@@ -12,13 +12,13 @@ import type { SyrinConfig } from './types';
 import { Paths, Messages, ToolCommands } from '@/constants';
 
 /**
- * Load configuration from .syrin/config.yaml file.
+ * Load configuration from syrin.yaml file.
  * @param projectRoot - Root directory of the project (defaults to current working directory)
  * @returns Loaded and validated configuration
  * @throws {ConfigurationError} If config file is missing or invalid
  */
 export function loadConfig(projectRoot: string = process.cwd()): SyrinConfig {
-  const configPath = path.join(projectRoot, Paths.SYRIN_DIR, Paths.CONFIG_FILE);
+  const configPath = path.join(projectRoot, Paths.CONFIG_FILE);
 
   // Check if config file exists
   if (!fs.existsSync(configPath)) {
@@ -66,6 +66,6 @@ export function loadConfig(projectRoot: string = process.cwd()): SyrinConfig {
  * @returns true if config file exists
  */
 export function configExists(projectRoot: string = process.cwd()): boolean {
-  const configPath = path.join(projectRoot, Paths.SYRIN_DIR, Paths.CONFIG_FILE);
+  const configPath = path.join(projectRoot, Paths.CONFIG_FILE);
   return fs.existsSync(configPath);
 }

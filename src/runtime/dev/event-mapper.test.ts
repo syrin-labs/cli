@@ -7,6 +7,7 @@ import { DevEventMapper } from './event-mapper';
 import type { EventEmitter, EventSubscriber } from '@/events/emitter';
 import type { EventEnvelope } from '@/events/types';
 import type { ChatUI } from '@/presentation/dev/chat-ui';
+import { ERROR_CODES } from '@/runtime/analysis/rules/error-codes';
 import {
   LLMProposalEventType,
   ValidationEventType,
@@ -201,7 +202,7 @@ describe('DevEventMapper', () => {
         payload: {
           tool_name: 'get_user',
           validation_errors: [
-            { code: 'E001', message: 'Missing output schema' },
+            { code: ERROR_CODES.E001, message: 'Missing output schema' },
           ],
         },
         timestamp: '2024-01-01T10:00:00.000Z',

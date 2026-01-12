@@ -1,0 +1,26 @@
+# Example tool contract: fetch_user
+# This demonstrates a simple tool that fetches user data from an API
+
+version: 1
+tool: fetch_user
+
+contract:
+  input_schema: FetchUserRequest
+  output_schema: User
+
+guarantees:
+  side_effects: none
+  max_output_size: 10kb
+
+tests:
+  - name: fetch_existing_user
+    input:
+      user_id: '123'
+    expect:
+      output_schema: User
+
+  - name: fetch_nonexistent_user
+    input:
+      user_id: '999'
+    expect:
+      output_schema: User

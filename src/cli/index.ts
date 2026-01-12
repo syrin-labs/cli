@@ -97,22 +97,47 @@ export function setupCLI(): void {
   // test command
   program
     .command('test')
-    .description('Test MCP connection and validate protocol compliance')
+    .description(
+      'Validate tool contracts (default) or test MCP connection (--connection)'
+    )
     .argument(
       '[url-or-script]',
-      'MCP URL (for http transport) or script (for stdio transport). If not provided, uses value from config.yaml'
+      'MCP URL (for http transport) or script (for stdio transport). Only used with --connection flag'
+    )
+    .option(
+      '--connection',
+      'Test MCP connection only (legacy behavior). Without this flag, validates tool contracts.'
+    )
+    .option(
+      '--tool <name>',
+      'Test specific tool only (for tool validation mode)'
+    )
+    .option(
+      '--path <path>',
+      'Test all tools in a specific path (relative to tools directory, e.g., "weather" or "server")'
+    )
+    .option('--strict', 'Treat warnings as errors')
+    .option('--json', 'Output results as JSON')
+    .option('--ci', 'CI mode: minimal output, exit code 1 on errors')
+    .option(
+      '--show-errors',
+      'Show sandbox process error output (stderr from MCP server)'
+    )
+    .option(
+      '--tools-dir <path>',
+      'Tools directory (overrides config, default: tools)'
     )
     .option(
       '--transport <type>',
-      'Transport type (http or stdio). If not provided, uses transport from config.yaml'
+      'Transport type (http or stdio). Only used with --connection flag'
     )
     .option(
       '--url <url>',
-      'MCP URL to test (for http transport). If not provided, uses URL from config.yaml or positional argument'
+      'MCP URL to test (for http transport). Only used with --connection flag'
     )
     .option(
       '--script <script>',
-      'Script to test (for stdio transport). If not provided, uses script from config.yaml or positional argument'
+      'Script to test (for stdio transport). Only used with --connection flag'
     )
     .option(
       '--project-root <path>',
@@ -138,6 +163,14 @@ export function setupCLI(): void {
       async (
         urlOrScript: string | undefined,
         options: {
+          connection?: boolean;
+          tool?: string;
+          path?: string;
+          strict?: boolean;
+          json?: boolean;
+          ci?: boolean;
+          showErrors?: boolean;
+          toolsDir?: string;
           transport?: string;
           url?: string;
           script?: string;
@@ -147,33 +180,78 @@ export function setupCLI(): void {
         }
       ) => {
         try {
-          // Determine if positional argument is URL or script based on transport
-          let finalUrl = options.url;
-          let finalScript = options.script;
-
-          if (urlOrScript) {
-            const transport = options.transport as 'http' | 'stdio' | undefined;
-            if (
-              transport === 'http' ||
-              (!transport && urlOrScript.startsWith('http'))
-            ) {
-              finalUrl = urlOrScript;
-            } else {
-              finalScript = urlOrScript;
-            }
-          }
-
           const { parseEnvOptions, parseAuthHeaderOptions } =
             await import('@/cli/utils/option-parsers');
 
-          await executeTest({
-            transport: options.transport as 'http' | 'stdio' | undefined,
-            url: finalUrl,
-            script: finalScript,
-            projectRoot: options.projectRoot,
-            env: parseEnvOptions(options.env),
-            authHeaders: parseAuthHeaderOptions(options.authHeader),
-          });
+          // If --connection flag, use legacy connection testing
+          if (options.connection) {
+            // Check for conflicting options that will be ignored
+            const ignoredOptions: string[] = [];
+            if (options.tool) ignoredOptions.push('--tool');
+            if (options.strict) ignoredOptions.push('--strict');
+            if (options.toolsDir) ignoredOptions.push('--tools-dir');
+
+            if (ignoredOptions.length > 0) {
+              console.warn(
+                `Warning: The following options are ignored when using --connection mode: ${ignoredOptions.join(', ')}`
+              );
+            }
+
+            // Determine if positional argument is URL or script based on transport
+            let finalUrl = options.url;
+            let finalScript = options.script;
+
+            if (urlOrScript) {
+              const transport = options.transport as
+                | 'http'
+                | 'stdio'
+                | undefined;
+              if (
+                transport === 'http' ||
+                (!transport && urlOrScript.startsWith('http'))
+              ) {
+                finalUrl = urlOrScript;
+              } else {
+                finalScript = urlOrScript;
+              }
+            }
+
+            await executeTest({
+              connection: true,
+              transport: options.transport as 'http' | 'stdio' | undefined,
+              url: finalUrl,
+              script: finalScript,
+              projectRoot: options.projectRoot,
+              env: parseEnvOptions(options.env),
+              authHeaders: parseAuthHeaderOptions(options.authHeader),
+            });
+          } else {
+            // Tool validation mode - check for unused connection-related options
+            const unusedOptions: string[] = [];
+            if (urlOrScript)
+              unusedOptions.push('positional URL/script argument');
+            if (options.transport && !options.url && !options.script)
+              unusedOptions.push('--transport');
+
+            if (unusedOptions.length > 0) {
+              console.warn(
+                `Warning: The following connection-related options are unused in tool validation mode: ${unusedOptions.join(', ')}`
+              );
+            }
+
+            await executeTest({
+              tool: options.tool,
+              path: options.path,
+              strict: options.strict,
+              json: options.json,
+              ci: options.ci,
+              showErrors: options.showErrors,
+              toolsDir: options.toolsDir,
+              projectRoot: options.projectRoot,
+              env: parseEnvOptions(options.env),
+              authHeaders: parseAuthHeaderOptions(options.authHeader),
+            });
+          }
         } catch (error) {
           // Error handling is done in executeTest
           if (error instanceof Error) {

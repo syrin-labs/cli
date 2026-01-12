@@ -1,0 +1,24 @@
+# Tool contract for test_e500_side_effect
+# Tests E500: Side Effect Detected - tool writes to filesystem
+
+version: 1
+tool: test_e500_side_effect
+
+contract:
+  input_schema: TestE500Input
+  output_schema: TestE500Output
+
+guarantees:
+  side_effects: filesystem # Tool writes to filesystem (outside temp dir, which is still a violation)
+  max_output_size: 1kb
+  max_execution_time: '30s' # Standard timeout for quick tools
+
+tests:
+  # Test: Should detect filesystem write (E500)
+  # E500 is automatically detected by IOMonitor when tool writes outside temp directory
+  - name: test_side_effect_detection
+    input:
+      data: 'test data'
+    expect:
+      error:
+        type: side_effect

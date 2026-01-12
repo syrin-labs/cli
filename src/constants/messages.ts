@@ -19,7 +19,7 @@ export const Messages = {
     `After the setup, you can call \`${doctorCommand}\` to verify the setup process.`,
   INIT_REINITIALIZE_TIP: 'Want to re-initialize?',
   INIT_REINITIALIZE_INSTRUCTION: (initCommand: string) =>
-    `Delete the .syrin directory and run \`${initCommand}\` again.`,
+    `Delete the syrin.yaml file and run \`${initCommand}\` again.`,
   INIT_REVIEW_CONFIG: (configPath: string) =>
     `Review and edit ${configPath} if needed`,
   INIT_SETUP_ENV_VARS: 'Set up your environment variables (API keys, etc.)',

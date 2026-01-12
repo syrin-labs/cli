@@ -1,0 +1,26 @@
+# Tool contract for test_e301_output_explosion
+# Tests E301: Output Explosion - tool returns output exceeding max_output_size
+
+version: 1
+tool: test_e301_output_explosion
+
+contract:
+  input_schema: TestE014Input
+  output_schema: TestE014Output
+
+guarantees:
+  side_effects: none
+  max_output_size: 1kb # Tool violates this by returning 2kb output
+  max_execution_time: '30s' # Standard timeout for quick tools
+
+tests:
+  # Test: Should detect output explosion (E301)
+  # E301 is automatically detected when output exceeds max_output_size limit (1kb)
+  - name: test_output_explosion_detection
+    input:
+      data: 'test'
+    expect:
+      error:
+        type: output_explosion # Expected: Output explosion error
+    # Tool executes successfully but returns 2kb output, exceeding 1kb limit
+    # Behavioral rules detect output size violations automatically

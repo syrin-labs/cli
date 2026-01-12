@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { executeAnalyse } from './analyse';
 import { analyseTools } from '@/runtime/analysis';
 import { displayAnalysisResult } from '@/presentation/analysis-ui';
+import { ERROR_CODES } from '@/runtime/analysis/rules/error-codes';
 import {
   resolveTransportConfig,
   establishConnection,
@@ -100,14 +101,14 @@ describe('executeAnalyse', () => {
         verdict: 'fail' as const,
         diagnostics: [
           {
-            code: 'E001',
+            code: ERROR_CODES.E001,
             severity: 'error' as const,
             message: 'Missing output schema',
           },
         ],
         errors: [
           {
-            code: 'E001',
+            code: ERROR_CODES.E001,
             severity: 'error' as const,
             message: 'Missing output schema',
           },

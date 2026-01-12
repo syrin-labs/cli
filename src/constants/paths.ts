@@ -7,11 +7,11 @@ export const Paths = {
   /** Syrin configuration directory name */
   SYRIN_DIR: '.syrin',
   /** Configuration file name */
-  CONFIG_FILE: 'config.yaml',
+  CONFIG_FILE: 'syrin.yaml',
   /** Environment file name */
   ENV_FILE: '.env',
   /** Full path to config file (relative to project root) */
-  CONFIG_PATH: '.syrin/config.yaml',
+  CONFIG_PATH: 'syrin.yaml',
   /** Full path to env file (relative to project root) */
   ENV_PATH: '.env',
   /** Events directory (relative to project root) */

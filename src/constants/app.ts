@@ -2,7 +2,7 @@
  * Application metadata constants.
  */
 
-export const PACKAGE_NAME = '@ankan-ai/syrin';
+export const PACKAGE_NAME = '@syrin/cli';
 
 export const App = {
   NAME: 'Syrin',

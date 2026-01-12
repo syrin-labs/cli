@@ -373,7 +373,7 @@ describe('BaseMCPClientManager', () => {
       vi.mocked(mockClient.callTool).mockImplementation(
         () =>
           new Promise(resolve => {
-            setTimeout(() => resolve(mockResult as any), 50);
+            setTimeout(() => resolve(mockResult as any), 100);
           })
       );
 
@@ -389,7 +389,7 @@ describe('BaseMCPClientManager', () => {
         duration_ms: expect.any(Number),
       });
       expect((completedCall?.[1] as any).duration_ms).toBeGreaterThanOrEqual(
-        50
+        90
       );
     });
   });

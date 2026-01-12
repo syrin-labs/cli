@@ -62,18 +62,18 @@ The server will be available at `http://localhost:8000/mcp`
 
 ### Stdio Mode (Default)
 
-The config.yaml is already set up for stdio mode. Simply run:
+The syrin.yaml is already set up for stdio mode. Simply run:
 
 ```bash
 cd /path/to/syrin
 syrin dev --exec
 ```
 
-This will automatically spawn the server using the script in config.yaml.
+This will automatically spawn the server using the script in syrin.yaml.
 
 ### HTTP Mode
 
-1. Update `.syrin/config.yaml`:
+1. Update `syrin.yaml`:
    - Change `transport: 'http'`
    - Uncomment and set `mcp_url: 'http://localhost:8000/mcp'`
    - Update `script: '.venv/bin/python server.py --mode http'`

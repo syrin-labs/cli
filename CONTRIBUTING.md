@@ -32,14 +32,14 @@ By participating in this project, you agree to maintain a respectful and inclusi
 2. Clone your fork:
 
    ```bash
-   git clone https://github.com/YOUR_USERNAME/syrin.git
+   git clone https://github.com/YOUR_USERNAME/cli.git
    cd syrin
    ```
 
 3. Add the upstream repository:
 
    ```bash
-   git remote add upstream https://github.com/ankan-labs/syrin.git
+   git remote add upstream https://github.com/syrin-labs/cli.git
    ```
 
 ## Development Setup
@@ -389,7 +389,7 @@ ls -la dist/
 ## Getting Help
 
 - **Documentation**: [https://docs.syrin.dev](https://docs.syrin.dev)
-- **Issues**: [https://github.com/ankan-labs/syrin/issues](https://github.com/ankan-labs/syrin/issues)
+- **Issues**: [https://github.com/syrin-labs/cli/issues](https://github.com/syrin-labs/cli/issues)
 - **Discussions**: Use GitHub Discussions for questions
 
 ## License

@@ -3,7 +3,6 @@
  * Initializes a new Syrin project with configuration.
  */
 
-import * as path from 'path';
 import { generateConfigFile, isProjectInitialized } from '@/config/generator';
 import {
   promptInitOptions,
@@ -36,7 +35,6 @@ export async function executeInit(
 ): Promise<void> {
   await showVersionBanner();
   const projectRoot = options.projectRoot || process.cwd();
-  const configDir = path.join(projectRoot, Paths.SYRIN_DIR);
 
   // Check if project is already initialized
   if (isProjectInitialized(projectRoot)) {
@@ -70,7 +68,7 @@ export async function executeInit(
 
   try {
     // Generate config file
-    const configPath = generateConfigFile(initOptions, configDir);
+    const configPath = generateConfigFile(initOptions, projectRoot);
 
     logger.info('Configuration file created successfully', {
       configPath,
@@ -119,7 +117,7 @@ export async function executeInit(
         ? error
         : new ConfigurationError(Messages.ERROR_GENERATE_CONFIG, {
             cause: error instanceof Error ? error : new Error(String(error)),
-            context: { projectRoot, configDir },
+            context: { projectRoot },
           });
     logger.error('Failed to initialize project', configError);
     throw configError;

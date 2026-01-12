@@ -1,30 +1,50 @@
 /**
  * Configuration file generator.
- * Creates well-documented, production-ready config.yaml files.
+ * Creates well-documented, production-ready syrin.yaml files from template.
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import type { InitOptions, SyrinConfig } from '@/config/types';
 import { makeSyrinVersion } from '@/types/factories';
 import { Paths } from '@/constants';
 
 /**
- * Generate a production-ready config.yaml file with comprehensive documentation.
+ * Get the path to the template file.
+ * The template is located in the same directory as this file.
+ */
+function getTemplatePath(): string {
+  // Get the directory of the current file using import.meta.url
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  return path.join(__dirname, 'syrin.template.yaml');
+}
+
+/**
+ * Read the template file.
+ */
+function readTemplate(): string {
+  const templatePath = getTemplatePath();
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(
+      `Template file not found: ${templatePath}. This is a build error.`
+    );
+  }
+  return fs.readFileSync(templatePath, 'utf-8');
+}
+
+/**
+ * Generate a production-ready syrin.yaml file with comprehensive documentation.
  * @param options - Initialization options
- * @param configDir - Directory where .syrin/config.yaml will be created
+ * @param projectRoot - Root directory where syrin.yaml will be created
  * @returns Path to the created config file
  */
 export function generateConfigFile(
   options: InitOptions,
-  configDir: string
+  projectRoot: string
 ): string {
-  const configPath = path.join(configDir, Paths.CONFIG_FILE);
-
-  // Ensure .syrin directory exists
-  if (!fs.existsSync(configDir)) {
-    fs.mkdirSync(configDir, { recursive: true });
-  }
+  const configPath = path.join(projectRoot, Paths.CONFIG_FILE);
 
   const configContent = buildConfigContent(options);
 
@@ -34,7 +54,7 @@ export function generateConfigFile(
 }
 
 /**
- * Build the YAML content for the config file with documentation.
+ * Build the YAML content for the config file from template.
  */
 function buildConfigContent(options: InitOptions): string {
   const config: SyrinConfig = {
@@ -51,174 +71,203 @@ function buildConfigContent(options: InitOptions): string {
     config.mcp_url = options.mcpUrl;
   }
 
-  // Build YAML content with comments
-  const lines: string[] = [];
+  // Read template
+  let template = readTemplate();
 
-  lines.push('# Syrin Configuration File');
-  lines.push('# ========================');
-  lines.push('# This file configures your Syrin runtime environment.');
-  lines.push(
-    '# For detailed documentation, visit: https://github.com/AnkanAI/syrin'
+  // Replace simple placeholders
+  template = template.replace(/\{\{VERSION\}\}/g, String(config.version));
+  template = template.replace(
+    /\{\{PROJECT_NAME\}\}/g,
+    String(config.project_name)
   );
-  lines.push('');
-  lines.push('# Configuration Version');
-  lines.push('# The version of this configuration schema.');
-  lines.push(`version: "${String(config.version)}"`);
-  lines.push('');
-  lines.push('# Project Configuration');
-  lines.push('# ---------------------');
-  lines.push('# Project name: A unique identifier for your MCP server project');
-  lines.push(`project_name: "${String(config.project_name)}"`);
-  lines.push('');
-  lines.push(
-    '# Agent name: The name of your AI agent that will interact with the MCP server'
-  );
-  lines.push(`agent_name: "${String(config.agent_name)}"`);
-  lines.push('');
-  lines.push('# Transport Configuration');
-  lines.push('# -----------------------');
-  lines.push('# Transport type: How Syrin communicates with your MCP server');
-  lines.push(
-    '#   - "stdio": Communicate via standard input/output (spawns the MCP server process)'
-  );
-  lines.push(
-    '#   - "http":  Communicate via HTTP (connects to a running MCP server)'
-  );
-  lines.push(`transport: "${config.transport}"`);
-  lines.push('');
+  template = template.replace(/\{\{AGENT_NAME\}\}/g, String(config.agent_name));
+  template = template.replace(/\{\{TRANSPORT\}\}/g, config.transport);
 
-  // Transport-specific configuration
-  if (config.transport === 'http') {
-    lines.push('# MCP Server URL (required for http transport)');
-    lines.push('# The HTTP endpoint where your MCP server is running');
-    lines.push('# Example: "http://localhost:8000/mcp"');
-    lines.push(`mcp_url: "${String(config.mcp_url)}"`);
-    lines.push('');
+  // Handle transport-specific blocks
+  if (config.transport === 'http' && config.mcp_url) {
+    template = template.replace(
+      /\{\{#IF_HTTP\}\}([\s\S]*?)\{\{\/IF_HTTP\}\}/g,
+      (match, content) => {
+        return content.replace(/\{\{MCP_URL\}\}/g, String(config.mcp_url));
+      }
+    );
+    template = template.replace(
+      /\{\{#IF_STDIO\}\}([\s\S]*?)\{\{\/IF_STDIO\}\}/g,
+      ''
+    );
   } else {
-    lines.push('# MCP Server URL (not used for stdio transport)');
-    lines.push('# Uncomment and configure if you switch to http transport');
-    lines.push('# mcp_url: "http://localhost:8000/mcp"');
-    lines.push('');
+    template = template.replace(
+      /\{\{#IF_HTTP\}\}([\s\S]*?)\{\{\/IF_HTTP\}\}/g,
+      ''
+    );
+    template = template.replace(
+      /\{\{#IF_STDIO\}\}([\s\S]*?)\{\{\/IF_STDIO\}\}/g,
+      (match, content) => content
+    );
   }
 
-  lines.push('# Script Configuration');
-  lines.push('# --------------------');
-  lines.push('# Command to run your MCP server');
-  lines.push('# For stdio transport, this is required');
-  lines.push(
-    '# Use --run-script flag in dev mode to spawn the server internally'
-  );
+  // Handle script blocks
   if (config.script) {
-    lines.push(`script: "${String(config.script)}"`);
+    template = template.replace(
+      /\{\{#IF_SCRIPT\}\}([\s\S]*?)\{\{\/IF_SCRIPT\}\}/g,
+      (match, content) => {
+        return content.replace(/\{\{SCRIPT\}\}/g, String(config.script));
+      }
+    );
+    template = template.replace(
+      /\{\{#IF_NO_SCRIPT\}\}([\s\S]*?)\{\{\/IF_NO_SCRIPT\}\}/g,
+      ''
+    );
   } else {
-    lines.push('# script: "python3 server.py"');
+    template = template.replace(
+      /\{\{#IF_SCRIPT\}\}([\s\S]*?)\{\{\/IF_SCRIPT\}\}/g,
+      ''
+    );
+    template = template.replace(
+      /\{\{#IF_NO_SCRIPT\}\}([\s\S]*?)\{\{\/IF_NO_SCRIPT\}\}/g,
+      (match, content) => content
+    );
   }
-  lines.push('');
 
-  lines.push('# LLM Provider Configuration');
-  lines.push('# ---------------------------');
-  lines.push('# Configure one or more LLM providers for Syrin to use.');
-  lines.push('# API keys and model names can be set as:');
-  lines.push('#   - Environment variable names (recommended for security)');
-  lines.push('#   - Direct values (not recommended for production)');
-  lines.push('# At least one provider must be marked as default: true');
-  lines.push('');
-  lines.push('llm:');
-
-  // Generate LLM provider configurations
+  // Handle LLM providers loop
   const llmEntries = Object.entries(config.llm);
+  const hasOpenAI = llmEntries.some(([name]) => name === 'openai');
+  const hasClaude = llmEntries.some(([name]) => name === 'claude');
+  const hasOllama = llmEntries.some(([name]) => name === 'ollama');
+
+  // Extract the LLM provider template block
+  const llmTemplateMatch = template.match(
+    /\{\{#LLM_PROVIDERS\}\}([\s\S]*?)\{\{\/LLM_PROVIDERS\}\}/
+  );
+  if (!llmTemplateMatch) {
+    throw new Error('LLM_PROVIDERS template block not found');
+  }
+  const providerTemplate = llmTemplateMatch[1]!;
+
+  let llmSection = '';
   for (const [providerName, providerConfig] of llmEntries) {
-    lines.push(`  # ${providerName.toUpperCase()} Provider`);
-    lines.push(`  ${providerName}:`);
+    const isOllama = providerName === 'ollama';
+    const isDefault = providerConfig.default === true;
+    const providerNameUpper = providerName.toUpperCase();
 
-    if (providerName === 'ollama') {
-      // Ollama provider
-      if (providerConfig.MODEL_NAME) {
-        lines.push(
-          '    # Model name: Required for Ollama (e.g., "llama2", "mistral", "codellama")'
-        );
-        lines.push(
-          '    # Can be set as environment variable name or direct value'
-        );
-        lines.push(
-          '    # Example: "OLLAMA_MODEL_NAME" (reads from process.env.OLLAMA_MODEL_NAME)'
-        );
-        lines.push('    # Or: "llama2" (direct value)');
-        lines.push(`    MODEL_NAME: "${String(providerConfig.MODEL_NAME)}"`);
-        lines.push('');
-      }
-      if (providerConfig.default) {
-        lines.push('    # Set as default LLM provider');
-        lines.push('    default: true');
-      }
-    } else {
-      // Cloud providers (OpenAI, Claude)
-      if (providerConfig.API_KEY) {
-        lines.push(
-          '    # API key: Set as environment variable name or direct value'
-        );
-        lines.push(
-          '    # Example: "OPENAI_API_KEY" (reads from process.env.OPENAI_API_KEY)'
-        );
-        lines.push('    # Or: "sk-..." (direct value, not recommended)');
-        lines.push(`    API_KEY: "${String(providerConfig.API_KEY)}"`);
-        lines.push('');
-      }
-      if (providerConfig.MODEL_NAME) {
-        lines.push(
-          '    # Model name: Set as environment variable name or direct value'
-        );
-        lines.push(
-          '    # Example: "OPENAI_MODEL_NAME" (reads from process.env.OPENAI_MODEL_NAME)'
-        );
-        lines.push('    # Or: "gpt-4" (direct value)');
-        lines.push(`    MODEL_NAME: "${String(providerConfig.MODEL_NAME)}"`);
-        lines.push('');
-      }
+    // Start with a fresh copy of the template for each provider
+    let providerBlock = providerTemplate;
 
-      if (providerConfig.default) {
-        lines.push('    # Set as default LLM provider');
-        lines.push('    default: true');
-      }
-    }
+    // Replace provider-specific placeholders
+    providerBlock = providerBlock.replace(
+      /\{\{PROVIDER_NAME\}\}/g,
+      providerName
+    );
+    providerBlock = providerBlock.replace(
+      /\{\{PROVIDER_NAME_UPPER\}\}/g,
+      providerNameUpper
+    );
 
-    // Add commented-out alternative providers
-    if (
-      providerName === 'openai' &&
-      !llmEntries.some(([name]) => name === 'claude')
-    ) {
-      lines.push('');
-      lines.push('  # Claude Provider (uncomment to enable)');
-      lines.push('  # claude:');
-      lines.push('  #   API_KEY: "CLAUDE_API_KEY"');
-      lines.push('  #   MODEL_NAME: "CLAUDE_MODEL_NAME"');
-      lines.push('  #   default: false');
-    } else if (
-      providerName === 'claude' &&
-      !llmEntries.some(([name]) => name === 'openai')
-    ) {
-      lines.push('');
-      lines.push('  # OpenAI Provider (uncomment to enable)');
-      lines.push('  # openai:');
-      lines.push('  #   API_KEY: "OPENAI_API_KEY"');
-      lines.push('  #   MODEL_NAME: "OPENAI_MODEL_NAME"');
-      lines.push('  #   default: false');
-    }
-
-    if (!llmEntries.some(([name]) => name === 'ollama')) {
-      lines.push('');
-      lines.push('  # Ollama Provider - uncomment to enable');
-      lines.push('  # ollama:');
-      lines.push(
-        '  #   MODEL_NAME: "OLLAMA_MODEL_NAME"  # or "llama2", "mistral", etc.'
+    // Handle Ollama vs Cloud provider blocks
+    if (isOllama) {
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_OLLAMA\}\}([\s\S]*?)\{\{\/IF_OLLAMA\}\}/g,
+        (match, content) => {
+          return content.replace(
+            /\{\{MODEL_NAME\}\}/g,
+            String(providerConfig.MODEL_NAME || '')
+          );
+        }
       );
-      lines.push('  #   default: false');
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_CLOUD_PROVIDER\}\}([\s\S]*?)\{\{\/IF_CLOUD_PROVIDER\}\}/g,
+        ''
+      );
+    } else {
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_OLLAMA\}\}([\s\S]*?)\{\{\/IF_OLLAMA\}\}/g,
+        ''
+      );
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_CLOUD_PROVIDER\}\}([\s\S]*?)\{\{\/IF_CLOUD_PROVIDER\}\}/g,
+        (match, content) => {
+          return content
+            .replace(/\{\{API_KEY\}\}/g, String(providerConfig.API_KEY || ''))
+            .replace(
+              /\{\{MODEL_NAME\}\}/g,
+              String(providerConfig.MODEL_NAME || '')
+            );
+        }
+      );
     }
 
-    lines.push('');
+    // Handle default flag
+    if (isDefault) {
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_DEFAULT\}\}([\s\S]*?)\{\{\/IF_DEFAULT\}\}/g,
+        (match, content) => content
+      );
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_NOT_DEFAULT\}\}([\s\S]*?)\{\{\/IF_NOT_DEFAULT\}\}/g,
+        ''
+      );
+    } else {
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_DEFAULT\}\}([\s\S]*?)\{\{\/IF_DEFAULT\}\}/g,
+        ''
+      );
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_NOT_DEFAULT\}\}([\s\S]*?)\{\{\/IF_NOT_DEFAULT\}\}/g,
+        (match, content) => content
+      );
+    }
+
+    // Handle alternative provider suggestions (only show once per provider type)
+    if (providerName === 'openai' && !hasClaude) {
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_OPENAI_AND_NO_CLAUDE\}\}([\s\S]*?)\{\{\/IF_OPENAI_AND_NO_CLAUDE\}\}/g,
+        (match, content) => content
+      );
+    } else {
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_OPENAI_AND_NO_CLAUDE\}\}([\s\S]*?)\{\{\/IF_OPENAI_AND_NO_CLAUDE\}\}/g,
+        ''
+      );
+    }
+
+    if (providerName === 'claude' && !hasOpenAI) {
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_CLAUDE_AND_NO_OPENAI\}\}([\s\S]*?)\{\{\/IF_CLAUDE_AND_NO_OPENAI\}\}/g,
+        (match, content) => content
+      );
+    } else {
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_CLAUDE_AND_NO_OPENAI\}\}([\s\S]*?)\{\{\/IF_CLAUDE_AND_NO_OPENAI\}\}/g,
+        ''
+      );
+    }
+
+    // Only show Ollama suggestion if no Ollama provider exists
+    // But only add it once (on the last provider)
+    const isLastProvider =
+      llmEntries[llmEntries.length - 1]![0] === providerName;
+    if (isLastProvider && !hasOllama) {
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_NO_OLLAMA\}\}([\s\S]*?)\{\{\/IF_NO_OLLAMA\}\}/g,
+        (match, content) => content
+      );
+    } else {
+      providerBlock = providerBlock.replace(
+        /\{\{#IF_NO_OLLAMA\}\}([\s\S]*?)\{\{\/IF_NO_OLLAMA\}\}/g,
+        ''
+      );
+    }
+
+    llmSection += providerBlock;
   }
 
-  return lines.join('\n');
+  // Replace LLM providers section
+  template = template.replace(
+    /\{\{#LLM_PROVIDERS\}\}([\s\S]*?)\{\{\/LLM_PROVIDERS\}\}/,
+    llmSection
+  );
+
+  return template;
 }
 
 /**
@@ -261,6 +310,6 @@ function buildLLMConfig(
  * @returns true if project is already initialized
  */
 export function isProjectInitialized(projectRoot: string): boolean {
-  const configPath = path.join(projectRoot, Paths.SYRIN_DIR, Paths.CONFIG_FILE);
+  const configPath = path.join(projectRoot, Paths.CONFIG_FILE);
   return fs.existsSync(configPath);
 }

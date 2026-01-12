@@ -1,6 +1,6 @@
 {
-  "name": "@ankan-ai/syrin",
-  "version": "1.2.2",
+  "name": "@syrin/cli",
+  "version": "1.3.0",
   "description": "Syrin is a runtime intelligence system that makes MCP servers debuggable, testable, and safe to run in production.",
   "type": "module",
   "main": "dist/index.js",
@@ -18,6 +18,7 @@
   "files": [
     "dist/**/*.js",
     "dist/**/*.d.ts",
+    "dist/config/syrin.template.yaml",
     "README.md",
     "LICENSE"
   ],
@@ -38,7 +39,8 @@
     "doc": "docs"
   },
   "scripts": {
-    "build": "tsc && tsc-alias -p tsconfig.json -f",
+    "build": "tsc && tsc-alias -p tsconfig.json -f && npm run copy:template",
+    "copy:template": "cp src/config/syrin.template.yaml dist/config/syrin.template.yaml",
     "prepublishOnly": "npm run build",
     "syrin": "sh -c 'npm run build && node dist/index.js \"$@\"' --",
     "lint": "eslint .",
@@ -53,14 +55,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ankan-labs/syrin.git"
+    "url": "git+https://github.com/syrin-labs/syrin.git"
   },
-  "author": "Ankan AI Labs Team",
+  "author": "Syrin Labs Team",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/ankan-labs/syrin/issues"
+    "url": "https://github.com/syrin-labs/syrin/issues"
   },
-  "homepage": "https://github.com/ankan-labs/syrin#readme",
+  "homepage": "https://github.com/syrin-labs/syrin#readme",
   "publishConfig": {
     "access": "public"
   },

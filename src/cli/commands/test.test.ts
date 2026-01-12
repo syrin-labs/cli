@@ -1,14 +1,18 @@
 /**
  * Tests for `syrin test` command.
+ * Tests both connection testing (--connection) and tool validation (default).
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { executeTest } from './test';
 import { connectMCP } from '@/runtime/mcp';
 import { resolveTransportConfig } from '@/cli/utils';
+import { TestOrchestrator } from '@/runtime/test/orchestrator';
+import { ERROR_CODES } from '@/runtime/analysis/rules/error-codes';
 
 // Mock dependencies
 vi.mock('@/runtime/mcp');
+vi.mock('@/runtime/test/orchestrator');
 vi.mock('@/cli/utils', async () => {
   const actual = await vi.importActual('@/cli/utils');
   return {
@@ -21,6 +25,9 @@ vi.mock('@/cli/utils', async () => {
 });
 vi.mock('@/presentation/test-ui', () => ({
   displayTestResults: vi.fn(),
+  formatCLIResults: vi.fn(),
+  formatJSONResults: vi.fn(() => '{}'),
+  formatCIResults: vi.fn(),
 }));
 vi.mock('@/utils/logger', () => ({
   logger: {
@@ -29,6 +36,7 @@ vi.mock('@/utils/logger', () => ({
   log: {
     blank: vi.fn(),
     error: vi.fn(),
+    plain: vi.fn(),
   },
 }));
 
@@ -37,7 +45,7 @@ describe('executeTest', () => {
     vi.clearAllMocks();
   });
 
-  describe('successful execution', () => {
+  describe('connection testing mode (--connection)', () => {
     it('should test MCP connection and display results', async () => {
       const mockResult = {
         success: true,
@@ -57,7 +65,7 @@ describe('executeTest', () => {
       vi.mocked(connectMCP).mockResolvedValue(mockResult);
 
       // When test succeeds, function completes normally (no exit)
-      await executeTest({});
+      await executeTest({ connection: true });
 
       expect(resolveTransportConfig).toHaveBeenCalled();
       expect(connectMCP).toHaveBeenCalledWith({
@@ -92,7 +100,7 @@ describe('executeTest', () => {
         throw new Error('process.exit(1)');
       });
 
-      await expect(executeTest({})).rejects.toThrow();
+      await expect(executeTest({ connection: true })).rejects.toThrow();
 
       expect(exitSpy).toHaveBeenCalledWith(1);
       exitSpy.mockRestore();
@@ -121,6 +129,7 @@ describe('executeTest', () => {
       });
 
       await executeTest({
+        connection: true,
         transport: 'http',
         url: 'http://localhost:8000',
       });
@@ -160,6 +169,7 @@ describe('executeTest', () => {
       });
 
       await executeTest({
+        connection: true,
         transport: 'stdio',
         script: 'python server.py',
       });
@@ -198,10 +208,12 @@ describe('executeTest', () => {
       });
 
       await executeTest({
+        connection: true,
         url: 'http://custom-url:9000',
       });
 
       expect(resolveTransportConfig).toHaveBeenCalledWith({
+        connection: true,
         url: 'http://custom-url:9000',
       });
 
@@ -231,10 +243,12 @@ describe('executeTest', () => {
       });
 
       await executeTest({
+        connection: true,
         script: 'custom-script.sh',
       });
 
       expect(resolveTransportConfig).toHaveBeenCalledWith({
+        connection: true,
         script: 'custom-script.sh',
       });
 
@@ -255,7 +269,9 @@ describe('executeTest', () => {
 
       vi.mocked(connectMCP).mockRejectedValue(new Error('Connection failed'));
 
-      await expect(executeTest({})).rejects.toThrow('Connection failed');
+      await expect(executeTest({ connection: true })).rejects.toThrow(
+        'Connection failed'
+      );
     });
 
     it('should handle transport resolution errors', async () => {
@@ -268,7 +284,7 @@ describe('executeTest', () => {
       });
 
       try {
-        await executeTest({});
+        await executeTest({ connection: true });
       } catch (_error) {
         // Expected to throw due to process.exit
       }
@@ -295,7 +311,7 @@ describe('executeTest', () => {
 
       vi.mocked(connectMCP).mockResolvedValue(mockResult);
 
-      await executeTest({ env });
+      await executeTest({ connection: true, env });
 
       expect(connectMCP).toHaveBeenCalledWith({
         transport: 'stdio',
@@ -326,7 +342,7 @@ describe('executeTest', () => {
 
       vi.mocked(connectMCP).mockResolvedValue(mockResult);
 
-      await executeTest({ authHeaders });
+      await executeTest({ connection: true, authHeaders });
 
       expect(connectMCP).toHaveBeenCalledWith({
         transport: 'http',
@@ -335,6 +351,162 @@ describe('executeTest', () => {
         env: undefined,
         headers: authHeaders,
       });
+    });
+  });
+
+  describe('tool validation mode (default)', () => {
+    it('should run tool validation when connection flag is not set', async () => {
+      const mockOrchestrator = {
+        run: vi.fn().mockResolvedValue({
+          verdict: 'pass',
+          diagnostics: [],
+          toolResults: [],
+          toolsTested: 0,
+          toolsPassed: 0,
+          toolsFailed: 0,
+        }),
+      };
+
+      vi.mocked(TestOrchestrator).mockImplementation(
+        () => mockOrchestrator as any
+      );
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit(0)');
+      });
+
+      await expect(executeTest({ projectRoot: '/tmp' })).rejects.toThrow();
+
+      expect(TestOrchestrator).toHaveBeenCalled();
+      expect(mockOrchestrator.run).toHaveBeenCalled();
+      expect(exitSpy).toHaveBeenCalledWith(0);
+      exitSpy.mockRestore();
+    });
+
+    it('should exit with code 1 when tool validation fails', async () => {
+      const mockOrchestrator = {
+        run: vi.fn().mockResolvedValue({
+          verdict: 'fail',
+          diagnostics: [
+            {
+              code: ERROR_CODES.E012,
+              severity: 'error',
+              message: 'Side effect detected',
+            },
+          ],
+          toolResults: [],
+          toolsTested: 1,
+          toolsPassed: 0,
+          toolsFailed: 1,
+        }),
+      };
+
+      vi.mocked(TestOrchestrator).mockImplementation(
+        () => mockOrchestrator as any
+      );
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit(1)');
+      });
+
+      await expect(executeTest({ projectRoot: '/tmp' })).rejects.toThrow();
+
+      expect(exitSpy).toHaveBeenCalledWith(1);
+      exitSpy.mockRestore();
+    });
+
+    it('should support --tool option', async () => {
+      const mockOrchestrator = {
+        run: vi.fn().mockResolvedValue({
+          verdict: 'pass',
+          diagnostics: [],
+          toolResults: [],
+          toolsTested: 1,
+          toolsPassed: 1,
+          toolsFailed: 0,
+        }),
+      };
+
+      vi.mocked(TestOrchestrator).mockImplementation(
+        () => mockOrchestrator as any
+      );
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit(0)');
+      });
+
+      await expect(
+        executeTest({ projectRoot: '/tmp', tool: 'fetch_user' })
+      ).rejects.toThrow();
+
+      expect(TestOrchestrator).toHaveBeenCalledWith(
+        expect.objectContaining({ toolName: 'fetch_user' })
+      );
+      exitSpy.mockRestore();
+    });
+
+    it('should support --strict option', async () => {
+      const mockOrchestrator = {
+        run: vi.fn().mockResolvedValue({
+          verdict: 'fail', // Warnings become errors in strict mode
+          diagnostics: [
+            { code: 'W021', severity: 'error', message: 'Weak schema' },
+          ],
+          toolResults: [],
+          toolsTested: 1,
+          toolsPassed: 0,
+          toolsFailed: 1,
+        }),
+      };
+
+      vi.mocked(TestOrchestrator).mockImplementation(
+        () => mockOrchestrator as any
+      );
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit(1)');
+      });
+
+      await expect(
+        executeTest({ projectRoot: '/tmp', strict: true })
+      ).rejects.toThrow();
+
+      expect(TestOrchestrator).toHaveBeenCalledWith(
+        expect.objectContaining({ strictMode: true })
+      );
+      exitSpy.mockRestore();
+    });
+
+    it('should support --json option', async () => {
+      const mockOrchestrator = {
+        run: vi.fn().mockResolvedValue({
+          verdict: 'pass',
+          diagnostics: [],
+          toolResults: [],
+          toolsTested: 0,
+          toolsPassed: 0,
+          toolsFailed: 0,
+        }),
+      };
+
+      vi.mocked(TestOrchestrator).mockImplementation(
+        () => mockOrchestrator as any
+      );
+
+      const { formatJSONResults } = await import('@/presentation/test-ui');
+      const { log } = await import('@/utils/logger');
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit(0)');
+      });
+
+      await expect(
+        executeTest({ projectRoot: '/tmp', json: true })
+      ).rejects.toThrow();
+
+      expect(formatJSONResults).toHaveBeenCalled();
+      expect(log.plain).toHaveBeenCalled();
+      exitSpy.mockRestore();
     });
   });
 });
