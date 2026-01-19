@@ -240,12 +240,28 @@ export class DevEventMapper {
     event: EventEnvelope<ToolCallValidationFailedPayload>
   ): void {
     const payload = event.payload;
+    
+    // Format each validation error with better structure
     const errors = payload.validation_errors
-      .map(err => `  - ${err.message} (${err.code})`)
-      .join('\n');
+      .map(err => {
+        // If the message contains newlines, it's already formatted with details
+        // Otherwise, format it simply
+        if (err.message.includes('\n')) {
+          // Multi-line error message - format with proper indentation
+          const lines = err.message.split('\n');
+          const firstLine = lines[0];
+          const details = lines.slice(1).map(line => `    ${line}`).join('\n');
+          return `  • ${firstLine}\n${details}`;
+        } else {
+          // Simple error message
+          return `  • ${err.message} (${err.code})`;
+        }
+      })
+      .join('\n\n');
+    
     this.chatUI.addMessage(
       'system',
-      `❌ Validation failed for **${payload.tool_name}**:\n${errors}`
+      `❌ Validation failed for **${payload.tool_name}**:\n\n${errors}`
     );
   }
 

@@ -487,14 +487,45 @@ you can request the full data if needed.`;
     // More sophisticated validation can be added later
     const schema = toolDef.inputSchema as {
       type?: string;
-      properties?: Record<string, unknown>;
+      properties?: Record<
+        string,
+        {
+          type?: string | string[];
+          description?: string;
+          enum?: unknown[];
+          format?: string;
+          items?: { type?: string };
+          [key: string]: unknown;
+        }
+      >;
       required?: string[];
     };
 
     if (schema.required) {
       for (const requiredField of schema.required) {
         if (!(requiredField in toolCall.arguments)) {
-          const error = `Missing required argument: ${requiredField}`;
+          // Extract field information from schema
+          const fieldDef = schema.properties?.[requiredField];
+          const fieldType = this.formatFieldType(fieldDef);
+          const fieldDescription = fieldDef?.description;
+
+          // Build comprehensive error message
+          let error = `Missing required field: "${requiredField}"`;
+          if (fieldType) {
+            error += `\n  Expected type: ${fieldType}`;
+          }
+          if (fieldDescription) {
+            error += `\n  Description: ${fieldDescription}`;
+          }
+          if (fieldDef?.enum) {
+            const enumValues = fieldDef.enum
+              .map(v => (typeof v === 'string' ? `"${v}"` : String(v)))
+              .join(', ');
+            error += `\n  Allowed values: ${enumValues}`;
+          }
+          if (fieldDef?.format) {
+            error += `\n  Format: ${fieldDef.format}`;
+          }
           await this.config.eventEmitter.emit<ToolCallValidationFailedPayload>(
             ValidationEventType.TOOL_CALL_VALIDATION_FAILED,
             {
@@ -526,6 +557,45 @@ you can request the full data if needed.`;
     );
 
     return { valid: true };
+  }
+
+  /**
+   * Format field type information for error messages.
+   */
+  private formatFieldType(fieldDef?: {
+    type?: string | string[];
+    items?: { type?: string };
+    [key: string]: unknown;
+  }): string | null {
+    if (!fieldDef) {
+      return null;
+    }
+
+    const type = fieldDef.type;
+    if (!type) {
+      return null;
+    }
+
+    // Handle array types
+    if (Array.isArray(type)) {
+      return type.join(' | ');
+    }
+
+    // Handle object type (could be a complex object)
+    if (type === 'object') {
+      return 'object';
+    }
+
+    // Handle array of items
+    if (type === 'array') {
+      const itemsType = fieldDef.items?.type;
+      if (itemsType) {
+        return `array<${itemsType}>`;
+      }
+      return 'array';
+    }
+
+    return type;
   }
 
   /**

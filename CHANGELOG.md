@@ -1,6 +1,13 @@
 # CHANGELOG
 
-## v1.3.0
+## v1.3.3
+
+### Bugs
+
+1.
+2.
+
+## v1.3.2
 
 ### Breaking Changes
 
