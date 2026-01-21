@@ -16,9 +16,7 @@ __pycache__/
 *.swp
 *.swo
 
-# Syrin
-.syrin/events/
-.syrin/.dev-history
-.syrin/data/
+# Syrin files
 .syrin/events
+.syrin/.dev-history
 .syrin/data

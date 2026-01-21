@@ -38,14 +38,24 @@ syrin dev [options]
 
 ## Options
 
-| Flag                    | Description                                    | Default            |
-| ----------------------- | ---------------------------------------------- | ------------------ |
-| `--exec`                | Execute tool calls instead of previewing       | `false`            |
-| `--llm <provider>`      | Override default LLM provider                  | From configuration |
-| `--project-root <path>` | Syrin project root directory                   | Current directory  |
-| `--save-events`         | Persist execution events to disk               | `false`            |
-| `--event-file <path>`   | Directory for event files                      | `.syrin/events`    |
-| `--run-script`          | Spawn MCP server internally for HTTP transport | `false`            |
+| Flag                    | Description                                      | Default            |
+| ----------------------- | ------------------------------------------------ | ------------------ |
+| `--exec`                | Execute tool calls instead of previewing         | `false`            |
+| `--llm <provider>`      | Override default LLM provider                    | From configuration |
+| `--project-root <path>` | Syrin project root directory                     | Current directory  |
+| `--save-events`         | Persist execution events to disk                 | `false`            |
+| `--event-file <path>`   | Directory for event files                        | `.syrin/events`    |
+| `--run-script`          | Spawn MCP server internally for HTTP transport   | `false`            |
+| `--transport <type>`    | Transport type (stdio or http)                   | From configuration |
+| `--mcp-url <url>`       | MCP server URL (required for http with global config) | From configuration |
+| `--script <command>`    | Script command (required for stdio with global config) | From configuration |
+
+**Global Options:**
+
+| Flag        | Description                  |
+| ----------- | ---------------------------- |
+| `--quiet`   | Minimal output (errors only) |
+| `--verbose` | Verbose output for debugging |
 
 Flags override values defined in `syrin.yaml`.
 

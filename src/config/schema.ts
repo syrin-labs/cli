@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import type { SyrinConfig } from '@/config/types';
+import type { SyrinConfig, GlobalSyrinConfig } from '@/config/types';
 import { ConfigurationError } from '@/utils/errors';
 import {
   makeProjectName,
@@ -15,6 +15,23 @@ import {
   makeScriptCommand,
   makeSyrinVersion,
 } from '@/types/factories';
+
+/**
+ * Helper function to check if at least one LLM provider is set as default.
+ * @param llm - Record of LLM provider configurations
+ * @returns true if at least one provider has default === true
+ */
+function hasDefaultLLMProvider(llm: Record<string, unknown>): boolean {
+  const providers = Object.values(llm);
+  return providers.some(provider => {
+    return (
+      provider &&
+      typeof provider === 'object' &&
+      'default' in provider &&
+      (provider as { default?: boolean }).default === true
+    );
+  });
+}
 
 /**
  * Schema for LLM provider configuration.
@@ -109,27 +126,40 @@ export const ConfigSchema = z
       path: ['script'],
     }
   )
-  .refine(
-    data => {
-      // At least one LLM provider should be set as default
-      const providers = Object.values(data.llm);
-      const hasDefault = providers.some(provider => {
-        return (
-          provider && typeof provider === 'object' && provider.default === true
-        );
-      });
-      return hasDefault;
-    },
-    {
-      message: 'At least one LLM provider must be set as default',
-      path: ['llm'],
-    }
-  );
+  .refine(data => hasDefaultLLMProvider(data.llm), {
+    message: 'At least one LLM provider must be set as default',
+    path: ['llm'],
+  });
 
 /**
  * Type inference from schema.
  */
 export type ConfigSchemaType = z.infer<typeof ConfigSchema>;
+
+/**
+ * Global configuration schema (LLM settings only).
+ * No transport, mcp_url, or script fields.
+ */
+export const GlobalConfigSchema = z
+  .object({
+    version: z.string().min(1, 'Version is required'),
+    project_name: z.literal('GlobalSyrin'),
+    agent_name: z.string().min(1, 'Agent name is required'),
+    llm: z
+      .record(z.string(), LLMProviderSchema)
+      .refine(obj => Object.keys(obj).length > 0, {
+        message: 'At least one LLM provider is required',
+      }),
+  })
+  .refine(data => hasDefaultLLMProvider(data.llm), {
+    message: 'At least one LLM provider must be set as default',
+    path: ['llm'],
+  });
+
+/**
+ * Type inference from global schema.
+ */
+export type GlobalConfigSchemaType = z.infer<typeof GlobalConfigSchema>;
 
 /**
  * Validate a configuration object against the schema.
@@ -214,6 +244,49 @@ export function validateConfig(config: unknown): SyrinConfig {
         ])
       ),
       check: parsed.check,
+    };
+
+    return validated;
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      throw new ConfigurationError(formatValidationError(error), {
+        context: { errors: error.issues },
+      });
+    }
+    throw error;
+  }
+}
+
+/**
+ * Validate a global configuration object against the schema.
+ * @param config - Global configuration object to validate
+ * @returns Validated global configuration with opaque types
+ * @throws {ConfigurationError} If validation fails
+ */
+export function validateGlobalConfig(config: unknown): GlobalSyrinConfig {
+  try {
+    const parsed = GlobalConfigSchema.parse(config);
+
+    // Transform to opaque types
+    // Note: project_name must be literal 'GlobalSyrin' for global config
+    const validated: GlobalSyrinConfig = {
+      version: makeSyrinVersion(parsed.version),
+      project_name: 'GlobalSyrin',
+      agent_name: makeAgentName(parsed.agent_name),
+      llm: Object.fromEntries(
+        Object.entries(parsed.llm).map(([key, provider]) => [
+          key,
+          {
+            API_KEY: provider.API_KEY
+              ? makeAPIKey(provider.API_KEY)
+              : undefined,
+            MODEL_NAME: provider.MODEL_NAME
+              ? makeModelName(provider.MODEL_NAME)
+              : undefined,
+            default: provider.default,
+          },
+        ])
+      ),
     };
 
     return validated;

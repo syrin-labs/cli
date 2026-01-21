@@ -9,7 +9,7 @@ import { normalizeTools } from './normalizer';
 import { buildIndexes } from './indexer';
 import { inferDependencies } from './dependencies';
 import { ALL_RULES } from './rules';
-import { logger } from '@/utils/logger';
+import { log } from '@/utils/logger';
 import type {
   AnalysisContext,
   AnalysisResult,
@@ -46,7 +46,7 @@ function runRules(
       diagnostics.push(...ruleDiagnostics);
     } catch (error) {
       // If a rule fails, log error but don't crash the analysis
-      logger.error(
+      log.error(
         `Rule ${rule.id} failed`,
         error instanceof Error ? error : new Error(String(error)),
         {

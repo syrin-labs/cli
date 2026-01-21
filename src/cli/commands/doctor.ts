@@ -3,16 +3,34 @@
  * Validates the Syrin project configuration and setup.
  */
 
-import { loadConfig } from '@/config/loader';
+import { loadConfigOptional } from '@/config/loader';
 import {
   checkEnvVar,
   checkCommandExists,
   extractCommandName,
 } from '@/config/env-checker';
 import { handleCommandError } from '@/cli/utils';
+import { showVersionBanner } from '@/cli/utils/version-banner';
 import type { SyrinConfig } from '@/config/types';
-import { Messages, TransportTypes, Defaults, LLMProviders } from '@/constants';
-import { displayDoctorReport } from '@/presentation/doctor-ui';
+import {
+  Messages,
+  TransportTypes,
+  Defaults,
+  LLMProviders,
+  Paths,
+} from '@/constants';
+import {
+  displayDoctorReport,
+  displayGlobalConfigValidation,
+} from '@/presentation/doctor-ui';
+import {
+  loadGlobalConfig,
+  getGlobalConfigPath,
+  getGlobalEnvPath,
+} from '@/config/global-loader';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 
 interface CheckResult {
   isValid: boolean;
@@ -23,6 +41,9 @@ interface CheckResult {
 
 interface DoctorReport {
   config: SyrinConfig;
+  configSource?: 'local' | 'global';
+  configPath?: string;
+  envSource?: 'local.env' | 'global.env' | 'process.env';
   transportCheck: CheckResult;
   scriptCheck: CheckResult | null;
   llmChecks: Array<{
@@ -30,6 +51,7 @@ interface DoctorReport {
     apiKeyCheck: CheckResult;
     modelCheck: CheckResult;
     isDefault: boolean;
+    envSource?: 'local.env' | 'global.env' | 'process.env';
   }>;
   localLlmChecks?: Array<{
     provider: string;
@@ -130,7 +152,8 @@ function checkScript(config: SyrinConfig): CheckResult | null {
  */
 function checkLLMProviders(
   config: SyrinConfig,
-  projectRoot: string
+  projectRoot: string,
+  isGlobalContext: boolean = false
 ): DoctorReport['llmChecks'] {
   const checks: DoctorReport['llmChecks'] = [];
 
@@ -148,8 +171,8 @@ function checkLLMProviders(
       ? String(providerConfig.MODEL_NAME)
       : '';
 
-    const apiKeyCheck = checkEnvVar(apiKeyVar, projectRoot);
-    const modelCheck = checkEnvVar(modelVar, projectRoot);
+    const apiKeyCheck = checkEnvVar(apiKeyVar, projectRoot, isGlobalContext);
+    const modelCheck = checkEnvVar(modelVar, projectRoot, isGlobalContext);
 
     checks.push({
       provider: providerName,
@@ -171,6 +194,7 @@ function checkLLMProviders(
           : modelCheck.errorMessage || Messages.ENV_SET_INSTRUCTIONS(modelVar),
       },
       isDefault: providerConfig.default === true,
+      envSource: apiKeyCheck.source || modelCheck.source,
     });
   }
 
@@ -182,7 +206,8 @@ function checkLLMProviders(
  */
 function checkLocalLLMProviders(
   config: SyrinConfig,
-  projectRoot: string
+  projectRoot: string,
+  isGlobalContext: boolean = false
 ): DoctorReport['localLlmChecks'] {
   const checks: DoctorReport['localLlmChecks'] = [];
 
@@ -192,7 +217,7 @@ function checkLocalLLMProviders(
       const modelVar = providerConfig.MODEL_NAME
         ? String(providerConfig.MODEL_NAME)
         : '';
-      const modelCheck = checkEnvVar(modelVar, projectRoot);
+      const modelCheck = checkEnvVar(modelVar, projectRoot, isGlobalContext);
 
       checks.push({
         provider: providerName,
@@ -213,13 +238,22 @@ function checkLocalLLMProviders(
  */
 function generateReport(
   config: SyrinConfig,
-  projectRoot: string
+  projectRoot: string,
+  configSource: 'local' | 'global',
+  configPath: string
 ): DoctorReport {
+  // Call checkLLMProviders once and reuse the result
+  const llmChecks = checkLLMProviders(config, projectRoot);
+  const envSource = llmChecks[0]?.envSource;
+
   return {
     config,
+    configSource,
+    configPath,
+    envSource,
     transportCheck: checkTransport(config),
     scriptCheck: checkScript(config),
-    llmChecks: checkLLMProviders(config, projectRoot),
+    llmChecks,
     localLlmChecks: checkLocalLLMProviders(config, projectRoot),
   };
 }
@@ -231,12 +265,55 @@ function generateReport(
 export async function executeDoctor(
   projectRoot: string = process.cwd()
 ): Promise<void> {
+  await showVersionBanner();
+
   try {
-    // Load configuration
-    const config = loadConfig(projectRoot);
+    // Try to load local config first
+    const localConfig = loadConfigOptional(projectRoot);
+    const globalConfig = loadGlobalConfig();
+
+    let config: SyrinConfig;
+    let configSource: 'local' | 'global';
+    let configPath: string;
+
+    if (localConfig) {
+      config = localConfig;
+      configSource = 'local';
+      configPath = path.join(projectRoot, Paths.CONFIG_FILE);
+    } else if (globalConfig) {
+      // Validate global config (including LLM providers)
+      const globalEnvPath = getGlobalEnvPath();
+      const globalEnvExists = fs.existsSync(globalEnvPath);
+
+      // Run LLM validation for global config (using home directory as project root)
+      const globalProjectRoot = os.homedir();
+      const llmChecks = checkLLMProviders(
+        globalConfig as SyrinConfig,
+        globalProjectRoot,
+        true
+      );
+
+      // Display validation results using presentation layer
+      displayGlobalConfigValidation(
+        getGlobalConfigPath(),
+        globalEnvPath,
+        globalEnvExists,
+        llmChecks
+      );
+      return;
+    } else {
+      throw new Error(
+        'No configuration found. Create a local config with `syrin init` or set up global config with `syrin init --global`.'
+      );
+    }
 
     // Generate report
-    const report = generateReport(config, projectRoot);
+    const report = generateReport(
+      config,
+      projectRoot,
+      configSource,
+      configPath
+    );
 
     // Display report using Ink UI
     await displayDoctorReport(report);

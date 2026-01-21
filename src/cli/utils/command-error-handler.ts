@@ -3,12 +3,8 @@
  * Provides consistent error handling patterns for CLI commands.
  */
 
-import { logger, log } from '@/utils/logger';
-import {
-  ConfigurationError,
-  normalizeError,
-  getErrorMessage,
-} from '@/utils/errors';
+import { log } from '@/utils/logger';
+import { ConfigurationError, getErrorMessage } from '@/utils/errors';
 import { Messages } from '@/constants';
 
 /**
@@ -33,9 +29,6 @@ export function handleCommandError(
     process.exit(1);
   }
 
-  const err = normalizeError(error);
-  // Only log to structured logger (won't output unless debug mode is enabled)
-  logger.error('Command failed', err);
   const message = getErrorMessage(error) || defaultMessage;
   log.blank();
   log.error(message);

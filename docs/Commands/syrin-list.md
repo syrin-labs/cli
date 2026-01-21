@@ -34,6 +34,8 @@ It provides an authoritative, protocol-backed view of what the server is willing
 syrin list [type] [options]
 ```
 
+**Alias:** `syrin ls`
+
 ## Options
 
 | Flag                    | Description                                                 | Default            |
@@ -43,6 +45,15 @@ syrin list [type] [options]
 | `--url <url>`           | MCP URL for HTTP transport                                  | From configuration |
 | `--script <script>`     | Execution command for stdio transport                       | From configuration |
 | `--project-root <path>` | Syrin project root directory                                | Current directory  |
+| `--env <key=value>`     | Environment variable for stdio transport (repeatable)       | None               |
+| `--auth-header <header>` | Authentication header for HTTP transport (repeatable)      | None               |
+
+**Global Options:**
+
+| Flag        | Description                  |
+| ----------- | ---------------------------- |
+| `--quiet`   | Minimal output (errors only) |
+| `--verbose` | Verbose output for debugging |
 
 Explicit flags override values defined in `syrin.yaml`.
 

@@ -15,7 +15,7 @@ import { ConfigurationError } from '@/utils/errors';
 import { formatTimeString } from './time-parser';
 import type { ToolExecutionError, ToolExecutionResult } from './types';
 import { ToolExecutionErrorType } from './types';
-import { logger } from '@/utils/logger';
+import { log } from '@/utils/logger';
 
 // Re-export types for convenience
 export * from './types';
@@ -90,7 +90,7 @@ export class SandboxExecutor {
         if (isNodeCommand) {
           // For Node.js: inject --max-old-space-size flag
           args = ['--max-old-space-size', String(memoryMB), ...args];
-          logger.debug(
+          log.debug(
             `Memory limit: ${memoryMB}MB enforced via --max-old-space-size for Node.js`
           );
         } else if (process.platform !== 'win32') {
@@ -104,13 +104,13 @@ export class SandboxExecutor {
           executable = '/bin/sh';
           args = ['-c', `ulimit -v ${memoryKB} && exec ${originalCommand}`];
           isWrapped = true;
-          logger.debug(
+          log.debug(
             `Memory limit: ${memoryMB}MB (${memoryKB}KB) enforced via ulimit -v`
           );
         } else {
           // Windows: Memory limits require different approach (SetProcessWorkingSetSize, Job Objects)
           // For now, log warning that limit is not enforced on Windows
-          logger.warn(
+          log.warn(
             `Memory limit ${memoryMB}MB specified but not enforced on Windows platform`
           );
         }
@@ -186,8 +186,8 @@ export class SandboxExecutor {
             : typeof event === 'object' && event !== null && 'message' in event
               ? String((event as { message: unknown }).message)
               : 'Unknown MCP client error';
-        logger.error(
-          `MCP client connection error: ${errorMessage}`,
+        log.error(
+          `Error: ${errorMessage}`,
           event instanceof Error ? event : new Error(errorMessage)
         );
         // Errors will also be caught in try-catch blocks during tool execution

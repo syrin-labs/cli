@@ -5,7 +5,8 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { loadConfig } from '@/config/loader';
+import { loadConfigWithGlobal, configExists } from '@/config/loader';
+import { loadGlobalConfig } from '@/config/global-loader';
 import { getLLMProvider } from '@/runtime/llm/factory';
 import { createMCPClientManager } from '@/runtime/mcp/client/manager';
 import { RuntimeEventEmitter } from '@/events/emitter';
@@ -16,7 +17,7 @@ import { ChatUI } from '@/presentation/dev/chat-ui';
 import { DevEventMapper } from '@/runtime/dev/event-mapper';
 import { ConfigurationError } from '@/utils/errors';
 import { handleCommandError } from '@/cli/utils';
-import { logger, log } from '@/utils/logger';
+import { log } from '@/utils/logger';
 import { Messages, Paths, TransportTypes, FileExtensions } from '@/constants';
 import { makeSessionID } from '@/types/factories';
 import { v4 as uuidv4 } from 'uuid';
@@ -72,6 +73,12 @@ export interface DevCommandOptions {
   eventFile?: string;
   /** Run script to spawn server internally */
   runScript?: boolean;
+  /** Transport type override */
+  transport?: 'stdio' | 'http';
+  /** MCP URL override (for http transport) */
+  mcpUrl?: string;
+  /** Script command override (for stdio transport) */
+  script?: string;
 }
 
 /**
@@ -83,8 +90,60 @@ export async function executeDev(
   const projectRoot = options.projectRoot || process.cwd();
 
   try {
-    // Load configuration
-    const config = loadConfig(projectRoot);
+    // Load configuration (with global fallback)
+    const localExists = configExists(projectRoot);
+    const globalExists = loadGlobalConfig() !== null;
+
+    let config: SyrinConfig;
+    let configSource: 'local' | 'global';
+
+    try {
+      const configResult = loadConfigWithGlobal(projectRoot, {
+        transport: options.transport,
+        mcp_url: options.mcpUrl,
+        script: options.script,
+      });
+      config = configResult.config;
+      configSource = configResult.source;
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message.includes('No configuration found')
+      ) {
+        log.blank();
+        log.error('❌ No configuration found.');
+        log.blank();
+        if (!localExists && !globalExists) {
+          log.info('💡 Options:');
+          log.info('   1. Create local config: syrin init');
+          log.info('   2. Set up global config: syrin init --global');
+          log.blank();
+        } else if (!localExists) {
+          log.info('💡 Using global config requires CLI flags:');
+          log.info('   --transport <stdio|http>');
+          if (options.transport === 'http') {
+            log.info('   --mcp-url <url>');
+          } else if (options.transport === 'stdio') {
+            log.info('   --script <command>');
+          } else {
+            // Show both options when transport is not specified
+            log.info('   --mcp-url <url> (for http transport)');
+            log.info('   --script <command> (for stdio transport)');
+          }
+          log.blank();
+        }
+        throw error;
+      }
+      throw error;
+    }
+
+    // Show config source
+    if (configSource === 'global') {
+      log.blank();
+      log.info('ℹ️  Using global configuration from ~/.syrin/syrin.yaml');
+      log.info('   (No local syrin.yaml found in current directory)');
+      log.blank();
+    }
 
     // Validate transport configuration
     if (config.transport === TransportTypes.HTTP && !config.mcp_url) {
@@ -129,7 +188,7 @@ export async function executeDev(
         eventsDir,
         `${sessionId}${FileExtensions.JSONL}`
       );
-      logger.info(`Events will be saved to: ${eventFilePath}`);
+      log.info(`Events will be saved to: ${eventFilePath}`);
       log.blank();
       log.info(`Events are being saved to: ${eventFilePath}`);
       log.blank();
@@ -170,7 +229,7 @@ export async function executeDev(
         }
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
-        logger.error('Error during cleanup', err);
+        log.error(`Error: ${err.message}`);
         // Even if disconnect fails, try to kill the process directly
         // This is a safety net to ensure cleanup happens
       }
@@ -189,7 +248,7 @@ export async function executeDev(
     // Handle uncaught exceptions
     process.on('uncaughtException', (error: Error) => {
       void (async (): Promise<void> => {
-        logger.error('Uncaught exception', error);
+        log.error(`Error: ${error.message}`);
         await cleanup();
         process.exit(1);
       })();
@@ -198,9 +257,8 @@ export async function executeDev(
     // Handle unhandled promise rejections
     process.on('unhandledRejection', (reason: unknown) => {
       void (async (): Promise<void> => {
-        logger.error(
-          'Unhandled rejection',
-          reason instanceof Error ? reason : new Error(String(reason))
+        log.error(
+          `Error: ${reason instanceof Error ? reason.message : String(reason)}`
         );
         await cleanup();
         process.exit(1);
@@ -417,7 +475,7 @@ export async function executeDev(
               );
               const err =
                 error instanceof Error ? error : new Error(String(error));
-              logger.error('Error loading tool result for save', err);
+              log.error(`Error: ${err.message}`);
             }
           } catch (error) {
             const errorMessage =
@@ -428,7 +486,7 @@ export async function executeDev(
             );
             const err =
               error instanceof Error ? error : new Error(String(error));
-            logger.error('Error saving JSON to file', err);
+            log.error(`Error: ${err.message}`);
           }
           return;
         }
@@ -457,7 +515,7 @@ export async function executeDev(
             );
             const err =
               error instanceof Error ? error : new Error(String(error));
-            logger.error('Error reading history file', err);
+            log.error(`Error: ${err.message}`);
           }
           return;
         }
@@ -482,7 +540,7 @@ export async function executeDev(
             error instanceof Error ? error.message : String(error);
           chatUI.addMessage('system', `❌ Error: ${errorMessage}`);
           const err = error instanceof Error ? error : new Error(String(error));
-          logger.error('Error processing user input', err);
+          log.error(`Error: ${err.message}`);
         }
       },
       onExit: async (): Promise<void> => {
@@ -496,11 +554,11 @@ export async function executeDev(
           // Close file event store if used
           if (options.saveEvents && eventStore instanceof FileEventStore) {
             await eventStore.close();
-            logger.info('Event store closed');
+            log.info('Event store closed');
           }
         } catch (error) {
           const err = error instanceof Error ? error : new Error(String(error));
-          logger.error('Error during cleanup', err);
+          log.error(`Error: ${err.message}`);
         }
       },
     });
@@ -543,7 +601,7 @@ export async function executeDev(
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
           const err = error instanceof Error ? error : new Error(String(error));
-          logger.error('Error during SIGINT cleanup', err);
+          log.error(`Error: ${err.message}`);
         }
         process.exit(0);
       })();

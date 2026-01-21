@@ -3,6 +3,7 @@
  * These types represent the structure of the syrin.yaml file.
  */
 
+import * as os from 'os';
 import type {
   ProjectName,
   AgentName,
@@ -62,6 +63,48 @@ export interface SyrinConfig {
   llm: Record<string, LLMProviderConfig>;
   /** Tool testing configuration (v1.3.0) */
   check?: CheckConfig;
+}
+
+/**
+ * Global Syrin configuration (LLM settings only).
+ * Stored at ~/.syrin/syrin.yaml
+ */
+export interface GlobalSyrinConfig {
+  /** Configuration version */
+  version: SyrinVersion;
+  /** Project name (always "GlobalSyrin") */
+  project_name: 'GlobalSyrin';
+  /** Agent name (defaults to system username, can be customized) */
+  agent_name: AgentName;
+  /** LLM provider configurations */
+  llm: Record<string, LLMProviderConfig>;
+}
+
+/**
+ * Get default agent name from system.
+ * Tries: process.env.USER -> process.env.USERNAME -> os.userInfo().username -> 'Syrin'
+ */
+export function getDefaultAgentName(): string {
+  // Try process.env first (safest)
+  if (process.env.USER) {
+    return process.env.USER;
+  }
+  if (process.env.USERNAME) {
+    return process.env.USERNAME;
+  }
+
+  // Try os.userInfo() with error handling (can throw on some platforms)
+  try {
+    const username = os.userInfo().username;
+    if (username) {
+      return username;
+    }
+  } catch {
+    // Swallow any exceptions from os.userInfo()
+  }
+
+  // Fallback to default
+  return 'Syrin';
 }
 
 /**

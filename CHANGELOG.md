@@ -1,6 +1,58 @@
 # CHANGELOG
 
-## v1.3.0
+## v1.4.0
+
+### Features
+
+1. **Global Configuration Support** - Syrin can now be used from anywhere without project-specific configuration.
+   - `syrin init --global` creates user-wide LLM configuration at `~/.syrin/syrin.yaml`
+   - `syrin dev` works with global config using `--transport` and `--mcp-url`/`--script` flags
+   - Global `.env` support at `~/.syrin/.env` for shared API keys
+   - Configuration precedence: CLI flags > Local config > Global config > Defaults
+
+2. **New `syrin status` Command** - Quick project health overview (like `git status`).
+   - Shows configuration status (local/global)
+   - Displays project details and LLM provider status
+   - Shows environment file status
+   - Provides suggested actions for unconfigured items
+
+3. **New `syrin config` Command Suite** - Complete configuration management without editing YAML files.
+   - `syrin config list` - List all configuration values
+   - `syrin config get <key>` - Get a specific value
+   - `syrin config set <key> <value>` - Set a configuration value
+   - `syrin config edit` - Open config in editor
+   - `syrin config edit-env` - Open .env file in editor
+   - `syrin config set-default <provider>` - Set default LLM provider
+   - `syrin config remove <provider>` - Remove an LLM provider
+
+4. **Command Aliases** - Shorter alternatives for frequently used commands.
+   - `syrin ls` → `syrin list`
+   - `syrin doc` → `syrin doctor`
+   - `syrin cfg` → `syrin config`
+
+5. **Global CLI Flags** - New flags available on all commands.
+   - `--quiet` / `-q` - Minimal output (errors only), perfect for CI/CD
+   - `--verbose` - Verbose output for debugging
+
+6. **Improved Checkbox UX** - Added hint text "SPACE to toggle, ENTER to confirm" in init prompts.
+
+### Bug Fixes
+
+1. **Dev Mode Validation Details** - Now shows which required parameter is missing when validation fails.
+2. **`[object Object]` in Init Output** - Fixed logging bug that displayed object context incorrectly.
+3. **Exit Code 0 for Help** - Running `syrin` with no arguments now exits with code 0 (was 1).
+4. **Duplicate Error Messages** - Fixed duplicate error logging in command error handler.
+5. **Wrong Env Source in Doctor** - Fixed environment variable priority (local .env now takes precedence over global .env for local context).
+
+### Improvements
+
+1. **Version Banner Consistency** - All commands now show version banner consistently.
+2. **Unified Logger** - Consolidated `logger` and `log` into single `log` utility.
+3. **Cleaner YAML Generation** - Improved whitespace handling in generated config files.
+4. **Better Error Messages** - Standardized error formatting across all commands.
+5. **Comprehensive Documentation** - Complete CLI reference with all commands, flags, and examples.
+
+## v1.3.2
 
 ### Breaking Changes
 

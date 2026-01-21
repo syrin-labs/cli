@@ -97,6 +97,42 @@ It makes MCP systems understandable and testable.
 
 ---
 
+## Global Configuration
+
+Syrin supports both **local** (project-specific) and **global** (user-wide) configurations. This allows you to:
+
+- Use Syrin from any directory without initializing a project
+- Share LLM API keys across multiple projects
+- Set default agent names and LLM providers globally
+
+### Quick Setup
+
+```bash
+# Set up global configuration
+syrin config setup --global
+
+# Set API keys in global .env
+syrin config edit-env --global
+
+# Use Syrin from any directory
+syrin dev --exec --transport http --mcp-url http://localhost:8000/mcp
+```
+
+### Configuration Management
+
+```bash
+# View global config
+syrin config list --global
+
+# Set global LLM provider
+syrin config set openai.model "gpt-4-turbo" --global
+
+# Set default provider
+syrin config set-default claude --global
+```
+
+See the [Configuration Guide](docs/Commands/syrin-config.md) for more details.
+
 ## Key Capabilities
 
 ### Static Tool Contract Analysis (`syrin analyse`)

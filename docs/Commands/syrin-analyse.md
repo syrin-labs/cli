@@ -39,6 +39,8 @@ They only see contracts.
 syrin analyse [options]
 ```
 
+**Alias:** `syrin analyze` (American spelling)
+
 ## Options
 
 | Flag                    | Description                                | Default            |
@@ -50,6 +52,23 @@ syrin analyse [options]
 | `--url <url>`           | MCP URL for HTTP transport                 | From configuration |
 | `--script <script>`     | Script for stdio transport                 | From configuration |
 | `--project-root <path>` | Syrin project root directory               | Current directory  |
+| `--env <key=value>`     | Environment variable for stdio (repeatable) | None              |
+| `--auth-header <header>` | Auth header for HTTP transport (repeatable)| None              |
+
+**Global Options:**
+
+| Flag        | Description                  |
+| ----------- | ---------------------------- |
+| `--quiet`   | Minimal output (errors only) |
+| `--verbose` | Verbose output for debugging |
+
+```bash
+# Quiet mode for CI
+syrin --quiet analyse --ci
+
+# Verbose mode for debugging
+syrin --verbose analyse
+```
 
 ## What syrin analyse Does
 

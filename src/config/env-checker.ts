@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 import { Messages, Paths } from '@/constants';
+import { getGlobalEnvPath } from './global-loader';
 
 export interface EnvCheckResult {
   /** Whether the environment variable is set */
@@ -19,6 +20,8 @@ export interface EnvCheckResult {
   keyExistsInEnvFile?: boolean;
   /** Error message explaining why the variable is not set */
   errorMessage?: string;
+  /** Source of the environment variable: 'process.env' | 'global.env' | 'local.env' */
+  source?: 'process.env' | 'global.env' | 'local.env';
 }
 
 /**
@@ -65,18 +68,33 @@ function parseEnvFile(envFilePath: string): Map<string, string> {
 }
 
 /**
+ * Load global environment file.
+ * @returns Map of environment variables from ~/.syrin/.env
+ */
+export function loadGlobalEnvFile(): Map<string, string> {
+  const globalEnvPath = getGlobalEnvPath();
+  return parseEnvFile(globalEnvPath);
+}
+
+/**
  * Check if an environment variable is set.
- * Checks both process.env and .env file, providing detailed error messages.
+ * Checks in order:
+ *   - For local context: process.env > local .env > global .env
+ *   - For global context: process.env > global .env
  * @param varName - Name of the environment variable
  * @param projectRoot - Root directory of the project
+ * @param isGlobalContext - Whether this check is for global config (affects check order and error messages)
  * @returns Check result with detailed error information
  */
 export function checkEnvVar(
   varName: string,
-  projectRoot: string = process.cwd()
+  projectRoot: string = process.cwd(),
+  isGlobalContext: boolean = false
 ): EnvCheckResult {
-  const envFilePath = path.join(projectRoot, Paths.ENV_FILE);
-  const envFileExists = fs.existsSync(envFilePath);
+  const localEnvFilePath = path.join(projectRoot, Paths.ENV_FILE);
+  const globalEnvPath = getGlobalEnvPath();
+  const localEnvFileExists = fs.existsSync(localEnvFilePath);
+  const globalEnvFileExists = fs.existsSync(globalEnvPath);
 
   // First check process.env (takes precedence)
   const processEnvValue = process.env[varName];
@@ -84,51 +102,87 @@ export function checkEnvVar(
     return {
       isSet: true,
       value: processEnvValue,
-      envFileExists,
-      keyExistsInEnvFile: undefined, // Not checked since process.env has it
+      envFileExists: localEnvFileExists || globalEnvFileExists,
+      keyExistsInEnvFile: undefined,
+      source: 'process.env',
     };
   }
 
-  // If not in process.env, check .env file
-  if (!envFileExists) {
-    return {
-      isSet: false,
-      envFileExists: false,
-      keyExistsInEnvFile: false,
-      errorMessage: Messages.ENV_FILE_NOT_PRESENT(varName),
-    };
+  // For local context: check local .env first, then global .env
+  // For global context: check global .env only
+  if (!isGlobalContext && localEnvFileExists) {
+    const localEnvMap = parseEnvFile(localEnvFilePath);
+    const keyExistsInLocalEnv = localEnvMap.has(varName);
+    const localEnvValue = localEnvMap.get(varName);
+
+    if (keyExistsInLocalEnv) {
+      if (localEnvValue === '' || localEnvValue === undefined) {
+        return {
+          isSet: false,
+          value: localEnvValue,
+          envFileExists: true,
+          keyExistsInEnvFile: true,
+          errorMessage: Messages.ENV_KEY_EMPTY(varName),
+          source: 'local.env',
+        };
+      }
+
+      return {
+        isSet: true,
+        value: localEnvValue,
+        envFileExists: true,
+        keyExistsInEnvFile: true,
+        source: 'local.env',
+      };
+    }
   }
 
-  // Parse .env file
-  const envMap = parseEnvFile(envFilePath);
-  const keyExistsInEnvFile = envMap.has(varName);
-  const envFileValue = envMap.get(varName);
+  // Check global .env file (fallback for local context, primary for global context)
+  if (globalEnvFileExists) {
+    const globalEnvMap = parseEnvFile(globalEnvPath);
+    const keyExistsInGlobalEnv = globalEnvMap.has(varName);
+    const globalEnvValue = globalEnvMap.get(varName);
 
-  if (!keyExistsInEnvFile) {
-    return {
-      isSet: false,
-      envFileExists: true,
-      keyExistsInEnvFile: false,
-      errorMessage: Messages.ENV_KEY_NOT_FOUND(varName),
-    };
+    if (keyExistsInGlobalEnv) {
+      if (globalEnvValue === '') {
+        return {
+          isSet: false,
+          envFileExists: true,
+          keyExistsInEnvFile: true,
+          source: 'global.env',
+          errorMessage: Messages.ENV_SET_INSTRUCTIONS(varName),
+        };
+      }
+      return {
+        isSet: true,
+        value: globalEnvValue,
+        envFileExists: true,
+        keyExistsInEnvFile: true,
+        source: 'global.env',
+      };
+    }
   }
 
-  if (envFileValue === '' || envFileValue === undefined) {
-    return {
-      isSet: false,
-      value: envFileValue,
-      envFileExists: true,
-      keyExistsInEnvFile: true,
-      errorMessage: Messages.ENV_KEY_EMPTY(varName),
-    };
+  // Variable not found in any source
+  // Generate appropriate error message based on context
+  let errorMessage: string;
+  if (isGlobalContext) {
+    // For global config, suggest global .env or environment variables
+    if (globalEnvFileExists) {
+      errorMessage = `Key "${varName}" not found in ${globalEnvPath} or environment variables`;
+    } else {
+      errorMessage = `Global .env file not found at ${globalEnvPath}. Create it with: syrin config edit-env --global`;
+    }
+  } else {
+    // For local config, use original message
+    errorMessage = Messages.ENV_FILE_NOT_PRESENT(varName);
   }
 
-  // Key exists and has a value
   return {
-    isSet: true,
-    value: envFileValue,
-    envFileExists: true,
-    keyExistsInEnvFile: true,
+    isSet: false,
+    envFileExists: localEnvFileExists || globalEnvFileExists,
+    keyExistsInEnvFile: false,
+    errorMessage,
   };
 }
 

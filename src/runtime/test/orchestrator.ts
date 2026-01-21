@@ -38,7 +38,7 @@ import {
 import type { Diagnostic } from '@/runtime/analysis/types';
 import type { ToolContract, ParsedContract } from './contract-types';
 import type { Command } from '@/types/ids';
-import { logger } from '@/utils/logger';
+import { log } from '@/utils/logger';
 import { ConfigurationError } from '@/utils/errors';
 
 /**
@@ -309,7 +309,7 @@ export class TestOrchestrator {
       const mcpCommand = this.options.mcpCommand || config.script;
       const scriptName = mcpCommand ? String(mcpCommand) : 'unknown';
       if (!this.options.ci) {
-        logger.warn(
+        log.warn(
           `Tool "${toolName}" not found in MCP server. Running: ${scriptName}`
         );
       }
@@ -348,13 +348,13 @@ export class TestOrchestrator {
       try {
         toolTimeoutMs = parseTimeString(contract.guarantees.max_execution_time);
         if (!this.options.ci) {
-          logger.info(
+          log.info(
             `Tool "${toolName}" declared max_execution_time: ${contract.guarantees.max_execution_time} (${toolTimeoutMs}ms)`
           );
         }
       } catch (_error) {
         if (!this.options.ci) {
-          logger.warn(
+          log.warn(
             `Invalid max_execution_time for tool "${toolName}": ${contract.guarantees.max_execution_time}. Using global default.`
           );
         }

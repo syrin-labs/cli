@@ -1,6 +1,6 @@
 {
   "name": "@syrin/cli",
-  "version": "1.3.2",
+  "version": "1.4.0",
   "description": "Syrin is a runtime intelligence system that makes MCP servers debuggable, testable, and safe to run in production.",
   "type": "module",
   "main": "dist/index.js",

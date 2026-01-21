@@ -28,6 +28,18 @@ export const Messages = {
   INIT_RUN_DEV: (devCommand: string) =>
     `Run \`${devCommand}\` to start development mode`,
 
+  // Global Init Command Messages
+  GLOBAL_INIT_ALREADY_INITIALIZED: 'Global Syrin configuration already exists!',
+  GLOBAL_INIT_CONFIG_FILE: (configPath: string) =>
+    `Configuration file: ${configPath}`,
+  GLOBAL_INIT_SUCCESS: 'Global Syrin configuration created successfully!',
+  GLOBAL_INIT_EDIT_CONFIG:
+    'Run `syrin config edit --global` to edit the configuration',
+  GLOBAL_INIT_EDIT_ENV: 'Run `syrin config edit-env --global` to set API keys',
+  GLOBAL_INIT_REINITIALIZE_TIP: 'Want to re-initialize?',
+  GLOBAL_INIT_REINITIALIZE_INSTRUCTION:
+    'Delete ~/.syrin/syrin.yaml and run `syrin init --global` again.',
+
   // Error Messages
   ERROR_UNEXPECTED: 'An unexpected error occurred',
   ERROR_LOADING_CONFIG: 'Failed to load configuration file',

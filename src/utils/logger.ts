@@ -85,6 +85,20 @@ export class Log {
   }
 
   /**
+   * Get the current log level.
+   */
+  getLevel(): LogLevel {
+    return this.level;
+  }
+
+  /**
+   * Check if the logger is in quiet mode (only errors shown).
+   */
+  isQuiet(): boolean {
+    return this.level >= LogLevel.ERROR;
+  }
+
+  /**
    * Enable or disable structured logging.
    */
   setStructuredLogging(enabled: boolean): void {
@@ -157,9 +171,13 @@ export class Log {
   }
 
   /**
-   * Print styled text to console.
+   * Print styled text to console at INFO level.
+   * Respects log level - won't print if level is higher than INFO.
    */
   private print(text: string, ...styles: ColorKey[]): void {
+    if (LogLevel.INFO < this.level) {
+      return; // Skip if log level is higher than INFO (e.g., quiet mode)
+    }
     if (this.useStructuredLogging) {
       this.structuredLog(LogLevel.INFO, text);
     } else {
@@ -211,6 +229,7 @@ export class Log {
    * Log/print error message (red) with error icon.
    * For structured logging: logs at ERROR level (can include Error object)
    * For styled output: prints with red color and error icon
+   * Note: Errors always show regardless of log level (for quiet mode).
    */
   error(
     message: string,
@@ -227,9 +246,10 @@ export class Log {
       this.structuredLog(LogLevel.ERROR, message, context, err);
     } else {
       // Styled output: errorOrIcon is optional Icon
+      // Errors always print regardless of log level (critical for quiet mode)
       const icon = errorOrIcon as IconType | undefined;
       const iconText = icon ? `${icon} ` : `${Icon.ERROR} `;
-      this.print(`${iconText}${message}`, 'red');
+      console.log(this.style(`${iconText}${message}`, 'red'));
     }
   }
 
@@ -321,8 +341,12 @@ export class Log {
 
   /**
    * Print a line with label and value.
+   * Respects log level.
    */
   labelValue(labelText: string, valueText: string): void {
+    if (LogLevel.INFO < this.level) {
+      return; // Skip if log level is higher than INFO
+    }
     const output = `${this.style(labelText, 'dim')} ${this.style(valueText, 'cyan')}`;
     if (this.useStructuredLogging) {
       this.structuredLog(LogLevel.INFO, `${labelText} ${valueText}`);
@@ -381,8 +405,12 @@ export class Log {
 
   /**
    * Print plain text (no styling).
+   * Respects log level.
    */
   plain(text: string): void {
+    if (LogLevel.INFO < this.level) {
+      return; // Skip if log level is higher than INFO
+    }
     if (this.useStructuredLogging) {
       this.structuredLog(LogLevel.INFO, text);
     } else {
@@ -392,8 +420,12 @@ export class Log {
 
   /**
    * Print an empty line.
+   * Respects log level.
    */
   blank(): void {
+    if (LogLevel.INFO < this.level) {
+      return; // Skip if log level is higher than INFO
+    }
     console.log('');
   }
 
@@ -407,20 +439,34 @@ export class Log {
 }
 
 /**
- * Default logger instance for styled output (non-structured).
- * Use this for UI/presentation output.
+ * Default logger instance for styled output.
+ * Use this for all logging throughout the application.
  */
 export const log = new Log(LogLevel.INFO, {}, false);
 
 /**
- * Default structured logger instance.
- * Use this for application logging with levels and context.
+ * Set quiet mode (errors only).
+ * @param enabled - Whether to enable quiet mode
  */
-export const logger = new Log(LogLevel.INFO, {}, true);
+export function setQuietMode(enabled: boolean): void {
+  if (enabled) {
+    log.setLevel(LogLevel.ERROR);
+  }
+}
+
+/**
+ * Set verbose mode (debug level).
+ * @param enabled - Whether to enable verbose mode
+ */
+export function setVerboseMode(enabled: boolean): void {
+  if (enabled) {
+    log.setLevel(LogLevel.DEBUG);
+  }
+}
 
 /**
  * Create a logger with a specific context.
  */
 export function createLogger(context: Record<string, unknown>): Log {
-  return logger.child(context);
+  return log.child(context);
 }

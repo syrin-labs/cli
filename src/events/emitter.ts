@@ -3,7 +3,7 @@ import type { EventType } from '@/events/event-type';
 import type { EventStore } from '@/events/store';
 import { makeEventID, makeTimestamp } from '@/types/factories';
 import type { SessionID, WorkflowID, PromptID } from '@/types/ids';
-import { logger } from '@/utils/logger';
+import { log } from '@/utils/logger';
 import { EventStoreError } from '@/utils/errors';
 
 /**
@@ -74,7 +74,7 @@ export class RuntimeEventEmitter implements EventEmitter {
       if (appendResult instanceof Promise) {
         return appendResult
           .then(() => {
-            logger.debug(`Event emitted: ${eventType}`, {
+            log.debug(`Event emitted: ${eventType}`, {
               event_id: event.event_id,
               sequence: event.sequence,
             });
@@ -85,7 +85,7 @@ export class RuntimeEventEmitter implements EventEmitter {
           .catch((error: unknown) => {
             const err =
               error instanceof Error ? error : new Error(String(error));
-            logger.error('Failed to persist event', err, {
+            log.error(`Error: ${err.message}`, err, {
               event_id: event.event_id,
               event_type: eventType,
             });
@@ -98,7 +98,7 @@ export class RuntimeEventEmitter implements EventEmitter {
       }
 
       // Sync store
-      logger.debug(`Event emitted: ${eventType}`, {
+      log.debug(`Event emitted: ${eventType}`, {
         event_id: event.event_id,
         sequence: event.sequence,
       });
@@ -107,7 +107,7 @@ export class RuntimeEventEmitter implements EventEmitter {
       return event;
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('Failed to emit event', err, {
+      log.error(`Error: ${err.message}`, err, {
         event_id: event.event_id,
         event_type: eventType,
       });
@@ -162,7 +162,7 @@ export class RuntimeEventEmitter implements EventEmitter {
           result.catch((error: unknown) => {
             const err =
               error instanceof Error ? error : new Error(String(error));
-            logger.error('Error in event subscriber', err, {
+            log.error(`Error: ${err.message}`, err, {
               event_id: event.event_id,
               event_type: event.event_type,
             });
@@ -170,7 +170,7 @@ export class RuntimeEventEmitter implements EventEmitter {
         }
       } catch (error: unknown) {
         const err = error instanceof Error ? error : new Error(String(error));
-        logger.error('Error in event subscriber', err, {
+        log.error(`Error: ${err.message}`, err, {
           event_id: event.event_id,
           event_type: event.event_type,
         });

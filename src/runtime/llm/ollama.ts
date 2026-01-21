@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type { LLMProvider } from './provider';
 import type { LLMRequest, LLMResponse, ToolCall } from './types';
 import { ConfigurationError } from '@/utils/errors';
-import { logger, log } from '@/utils/logger';
+import { log } from '@/utils/logger';
 import { checkCommandExists, checkEnvVar } from '@/config/env-checker';
 
 /**
@@ -105,13 +105,13 @@ class OllamaProcessManager {
         const message = data.toString().trim();
         // Only log errors, not normal startup messages
         if (message && /error|fatal|critical/i.test(message)) {
-          logger.warn(`Ollama: ${message}`);
+          log.warn(`Ollama: ${message}`);
         }
       });
 
       // Handle process errors
       this.ollamaProcess.on('error', (error: Error) => {
-        logger.error('Failed to start Ollama service', error);
+        log.error(`Error: ${error.message}`, error);
         this.ollamaProcess = null;
         this.isStarting = false;
         throw new ConfigurationError(
@@ -248,7 +248,7 @@ export class OllamaProvider implements LLMProvider {
         ) ?? false;
 
       if (!modelExists) {
-        logger.info(`Model ${this.modelName} not found. Downloading...`);
+        log.info(`Model ${this.modelName} not found. Downloading...`);
         log.blank();
         log.info(`📥 Downloading model: ${this.modelName}`);
         log.plain(

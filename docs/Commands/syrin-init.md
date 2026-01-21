@@ -30,10 +30,26 @@ syrin init [options]
 
 ## Options
 
-| Flag                    | Description                               | Default           |
-| ----------------------- | ----------------------------------------- | ----------------- |
-| `-y, --yes`             | Skip interactive prompts and use defaults | `false`           |
-| `--project-root <path>` | Initialize Syrin in the given directory   | Current directory |
+| Flag                    | Description                                      | Default           |
+| ----------------------- | ------------------------------------------------ | ----------------- |
+| `-y, --yes`             | Skip interactive prompts and use defaults        | `false`           |
+| `--project-root <path>` | Initialize Syrin in the given directory          | Current directory |
+| `--global`              | Create global configuration (LLM providers only) | `false`           |
+
+**Global Options:**
+
+| Flag        | Description                  |
+| ----------- | ---------------------------- |
+| `--quiet`   | Minimal output (errors only) |
+| `--verbose` | Verbose output for debugging |
+
+```bash
+# Quiet mode for scripts
+syrin --quiet init -y
+
+# Verbose mode for debugging
+syrin --verbose init
+```
 
 ## How Initialization Works
 
@@ -86,6 +102,61 @@ Use this when:
 - standardizing project templates
 
 You are expected to review and edit the configuration afterward.
+
+## Global Initialization
+
+```bash
+syrin init --global
+```
+
+Creates a **global configuration** at `~/.syrin/syrin.yaml` that applies across all projects.
+
+Global configuration contains **only LLM provider settings**:
+
+- Agent name
+- LLM providers (OpenAI, Claude, Ollama)
+- API key references
+- Model names
+- Default provider selection
+
+**When to use global init:**
+
+- Share LLM credentials across multiple projects
+- Quick testing from any directory without project initialization
+- Personal development workflows
+
+**Global config structure:**
+
+```yaml
+version: "1.0"
+project_name: GlobalSyrin
+agent_name: YourAgentName
+llm:
+  openai:
+    API_KEY: OPENAI_API_KEY
+    MODEL_NAME: gpt-4
+    default: true
+```
+
+**Using global config with `syrin dev`:**
+
+When using global config, provide transport details via CLI flags:
+
+```bash
+# HTTP transport
+syrin dev --transport http --mcp-url http://localhost:8000/mcp
+
+# stdio transport
+syrin dev --transport stdio --script "python server.py"
+```
+
+**Non-interactive global init:**
+
+```bash
+syrin init --global --yes
+```
+
+Creates global config with default OpenAI settings.
 
 ## Configuration File Created
 
@@ -181,6 +252,7 @@ syrin dev      # start governed development
 ## See Also
 
 - [Configuration](/configuration/)
+- [syrin config](/commands/config/) - Manage configuration after initialization
 - [syrin doctor](/commands/doctor/)
 - [syrin dev](/commands/dev/)
 - [syrin test](/commands/test/)

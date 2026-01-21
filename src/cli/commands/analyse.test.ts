@@ -22,13 +22,26 @@ vi.mock('@/presentation/analysis-ui', () => ({
   displayAnalysisResult: vi.fn(),
 }));
 vi.mock('@/utils/logger', () => ({
-  logger: {
-    error: vi.fn(),
-  },
   log: {
     info: vi.fn(),
-    blank: vi.fn(),
+    warn: vi.fn(),
+    warning: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
+    success: vi.fn(),
+    plain: vi.fn(),
+    blank: vi.fn(),
+    heading: vi.fn(),
+    label: vi.fn(),
+    value: vi.fn(),
+    labelValue: vi.fn(),
+    numberedItem: vi.fn(),
+    checkmark: vi.fn(),
+    xmark: vi.fn(),
+    warnSymbol: vi.fn(),
+    tick: vi.fn(() => '✓'),
+    cross: vi.fn(() => '✗'),
+    styleText: vi.fn((text) => text),
   },
 }));
 

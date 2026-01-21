@@ -7,7 +7,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { executeDev } from './dev';
-import { loadConfig } from '@/config/loader';
+import { loadConfigWithGlobal, configExists } from '@/config/loader';
+import { loadGlobalConfig } from '@/config/global-loader';
 import { getLLMProvider } from '@/runtime/llm/factory';
 import { createMCPClientManager } from '@/runtime/mcp/client/manager';
 import { RuntimeEventEmitter } from '@/events/emitter';
@@ -23,6 +24,7 @@ import type { EventStore } from '@/events/store';
 
 // Mock dependencies
 vi.mock('@/config/loader');
+vi.mock('@/config/global-loader');
 vi.mock('@/runtime/llm/factory');
 vi.mock('@/runtime/mcp/client/manager');
 vi.mock('@/events/emitter');
@@ -56,15 +58,26 @@ vi.mock('@/cli/utils', async () => {
   };
 });
 vi.mock('@/utils/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    error: vi.fn(),
-  },
   log: {
     info: vi.fn(),
-    blank: vi.fn(),
+    warn: vi.fn(),
+    warning: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
+    success: vi.fn(),
     plain: vi.fn(),
+    blank: vi.fn(),
+    heading: vi.fn(),
+    label: vi.fn(),
+    value: vi.fn(),
+    labelValue: vi.fn(),
+    numberedItem: vi.fn(),
+    checkmark: vi.fn(),
+    xmark: vi.fn(),
+    warnSymbol: vi.fn(),
+    tick: vi.fn(() => '✓'),
+    cross: vi.fn(() => '✗'),
+    styleText: vi.fn((text) => text),
   },
 }));
 vi.mock('@/presentation/dev-ui', () => ({
@@ -84,9 +97,13 @@ vi.mock('@/utils/version-checker', () => ({
 vi.mock('uuid', () => ({
   v4: vi.fn(() => 'test-uuid-1234'),
 }));
-vi.mock('@/types/factories', () => ({
-  makeSessionID: vi.fn(prefix => `${prefix}-test-session-id`),
-}));
+vi.mock('@/types/factories', async () => {
+  const actual = await vi.importActual('@/types/factories');
+  return {
+    ...actual,
+    makeSessionID: vi.fn((prefix: string) => `${prefix}-test-session-id`),
+  };
+});
 
 describe('executeDev', () => {
   let tempDir: string;
@@ -164,7 +181,9 @@ describe('executeDev', () => {
       stop: vi.fn(),
     };
 
-    vi.mocked(loadConfig).mockReturnValue(mockConfig);
+    vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: mockConfig, source: 'local' });
+    vi.mocked(configExists).mockReturnValue(true);
+    vi.mocked(loadGlobalConfig).mockReturnValue(null);
     vi.mocked(getLLMProvider).mockReturnValue(mockLLMProvider);
     vi.mocked(createMCPClientManager).mockReturnValue(mockMCPClientManager);
     vi.mocked(RuntimeEventEmitter).mockImplementation(
@@ -214,14 +233,18 @@ describe('executeDev', () => {
 
       await executeDev({ projectRoot: customRoot });
 
-      expect(loadConfig).toHaveBeenCalledWith(customRoot);
+      expect(loadConfigWithGlobal).toHaveBeenCalledWith(
+        customRoot,
+        expect.any(Object)
+      );
     });
 
     it('should use current working directory as default project root', async () => {
       await executeDev({});
 
-      expect(loadConfig).toHaveBeenCalledWith(
-        expect.stringContaining(path.basename(tempDir))
+      expect(loadConfigWithGlobal).toHaveBeenCalledWith(
+        expect.stringContaining(path.basename(tempDir)),
+        expect.any(Object)
       );
     });
 
@@ -232,7 +255,7 @@ describe('executeDev', () => {
         mcp_url: undefined,
       };
 
-      vi.mocked(loadConfig).mockReturnValue(httpConfig);
+      vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: httpConfig, source: 'local' });
 
       await expect(executeDev({})).rejects.toThrow(ConfigurationError);
     });
@@ -259,7 +282,7 @@ describe('executeDev', () => {
         script: 'python server.py',
       };
 
-      vi.mocked(loadConfig).mockReturnValue(httpConfig);
+      vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: httpConfig, source: 'local' });
 
       await executeDev({ runScript: true });
 
@@ -279,7 +302,7 @@ describe('executeDev', () => {
         mcp_url: 'http://localhost:8000',
       };
 
-      vi.mocked(loadConfig).mockReturnValue(httpConfig);
+      vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: httpConfig, source: 'local' });
 
       await executeDev({});
 
@@ -299,7 +322,9 @@ describe('executeDev', () => {
         script: undefined,
       };
 
-      vi.mocked(loadConfig).mockReturnValue(stdioConfig);
+      vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: stdioConfig, source: 'local' });
+      vi.mocked(configExists).mockReturnValue(true);
+      vi.mocked(loadGlobalConfig).mockReturnValue(null);
 
       await expect(executeDev({})).rejects.toThrow(ConfigurationError);
     });
@@ -312,7 +337,7 @@ describe('executeDev', () => {
         script: undefined,
       };
 
-      vi.mocked(loadConfig).mockReturnValue(httpConfig);
+      vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: httpConfig, source: 'local' });
 
       await expect(executeDev({ runScript: true })).rejects.toThrow(
         ConfigurationError
@@ -502,9 +527,11 @@ describe('executeDev', () => {
 
   describe('error handling', () => {
     it('should handle config loading errors', async () => {
-      vi.mocked(loadConfig).mockImplementation(() => {
+      vi.mocked(loadConfigWithGlobal).mockImplementation(() => {
         throw new ConfigurationError('Config not found');
       });
+      vi.mocked(configExists).mockReturnValue(false);
+      vi.mocked(loadGlobalConfig).mockReturnValue(null);
 
       await expect(executeDev({})).rejects.toThrow(ConfigurationError);
     });

@@ -15,7 +15,7 @@ import type {
 } from '@/events/payloads/transport';
 import { getConnectedClient } from '../connection';
 import { ConfigurationError } from '@/utils/errors';
-import { logger } from '@/utils/logger';
+import { log } from '@/utils/logger';
 import type { TransportType } from '@/config/types';
 import type { MCPURL, Command } from '@/types/ids';
 import { parseCommand, setupProcessLogCapture, spawnProcess } from './process';
@@ -208,7 +208,7 @@ export class HTTPMCPClientManager
     } catch (error) {
       // Log but don't throw - cleanup errors are non-critical
       const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('Error closing transport during disconnect', err);
+      log.error(`Error: ${err.message}`, err);
 
       await this.eventEmitter.emit<TransportErrorPayload>(
         TransportEventType.TRANSPORT_ERROR,
@@ -352,7 +352,7 @@ export class StdioMCPClientManager
       this.transport = null;
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('Error closing transport during disconnect', err);
+      log.error(`Error: ${err.message}`, err);
       await this.emitTransportError(err.message, 'DISCONNECT_ERROR', false);
     }
   }

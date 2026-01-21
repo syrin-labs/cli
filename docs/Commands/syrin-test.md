@@ -97,6 +97,21 @@ syrin test --connection --transport stdio --script "python server.py"
 
 **Note**: When using `--connection`, tool validation options (`--tool`, `--strict`, `--tools-dir`) are ignored.
 
+### Global Options
+
+| Flag        | Description                  |
+| ----------- | ---------------------------- |
+| `--quiet`   | Minimal output (errors only) |
+| `--verbose` | Verbose output for debugging |
+
+```bash
+# Quiet mode for CI pipelines
+syrin --quiet test --ci
+
+# Verbose mode for debugging
+syrin --verbose test --tool my_tool
+```
+
 ## What syrin test Does (Tool Validation)
 
 ### 1. Contract Loading

@@ -12,7 +12,18 @@ import { executeAnalyse } from '@/cli/commands/analyse';
 import { executeDev } from '@/cli/commands/dev';
 import { executeUpdate } from '@/cli/commands/update';
 import { executeRollback } from '@/cli/commands/rollback';
-import { logger, log } from '@/utils/logger';
+import { executeStatus } from '@/cli/commands/status';
+import {
+  executeConfigSet,
+  executeConfigGet,
+  executeConfigList,
+  executeConfigShow,
+  executeConfigEdit,
+  executeConfigEditEnv,
+  executeConfigSetDefault,
+  executeConfigRemove,
+} from '@/cli/commands/config';
+import { log, setQuietMode, setVerboseMode } from '@/utils/logger';
 import { Messages, ListTypes, ListType } from '@/constants';
 import { getCurrentVersion } from '@/utils/version-checker';
 
@@ -21,7 +32,6 @@ import { getCurrentVersion } from '@/utils/version-checker';
  * Logs full error to internal logger and concise message to user.
  */
 function reportAnalyseError(error: Error): void {
-  logger.error('Analyse command failed', error);
   log.error(`Analyse command failed: ${error.message}`);
 }
 
@@ -37,7 +47,25 @@ export function setupCLI(): void {
   program
     .name('syrin')
     .description('Syrin - Runtime intelligence system for MCP servers')
-    .version(currentVersion, '-v, --version', 'Display version number');
+    .version(currentVersion, '-v, --version', 'Display version number')
+    .option('-q, --quiet', 'Minimal output (errors only)')
+    .option('--verbose', 'Verbose output for debugging')
+    .hook('preAction', (_thisCommand, actionCommand) => {
+      const opts = actionCommand.optsWithGlobals();
+      if (opts.quiet) {
+        setQuietMode(true);
+      }
+      if (opts.verbose) {
+        setVerboseMode(true);
+      }
+    })
+    .addHelpText(
+      'after',
+      '\nAliases:\n' +
+        '  ls        Alias for list\n' +
+        '  doc       Alias for doctor\n' +
+        '  cfg       Alias for config'
+    );
 
   // init command
   program
@@ -48,36 +76,47 @@ export function setupCLI(): void {
       '--project-root <path>',
       'Project root directory (defaults to current directory)'
     )
-    .action(async (options: { yes?: boolean; projectRoot?: string }) => {
-      try {
-        await executeInit({
-          yes: options.yes || false,
-          projectRoot: options.projectRoot,
-        });
-      } catch (error) {
-        // Handle ALREADY_INITIALIZED case first with early return
-        if (error instanceof Error && error.message === 'ALREADY_INITIALIZED') {
-          // Already handled in executeInit, just exit
-          return;
-        }
+    .option('--global', 'Create global configuration (LLM providers only)')
+    .action(
+      async (options: {
+        yes?: boolean;
+        projectRoot?: string;
+        global?: boolean;
+      }) => {
+        try {
+          await executeInit({
+            yes: options.yes || false,
+            projectRoot: options.projectRoot,
+            global: options.global || false,
+          });
+        } catch (error) {
+          // Handle ALREADY_INITIALIZED case first with early return
+          if (
+            error instanceof Error &&
+            error.message === 'ALREADY_INITIALIZED'
+          ) {
+            // Already handled in executeInit, just exit
+            return;
+          }
 
-        // Handle other Error cases
-        if (error instanceof Error) {
-          logger.error('Init command failed', error);
-          log.blank();
-          log.error(`Error: ${error.message}`);
-          log.blank();
-          process.exit(1);
-        }
+          // Handle other Error cases
+          if (error instanceof Error) {
+            log.blank();
+            log.error(`Error: ${error.message}`);
+            log.blank();
+            process.exit(1);
+          }
 
-        // Re-throw non-Error values
-        throw error;
+          // Re-throw non-Error values
+          throw error;
+        }
       }
-    });
+    );
 
   // doctor command
   program
     .command('doctor')
+    .alias('doc')
     .description('Validate Syrin project configuration and setup')
     .option(
       '--project-root <path>',
@@ -89,8 +128,9 @@ export function setupCLI(): void {
       } catch (error) {
         // Error handling is done in executeDoctor, this is a safety net
         if (error instanceof Error) {
-          logger.error('Doctor command failed', error);
+          log.error(`Error: ${error.message}`);
         }
+        process.exit(1);
       }
     });
 
@@ -255,7 +295,8 @@ export function setupCLI(): void {
         } catch (error) {
           // Error handling is done in executeTest
           if (error instanceof Error) {
-            logger.error('Test command failed', error);
+            log.error(`Error: ${error.message}`);
+            process.exit(1);
           }
         }
       }
@@ -264,6 +305,7 @@ export function setupCLI(): void {
   // list command
   program
     .command('list')
+    .alias('ls')
     .description('List tools, resources, or prompts from an MCP server')
     .argument(
       '[type]',
@@ -343,7 +385,8 @@ export function setupCLI(): void {
         } catch (error) {
           // Error handling is done in executeList
           if (error instanceof Error) {
-            logger.error('List command failed', error);
+            log.error(`Error: ${error.message}`);
+            process.exit(1);
           }
         }
       }
@@ -451,6 +494,18 @@ export function setupCLI(): void {
       '--run-script',
       'Run script to spawn server internally. If not provided, stdio uses script automatically, http connects to existing server'
     )
+    .option(
+      '--transport <type>',
+      'Transport type (stdio or http). Required when using global config.'
+    )
+    .option(
+      '--mcp-url <url>',
+      'MCP server URL (required for http transport when using global config)'
+    )
+    .option(
+      '--script <command>',
+      'Script command to run MCP server (required for stdio transport when using global config)'
+    )
     .action(
       async (options: {
         exec?: boolean;
@@ -459,6 +514,9 @@ export function setupCLI(): void {
         saveEvents?: boolean;
         eventFile?: string;
         runScript?: boolean;
+        transport?: 'stdio' | 'http';
+        mcpUrl?: string;
+        script?: string;
       }) => {
         try {
           await executeDev({
@@ -468,11 +526,15 @@ export function setupCLI(): void {
             saveEvents: options.saveEvents || false,
             eventFile: options.eventFile,
             runScript: options.runScript || false,
+            transport: options.transport,
+            mcpUrl: options.mcpUrl,
+            script: options.script,
           });
         } catch (error) {
           // Error handling is done in executeDev
           if (error instanceof Error) {
-            logger.error('Dev command failed', error);
+            log.error(`Error: ${error.message}`);
+            process.exit(1);
           }
         }
       }
@@ -488,7 +550,8 @@ export function setupCLI(): void {
       } catch (error) {
         // Error handling is done in executeUpdate
         if (error instanceof Error) {
-          logger.error('Update command failed', error);
+          log.error(`Error: ${error.message}`);
+          process.exit(1);
         }
       }
     });
@@ -504,10 +567,201 @@ export function setupCLI(): void {
       } catch (error) {
         // Error handling is done in executeRollback
         if (error instanceof Error) {
-          logger.error('Rollback command failed', error);
+          log.error(`Error: ${error.message}`);
+          process.exit(1);
         }
       }
     });
+
+  // status command
+  program
+    .command('status')
+    .description('Show project health overview (config, LLM, MCP connection)')
+    .option(
+      '--project-root <path>',
+      'Project root directory (defaults to current directory)'
+    )
+    .action(async (options: { projectRoot?: string }) => {
+      try {
+        await executeStatus(options.projectRoot);
+      } catch (error) {
+        if (error instanceof Error) {
+          log.error(`Error: ${error.message}`);
+          process.exit(1);
+        }
+      }
+    });
+
+  // config command
+  const configCommand = program
+    .command('config')
+    .alias('cfg')
+    .description('Manage Syrin configuration (local or global)');
+
+  // config set
+  configCommand
+    .command('set')
+    .description('Set a configuration value')
+    .argument('<key>', 'Configuration key (e.g., "openai.model", "agent_name")')
+    .argument('<value>', 'Value to set')
+    .option('--global', 'Operate on global config')
+    .option('--local', 'Operate on local config')
+    .action(
+      async (
+        key: string,
+        value: string,
+        options: { global?: boolean; local?: boolean }
+      ) => {
+        try {
+          await executeConfigSet(key, value, options);
+        } catch (error) {
+          if (error instanceof Error) {
+            log.error(`Error: ${error.message}`);
+          }
+          process.exit(1);
+        }
+      }
+    );
+
+  // config get
+  configCommand
+    .command('get')
+    .description('Get a configuration value')
+    .argument('<key>', 'Configuration key')
+    .option('--global', 'Operate on global config')
+    .option('--local', 'Operate on local config')
+    .action(
+      async (key: string, options: { global?: boolean; local?: boolean }) => {
+        try {
+          await executeConfigGet(key, options);
+        } catch (error) {
+          if (error instanceof Error) {
+            log.error(`Error: ${error.message}`);
+          }
+          process.exit(1);
+        }
+      }
+    );
+
+  // config list
+  configCommand
+    .command('list')
+    .description('List all configuration values')
+    .option('--global', 'Operate on global config')
+    .option('--local', 'Operate on local config')
+    .action(async (options: { global?: boolean; local?: boolean }) => {
+      try {
+        await executeConfigList(options);
+      } catch (error) {
+        if (error instanceof Error) {
+          log.error(`Error: ${error.message}`);
+        }
+        process.exit(1);
+      }
+    });
+
+  // config show
+  configCommand
+    .command('show')
+    .description('Show full configuration')
+    .option('--global', 'Operate on global config')
+    .option('--local', 'Operate on local config')
+    .action(async (options: { global?: boolean; local?: boolean }) => {
+      try {
+        await executeConfigShow(options);
+      } catch (error) {
+        if (error instanceof Error) {
+          log.error(`Error: ${error.message}`);
+        }
+        process.exit(1);
+      }
+    });
+
+  // config edit
+  configCommand
+    .command('edit')
+    .description('Edit configuration file in editor')
+    .option('--global', 'Operate on global config')
+    .option('--local', 'Operate on local config')
+    .action(async (options: { global?: boolean; local?: boolean }) => {
+      try {
+        await executeConfigEdit(options);
+      } catch (error) {
+        if (error instanceof Error) {
+          log.error(`Error: ${error.message}`);
+        }
+        process.exit(1);
+      }
+    });
+
+  // config edit-env
+  configCommand
+    .command('edit-env')
+    .description('Edit environment file in editor')
+    .option('--global', 'Operate on global config')
+    .option('--local', 'Operate on local config')
+    .action(async (options: { global?: boolean; local?: boolean }) => {
+      try {
+        await executeConfigEditEnv(options);
+      } catch (error) {
+        if (error instanceof Error) {
+          log.error(`Error: ${error.message}`);
+        }
+        process.exit(1);
+      }
+    });
+
+  // config set-default
+  configCommand
+    .command('set-default')
+    .description('Set default LLM provider')
+    .argument('<provider>', 'LLM provider name (e.g., openai, claude)')
+    .option('--global', 'Operate on global config')
+    .option('--local', 'Operate on local config')
+    .action(
+      async (
+        provider: string,
+        options: { global?: boolean; local?: boolean }
+      ) => {
+        try {
+          await executeConfigSetDefault(provider, options);
+        } catch (error) {
+          if (error instanceof Error) {
+            log.error(`Error: ${error.message}`);
+          }
+          process.exit(1);
+        }
+      }
+    );
+
+  // config remove
+  configCommand
+    .command('remove')
+    .description('Remove an LLM provider from configuration')
+    .argument('<provider>', 'LLM provider name to remove')
+    .option('--global', 'Operate on global config')
+    .option('--local', 'Operate on local config')
+    .action(
+      async (
+        provider: string,
+        options: { global?: boolean; local?: boolean }
+      ) => {
+        try {
+          await executeConfigRemove(provider, options);
+        } catch (error) {
+          if (error instanceof Error) {
+            log.error(`Error: ${error.message}`);
+          }
+          process.exit(1);
+        }
+      }
+    );
+
+  // Handle no command provided - show help and exit with 0
+  if (process.argv.length <= 2) {
+    program.outputHelp();
+    process.exit(0);
+  }
 
   // Parse command line arguments
   program.parse();
@@ -521,7 +775,7 @@ export function run(): void {
     setupCLI();
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    logger.error('CLI setup failed', err);
+    log.error(`Error: ${err.message}`);
     log.error(Messages.CLI_START_FAILED);
     process.exit(1);
   }

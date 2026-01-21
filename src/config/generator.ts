@@ -267,7 +267,28 @@ function buildConfigContent(options: InitOptions): string {
     llmSection
   );
 
+  // Clean up whitespace
+  template = cleanupYamlWhitespace(template);
+
   return template;
+}
+
+/**
+ * Clean up excessive whitespace in generated YAML.
+ * - Removes trailing whitespace from lines
+ * - Collapses 3+ consecutive blank lines into 2
+ * - Ensures file ends with single newline
+ */
+function cleanupYamlWhitespace(content: string): string {
+  return (
+    content
+      // Remove trailing whitespace from each line
+      .replace(/[ \t]+$/gm, '')
+      // Collapse 3+ consecutive newlines into 2 (one blank line)
+      .replace(/\n{3,}/g, '\n\n')
+      // Ensure single newline at end of file
+      .replace(/\n*$/, '\n')
+  );
 }
 
 /**

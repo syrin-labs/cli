@@ -23,14 +23,9 @@ import {
 } from '@/constants';
 
 /**
- * Interface for inquirer answers.
+ * Interface for LLM-related answers (shared between init and global init).
  */
-interface InitAnswers {
-  projectName: string;
-  agentName: string;
-  transport: TransportType;
-  mcpUrl?: string;
-  script: string;
+interface LLMAnswers {
   llmProviders: string[];
   openaiApiKey?: string;
   openaiModel?: string;
@@ -38,6 +33,213 @@ interface InitAnswers {
   claudeModel?: string;
   ollamaModelName?: string;
   defaultProvider: string;
+}
+
+/**
+ * Interface for inquirer answers.
+ */
+interface InitAnswers extends LLMAnswers {
+  projectName: string;
+  agentName: string;
+  transport: TransportType;
+  mcpUrl?: string;
+  script: string;
+}
+
+/**
+ * Interface for global init answers (LLM providers only).
+ */
+interface GlobalInitAnswers extends LLMAnswers {
+  agentName: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, no-restricted-syntax
+type QuestionArray = any[];
+
+/**
+ * Get LLM provider prompts (shared between init and global init).
+ * @param defaultProviders - Default providers to check (for non-interactive mode)
+ * @returns Array of inquirer questions for LLM provider configuration
+ */
+function getLLMProviderPrompts(defaultProviders?: string[]): QuestionArray {
+  return [
+    {
+      type: 'checkbox',
+      name: 'llmProviders',
+      message:
+        'Select LLM providers to configure (SPACE to toggle, ENTER to confirm):',
+      choices: [
+        {
+          name: LLMProviderDisplayNames.OPENAI,
+          value: LLMProviders.OPENAI,
+          checked: defaultProviders?.includes(LLMProviders.OPENAI) ?? true,
+        },
+        {
+          name: LLMProviderDisplayNames.CLAUDE,
+          value: LLMProviders.CLAUDE,
+          checked: defaultProviders?.includes(LLMProviders.CLAUDE) ?? false,
+        },
+        {
+          name: LLMProviderDisplayNames.OLLAMA,
+          value: LLMProviders.OLLAMA,
+          checked: defaultProviders?.includes(LLMProviders.OLLAMA) ?? false,
+        },
+      ],
+      validate: (input: string[]): boolean | string => {
+        if (input.length === 0) {
+          return Messages.PROMPT_LLM_PROVIDER_REQUIRED;
+        }
+        return true;
+      },
+    },
+    {
+      type: 'input',
+      name: 'openaiApiKey',
+      message: 'OpenAI API Key (env var name or direct value):',
+      default: EnvVars.OPENAI_API_KEY,
+      when: (answers: Partial<LLMAnswers>): boolean =>
+        answers.llmProviders?.includes(LLMProviders.OPENAI) ?? false,
+      validate: (
+        input: string,
+        answers?: Partial<LLMAnswers>
+      ): boolean | string => {
+        if (
+          answers?.llmProviders?.includes(LLMProviders.OPENAI) &&
+          !input.trim()
+        ) {
+          return 'OpenAI API key is required';
+        }
+        return true;
+      },
+    },
+    {
+      type: 'input',
+      name: 'openaiModel',
+      message: 'OpenAI Model Name (env var name or direct value):',
+      default: EnvVars.OPENAI_MODEL_NAME,
+      when: (answers: Partial<LLMAnswers>): boolean =>
+        answers.llmProviders?.includes(LLMProviders.OPENAI) ?? false,
+      validate: (
+        input: string,
+        answers?: Partial<LLMAnswers>
+      ): boolean | string => {
+        if (
+          answers?.llmProviders?.includes(LLMProviders.OPENAI) &&
+          !input.trim()
+        ) {
+          return Messages.PROMPT_OPENAI_MODEL_REQUIRED;
+        }
+        return true;
+      },
+    },
+    {
+      type: 'input',
+      name: 'claudeApiKey',
+      message: 'Claude API Key (env var name or direct value):',
+      default: EnvVars.CLAUDE_API_KEY,
+      when: (answers: Partial<LLMAnswers>): boolean =>
+        answers.llmProviders?.includes(LLMProviders.CLAUDE) ?? false,
+      validate: (
+        input: string,
+        answers?: Partial<LLMAnswers>
+      ): boolean | string => {
+        if (
+          answers?.llmProviders?.includes(LLMProviders.CLAUDE) &&
+          !input.trim()
+        ) {
+          return Messages.PROMPT_CLAUDE_API_KEY_REQUIRED;
+        }
+        return true;
+      },
+    },
+    {
+      type: 'input',
+      name: 'claudeModel',
+      message: 'Claude Model Name (env var name or direct value):',
+      default: EnvVars.CLAUDE_MODEL_NAME,
+      when: (answers: Partial<LLMAnswers>): boolean =>
+        answers.llmProviders?.includes(LLMProviders.CLAUDE) ?? false,
+      validate: (
+        input: string,
+        answers?: Partial<LLMAnswers>
+      ): boolean | string => {
+        if (
+          answers?.llmProviders?.includes(LLMProviders.CLAUDE) &&
+          !input.trim()
+        ) {
+          return Messages.PROMPT_CLAUDE_MODEL_REQUIRED;
+        }
+        return true;
+      },
+    },
+    {
+      type: 'input',
+      name: 'ollamaModelName',
+      message: 'Ollama Model Name (e.g., "llama2", "mistral", "codellama"):',
+      default: EnvVars.OLLAMA_MODEL_NAME,
+      when: (answers: Partial<LLMAnswers>): boolean =>
+        answers.llmProviders?.includes(LLMProviders.OLLAMA) ?? false,
+      validate: (
+        input: string,
+        answers?: Partial<LLMAnswers>
+      ): boolean | string => {
+        if (
+          answers?.llmProviders?.includes(LLMProviders.OLLAMA) &&
+          !input.trim()
+        ) {
+          return Messages.PROMPT_OLLAMA_MODEL_REQUIRED;
+        }
+        return true;
+      },
+    },
+    {
+      type: 'list',
+      name: 'defaultProvider',
+      message: 'Default LLM provider:',
+      choices: (answers: Partial<LLMAnswers>): string[] =>
+        answers.llmProviders || [],
+      default: (answers: Partial<LLMAnswers>): string | undefined =>
+        answers.llmProviders?.[0],
+    },
+  ];
+}
+
+/**
+ * Build LLM providers config from answers (shared between init and global init).
+ * @param answers - User answers containing LLM provider selections
+ * @returns LLM providers configuration object
+ */
+function buildLLMProvidersConfig(
+  answers: LLMAnswers
+): InitOptions['llmProviders'] {
+  const llmProviders: InitOptions['llmProviders'] = {};
+
+  if (answers.llmProviders.includes('openai')) {
+    llmProviders.openai = {
+      apiKey: makeAPIKey(answers.openaiApiKey || ''),
+      modelName: makeModelName(answers.openaiModel || ''),
+      default: answers.defaultProvider === 'openai',
+    };
+  }
+
+  if (answers.llmProviders.includes('claude')) {
+    llmProviders.claude = {
+      apiKey: makeAPIKey(answers.claudeApiKey || ''),
+      modelName: makeModelName(answers.claudeModel || ''),
+      default: answers.defaultProvider === 'claude',
+    };
+  }
+
+  if (answers.llmProviders.includes('ollama')) {
+    llmProviders.ollama = {
+      modelName: answers.ollamaModelName
+        ? makeModelName(answers.ollamaModelName)
+        : undefined,
+      default: answers.defaultProvider === 'ollama',
+    };
+  }
+
+  return llmProviders;
 }
 
 /**
@@ -53,7 +255,7 @@ export async function promptInitOptions(
     defaults?.projectName ||
     currentDirName.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
 
-  const answers = await inquirer.prompt<InitAnswers>([
+  const projectPrompts: QuestionArray = [
     {
       type: 'input',
       name: 'projectName',
@@ -136,173 +338,15 @@ export async function promptInitOptions(
         return true;
       },
     },
-    {
-      type: 'checkbox',
-      name: 'llmProviders',
-      message: 'Select LLM providers to configure:',
-      choices: [
-        {
-          name: LLMProviderDisplayNames.OPENAI,
-          value: LLMProviders.OPENAI,
-          checked: true,
-        },
-        {
-          name: LLMProviderDisplayNames.CLAUDE,
-          value: LLMProviders.CLAUDE,
-        },
-        {
-          name: LLMProviderDisplayNames.OLLAMA,
-          value: LLMProviders.OLLAMA,
-        },
-      ],
-      default: defaults?.llmProviders
-        ? Object.keys(defaults.llmProviders)
-        : [LLMProviders.OPENAI],
-      validate: (input: string[]): boolean | string => {
-        if (input.length === 0) {
-          return Messages.PROMPT_LLM_PROVIDER_REQUIRED;
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'openaiApiKey',
-      message: 'OpenAI API Key (env var name or direct value):',
-      default: EnvVars.OPENAI_API_KEY,
-      when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes(LLMProviders.OPENAI) ?? false,
-      validate: (
-        input: string,
-        answers?: Partial<InitAnswers>
-      ): boolean | string => {
-        if (
-          answers?.llmProviders?.includes(LLMProviders.OPENAI) &&
-          !input.trim()
-        ) {
-          return 'OpenAI API key is required';
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'openaiModel',
-      message: 'OpenAI Model Name (env var name or direct value):',
-      default: EnvVars.OPENAI_MODEL_NAME,
-      when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes(LLMProviders.OPENAI) ?? false,
-      validate: (
-        input: string,
-        answers?: Partial<InitAnswers>
-      ): boolean | string => {
-        if (
-          answers?.llmProviders?.includes(LLMProviders.OPENAI) &&
-          !input.trim()
-        ) {
-          return Messages.PROMPT_OPENAI_MODEL_REQUIRED;
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'claudeApiKey',
-      message: 'Claude API Key (env var name or direct value):',
-      default: EnvVars.CLAUDE_API_KEY,
-      when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes(LLMProviders.CLAUDE) ?? false,
-      validate: (
-        input: string,
-        answers?: Partial<InitAnswers>
-      ): boolean | string => {
-        if (
-          answers?.llmProviders?.includes(LLMProviders.CLAUDE) &&
-          !input.trim()
-        ) {
-          return Messages.PROMPT_CLAUDE_API_KEY_REQUIRED;
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'claudeModel',
-      message: 'Claude Model Name (env var name or direct value):',
-      default: EnvVars.CLAUDE_MODEL_NAME,
-      when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes(LLMProviders.CLAUDE) ?? false,
-      validate: (
-        input: string,
-        answers?: Partial<InitAnswers>
-      ): boolean | string => {
-        if (
-          answers?.llmProviders?.includes(LLMProviders.CLAUDE) &&
-          !input.trim()
-        ) {
-          return Messages.PROMPT_CLAUDE_MODEL_REQUIRED;
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'ollamaModelName',
-      message: 'Ollama Model Name (e.g., "llama2", "mistral", "codellama"):',
-      default: EnvVars.OLLAMA_MODEL_NAME,
-      when: (answers: Partial<InitAnswers>): boolean =>
-        answers.llmProviders?.includes(LLMProviders.OLLAMA) ?? false,
-      validate: (
-        input: string,
-        answers?: Partial<InitAnswers>
-      ): boolean | string => {
-        if (
-          answers?.llmProviders?.includes(LLMProviders.OLLAMA) &&
-          !input.trim()
-        ) {
-          return Messages.PROMPT_OLLAMA_MODEL_REQUIRED;
-        }
-        return true;
-      },
-    },
-    {
-      type: 'list',
-      name: 'defaultProvider',
-      message: 'Default LLM provider:',
-      choices: (answers: Partial<InitAnswers>): string[] =>
-        answers.llmProviders || [],
-      default: (answers: Partial<InitAnswers>): string =>
-        answers.llmProviders?.[0] || 'openai',
-    },
-  ]);
+  ];
 
-  // Build LLM providers config
-  const llmProviders: InitOptions['llmProviders'] = {};
+  // Combine project prompts with LLM provider prompts
+  const llmPrompts = getLLMProviderPrompts(
+    defaults?.llmProviders ? Object.keys(defaults.llmProviders) : undefined
+  );
+  const allPrompts = [...projectPrompts, ...llmPrompts];
 
-  if (answers.llmProviders.includes('openai')) {
-    llmProviders.openai = {
-      apiKey: makeAPIKey(answers.openaiApiKey || ''),
-      modelName: makeModelName(answers.openaiModel || ''),
-      default: answers.defaultProvider === 'openai' || false,
-    };
-  }
-
-  if (answers.llmProviders.includes('claude')) {
-    llmProviders.claude = {
-      apiKey: makeAPIKey(answers.claudeApiKey || ''),
-      modelName: makeModelName(answers.claudeModel || ''),
-      default: answers.defaultProvider === 'claude' || false,
-    };
-  }
-
-  if (answers.llmProviders.includes('ollama')) {
-    llmProviders.ollama = {
-      modelName: answers.ollamaModelName
-        ? makeModelName(answers.ollamaModelName)
-        : undefined,
-      default: answers.defaultProvider === 'ollama' || false,
-    };
-  }
+  const answers = await inquirer.prompt<InitAnswers>(allPrompts);
 
   return {
     projectName: makeProjectName(answers.projectName),
@@ -310,7 +354,7 @@ export async function promptInitOptions(
     transport: answers.transport,
     mcpUrl: answers.mcpUrl ? makeMCPURL(answers.mcpUrl) : undefined,
     script: makeScriptCommand(answers.script),
-    llmProviders,
+    llmProviders: buildLLMProvidersConfig(answers),
     nonInteractive: false,
   };
 }
@@ -339,5 +383,57 @@ export function getDefaultInitOptions(projectRoot: string): InitOptions {
       },
     },
     nonInteractive: true,
+  };
+}
+
+/**
+ * Global init options (LLM providers only).
+ */
+export interface GlobalInitOptions {
+  agentName: ReturnType<typeof makeAgentName>;
+  llmProviders: InitOptions['llmProviders'];
+}
+
+/**
+ * Prompt user for global initialization details (LLM providers only).
+ * @returns User's answers for global config
+ */
+export async function promptGlobalInitOptions(): Promise<GlobalInitOptions> {
+  const answers = await inquirer.prompt<GlobalInitAnswers>([
+    {
+      type: 'input',
+      name: 'agentName',
+      message: 'Agent name:',
+      default: Defaults.AGENT_NAME,
+      validate: (input: string): boolean | string => {
+        if (!input.trim()) {
+          return Messages.PROMPT_AGENT_NAME_REQUIRED;
+        }
+        return true;
+      },
+    },
+    ...getLLMProviderPrompts(),
+  ]);
+
+  return {
+    agentName: makeAgentName(answers.agentName),
+    llmProviders: buildLLMProvidersConfig(answers),
+  };
+}
+
+/**
+ * Create default global init options for non-interactive mode.
+ * @returns Default options for global config
+ */
+export function getDefaultGlobalInitOptions(): GlobalInitOptions {
+  return {
+    agentName: makeAgentName(Defaults.AGENT_NAME),
+    llmProviders: {
+      openai: {
+        apiKey: makeAPIKey(EnvVars.OPENAI_API_KEY),
+        modelName: makeModelName(EnvVars.OPENAI_MODEL_NAME),
+        default: true,
+      },
+    },
   };
 }

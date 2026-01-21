@@ -22,6 +22,9 @@ interface DoctorReport {
     mcp_url?: unknown;
     script?: unknown;
   };
+  configSource?: 'local' | 'global';
+  configPath?: string;
+  envSource?: 'local.env' | 'global.env' | 'process.env';
   transportCheck: CheckResult;
   scriptCheck: CheckResult | null;
   llmChecks: Array<{
@@ -38,12 +41,75 @@ interface DoctorReport {
 }
 
 /**
+ * Display global config validation results.
+ */
+export function displayGlobalConfigValidation(
+  globalConfigPath: string,
+  globalEnvPath: string,
+  globalEnvExists: boolean,
+  llmChecks: Array<{
+    provider: string;
+    apiKeyCheck: CheckResult;
+    modelCheck: CheckResult;
+  }>
+): void {
+  log.blank();
+  log.heading('Validating Syrin configuration...');
+  log.blank();
+  log.label('No local config found at ./syrin.yaml');
+  log.label('Using global configuration...');
+  log.blank();
+
+  log.labelValue('Global Config:', globalConfigPath);
+  if (globalEnvExists) {
+    log.labelValue('Global Environment:', globalEnvPath);
+  } else {
+    log.labelValue('Global Environment:', `${globalEnvPath} (not found)`);
+  }
+  log.blank();
+
+  const hasErrors = llmChecks.some(
+    check => !check.apiKeyCheck.isValid || !check.modelCheck.isValid
+  );
+
+  if (hasErrors) {
+    log.heading('Global configuration has issues:');
+    log.blank();
+    for (const check of llmChecks) {
+      if (!check.apiKeyCheck.isValid) {
+        log.plain(
+          `  • ${check.provider} API Key: ${check.apiKeyCheck.fix || 'Missing'}`
+        );
+      }
+      if (!check.modelCheck.isValid) {
+        log.plain(
+          `  • ${check.provider} Model: ${check.modelCheck.fix || 'Missing'}`
+        );
+      }
+    }
+    log.blank();
+  } else {
+    log.success('Global configuration is valid!');
+    log.label('To create a local config, run: syrin init');
+    log.blank();
+  }
+}
+
+/**
  * Display doctor report using plain console output.
  * This avoids Ink taking control of stdin, which disables terminal history.
  */
 export async function displayDoctorReport(report: DoctorReport): Promise<void> {
-  const { config, transportCheck, scriptCheck, llmChecks, localLlmChecks } =
-    report;
+  const {
+    config,
+    configSource,
+    configPath,
+    envSource,
+    transportCheck,
+    scriptCheck,
+    llmChecks,
+    localLlmChecks,
+  } = report;
 
   const allValid =
     transportCheck.isValid &&
@@ -61,6 +127,24 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
   log.label('═══════════════════');
   log.labelValue('Version:', versionDisplayString);
   log.blank();
+
+  // Config Source Info
+  if (configSource && configPath) {
+    log.labelValue(
+      `${configSource === 'local' ? 'Local' : 'Global'} Config:`,
+      configPath
+    );
+    if (envSource) {
+      const envSourceLabel =
+        envSource === 'local.env'
+          ? 'Local project .env file'
+          : envSource === 'global.env'
+            ? 'Global .env file'
+            : 'process.env';
+      log.labelValue('Environment Source:', envSourceLabel);
+    }
+    log.blank();
+  }
 
   // Project Info
   log.labelValue('Project:', String(config.project_name));

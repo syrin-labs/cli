@@ -29,11 +29,31 @@ This command answers one question:
 syrin doctor [options]
 ```
 
+**Alias:** `syrin doc`
+
 ## Options
 
 | Flag                    | Description                    | Default           |
 | ----------------------- | ------------------------------ | ----------------- |
 | `--project-root <path>` | Path to the Syrin project root | Current directory |
+
+**Global Options:**
+
+| Flag        | Description                  |
+| ----------- | ---------------------------- |
+| `--quiet`   | Minimal output (errors only) |
+| `--verbose` | Verbose output for debugging |
+
+```bash
+# Using alias
+syrin doc
+
+# Quiet mode (CI-friendly)
+syrin --quiet doctor
+
+# Verbose mode (debugging)
+syrin --verbose doctor
+```
 
 ## What `syrin doctor` Does
 

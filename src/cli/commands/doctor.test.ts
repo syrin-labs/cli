@@ -7,7 +7,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { executeDoctor } from './doctor';
-import { loadConfig } from '@/config/loader';
+import { loadConfigOptional } from '@/config/loader';
+import { loadGlobalConfig } from '@/config/global-loader';
 import {
   checkEnvVar,
   checkCommandExists,
@@ -20,7 +21,15 @@ import type { SyrinConfig } from '@/config/types';
 
 // Mock dependencies
 vi.mock('@/config/loader');
+vi.mock('@/config/global-loader');
 vi.mock('@/config/env-checker');
+vi.mock('fs', async () => {
+  const actual = await vi.importActual('fs');
+  return {
+    ...actual,
+    existsSync: vi.fn(),
+  };
+});
 vi.mock('@/cli/utils', async () => {
   const actual = await vi.importActual('@/cli/utils');
   return {
@@ -34,12 +43,26 @@ vi.mock('@/presentation/doctor-ui', () => ({
   displayDoctorReport: vi.fn(),
 }));
 vi.mock('@/utils/logger', () => ({
-  logger: {
-    error: vi.fn(),
-  },
   log: {
-    blank: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    warning: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
+    success: vi.fn(),
+    plain: vi.fn(),
+    blank: vi.fn(),
+    heading: vi.fn(),
+    label: vi.fn(),
+    value: vi.fn(),
+    labelValue: vi.fn(),
+    numberedItem: vi.fn(),
+    checkmark: vi.fn(),
+    xmark: vi.fn(),
+    warnSymbol: vi.fn(),
+    tick: vi.fn(() => '✓'),
+    cross: vi.fn(() => '✗'),
+    styleText: vi.fn((text) => text),
   },
 }));
 
@@ -52,6 +75,9 @@ describe('executeDoctor', () => {
     originalCwd = process.cwd();
     process.chdir(tempDir);
     vi.clearAllMocks();
+    vi.mocked(loadConfigOptional).mockReturnValue(null);
+    vi.mocked(loadGlobalConfig).mockReturnValue(null);
+    vi.mocked(fs.existsSync).mockReturnValue(false);
   });
 
   afterEach(() => {
@@ -77,7 +103,8 @@ describe('executeDoctor', () => {
         },
       };
 
-      vi.mocked(loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(loadConfigOptional).mockReturnValue(mockConfig);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(checkCommandExists).mockReturnValue(true);
       vi.mocked(checkEnvVar).mockReturnValue({
         isSet: true,
@@ -87,7 +114,7 @@ describe('executeDoctor', () => {
       // When all checks pass, function completes normally (no exit)
       await executeDoctor(tempDir);
 
-      expect(loadConfig).toHaveBeenCalledWith(tempDir);
+      expect(loadConfigOptional).toHaveBeenCalledWith(tempDir);
     });
 
     it('should exit with code 0 when all checks pass', async () => {
@@ -105,7 +132,8 @@ describe('executeDoctor', () => {
         },
       };
 
-      vi.mocked(loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(loadConfigOptional).mockReturnValue(mockConfig);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(checkCommandExists).mockReturnValue(true);
       vi.mocked(checkEnvVar).mockReturnValue({
         isSet: true,
@@ -115,7 +143,7 @@ describe('executeDoctor', () => {
       // When all checks pass, executeDoctor completes normally without calling process.exit
       await executeDoctor(tempDir);
 
-      expect(loadConfig).toHaveBeenCalledWith(tempDir);
+      expect(loadConfigOptional).toHaveBeenCalledWith(tempDir);
     });
 
     it('should exit with code 1 when command check fails', async () => {
@@ -133,7 +161,8 @@ describe('executeDoctor', () => {
         },
       };
 
-      vi.mocked(loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(loadConfigOptional).mockReturnValue(mockConfig);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(checkCommandExists).mockReturnValue(false);
       vi.mocked(checkEnvVar).mockReturnValue({
         isSet: true,
@@ -168,7 +197,8 @@ describe('executeDoctor', () => {
         },
       };
 
-      vi.mocked(loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(loadConfigOptional).mockReturnValue(mockConfig);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(checkCommandExists).mockReturnValue(true);
       vi.mocked(checkEnvVar).mockReturnValue({
         isSet: false,
@@ -200,7 +230,8 @@ describe('executeDoctor', () => {
         llm: {},
       };
 
-      vi.mocked(loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(loadConfigOptional).mockReturnValue(mockConfig);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(checkEnvVar).mockReturnValue({
         isSet: true,
         value: 'test-value',
@@ -209,7 +240,7 @@ describe('executeDoctor', () => {
       // When all checks pass, function completes normally (no exit)
       await executeDoctor(tempDir);
 
-      expect(loadConfig).toHaveBeenCalledWith(tempDir);
+      expect(loadConfigOptional).toHaveBeenCalledWith(tempDir);
     });
 
     it('should fail HTTP transport without URL', async () => {
@@ -221,7 +252,8 @@ describe('executeDoctor', () => {
         llm: {},
       };
 
-      vi.mocked(loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(loadConfigOptional).mockReturnValue(mockConfig);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(1)');
@@ -241,7 +273,8 @@ describe('executeDoctor', () => {
         llm: {},
       };
 
-      vi.mocked(loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(loadConfigOptional).mockReturnValue(mockConfig);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(extractCommandName).mockReturnValue('python');
       vi.mocked(checkCommandExists).mockReturnValue(true);
       vi.mocked(checkEnvVar).mockReturnValue({
@@ -276,7 +309,8 @@ describe('executeDoctor', () => {
         },
       };
 
-      vi.mocked(loadConfig).mockReturnValue(mockConfig);
+      vi.mocked(loadConfigOptional).mockReturnValue(mockConfig);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(checkCommandExists).mockReturnValue(true);
       vi.mocked(checkEnvVar).mockReturnValue({
         isSet: true,
@@ -286,16 +320,16 @@ describe('executeDoctor', () => {
       // When all checks pass, function completes normally (no exit)
       await executeDoctor(tempDir);
 
-      expect(checkEnvVar).toHaveBeenCalledWith('OPENAI_API_KEY', tempDir);
-      expect(checkEnvVar).toHaveBeenCalledWith('OPENAI_MODEL', tempDir);
-      expect(checkEnvVar).toHaveBeenCalledWith('CLAUDE_API_KEY', tempDir);
-      expect(checkEnvVar).toHaveBeenCalledWith('CLAUDE_MODEL', tempDir);
+      expect(checkEnvVar).toHaveBeenCalledWith('OPENAI_API_KEY', tempDir, false);
+      expect(checkEnvVar).toHaveBeenCalledWith('OPENAI_MODEL', tempDir, false);
+      expect(checkEnvVar).toHaveBeenCalledWith('CLAUDE_API_KEY', tempDir, false);
+      expect(checkEnvVar).toHaveBeenCalledWith('CLAUDE_MODEL', tempDir, false);
     });
   });
 
   describe('error handling', () => {
     it('should handle config loading errors', async () => {
-      vi.mocked(loadConfig).mockImplementation(() => {
+      vi.mocked(loadConfigOptional).mockImplementation(() => {
         throw new Error('Config not found');
       });
 
