@@ -16,6 +16,9 @@ import {
   makeSyrinVersion,
 } from '@/types/factories';
 
+/** Env var name pattern: UPPER_SNAKE_CASE (keys in syrin.yaml must reference .env keys only). */
+const ENV_VAR_NAME_REGEX = /^[A-Z][A-Z0-9_]*$/;
+
 /**
  * Helper function to check if at least one LLM provider is set as default.
  * @param llm - Record of LLM provider configurations
@@ -35,6 +38,7 @@ function hasDefaultLLMProvider(llm: Record<string, unknown>): boolean {
 
 /**
  * Schema for LLM provider configuration.
+ * API_KEY and MODEL_NAME must be env var names (keys in .env), not direct values.
  */
 const LLMProviderSchema = z
   .object({
@@ -61,10 +65,27 @@ const LLMProviderSchema = z
       message:
         'For cloud providers (OpenAI, Claude), API_KEY and MODEL_NAME are required. For Ollama, MODEL_NAME is required.',
     }
+  )
+  .refine(
+    data => {
+      // All values must be env var names (UPPER_SNAKE_CASE), not direct values
+      if (data.API_KEY && !ENV_VAR_NAME_REGEX.test(data.API_KEY)) {
+        return false;
+      }
+      if (data.MODEL_NAME && !ENV_VAR_NAME_REGEX.test(data.MODEL_NAME)) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message:
+        'API_KEY and MODEL_NAME must be env var names from .env (e.g. OPENAI_API_KEY, OPENAI_MODEL_NAME), not direct values.',
+      path: ['API_KEY', 'MODEL_NAME'],
+    }
   );
 
 /**
- * Schema for check configuration (v1.3.0).
+ * Schema for tool validation configuration.
  */
 const CheckConfigSchema = z
   .object({
@@ -85,11 +106,14 @@ const CheckConfigSchema = z
  */
 export const ConfigSchema = z
   .object({
-    version: z.string().min(1, 'Version is required'),
+    version: z
+      .string()
+      .min(1, 'Configuration version must be a non-empty string')
+      .optional(),
     project_name: z.string().min(1, 'Project name is required'),
     agent_name: z.string().min(1, 'Agent name is required'),
     transport: z.enum(['stdio', 'http']),
-    mcp_url: z.string().url().optional(),
+    url: z.string().url().optional(),
     script: z.string().optional(),
     llm: z
       .record(z.string(), LLMProviderSchema)
@@ -100,15 +124,15 @@ export const ConfigSchema = z
   })
   .refine(
     data => {
-      // If transport is http, mcp_url must be provided
-      if (data.transport === 'http' && !data.mcp_url) {
+      // If transport is http, url must be provided
+      if (data.transport === 'http' && !data.url) {
         return false;
       }
       return true;
     },
     {
-      message: 'mcp_url is required when transport is "http"',
-      path: ['mcp_url'],
+      message: 'url is required when transport is "http"',
+      path: ['url'],
     }
   )
   .refine(
@@ -138,11 +162,14 @@ export type ConfigSchemaType = z.infer<typeof ConfigSchema>;
 
 /**
  * Global configuration schema (LLM settings only).
- * No transport, mcp_url, or script fields.
+ * No transport, url, or script fields.
  */
 export const GlobalConfigSchema = z
   .object({
-    version: z.string().min(1, 'Version is required'),
+    version: z
+      .string()
+      .min(1, 'Configuration version must be a non-empty string')
+      .optional(),
     project_name: z.literal('GlobalSyrin'),
     agent_name: z.string().min(1, 'Agent name is required'),
     llm: z
@@ -223,11 +250,11 @@ export function validateConfig(config: unknown): SyrinConfig {
 
     // Transform to opaque types
     const validated: SyrinConfig = {
-      version: makeSyrinVersion(parsed.version),
+      version: parsed.version ? makeSyrinVersion(parsed.version) : undefined,
       project_name: makeProjectName(parsed.project_name),
       agent_name: makeAgentName(parsed.agent_name),
       transport: parsed.transport,
-      mcp_url: parsed.mcp_url ? makeMCPURL(parsed.mcp_url) : undefined,
+      url: parsed.url ? makeMCPURL(parsed.url) : undefined,
       script: parsed.script ? makeScriptCommand(parsed.script) : undefined,
       llm: Object.fromEntries(
         Object.entries(parsed.llm).map(([key, provider]) => [
@@ -270,8 +297,8 @@ export function validateGlobalConfig(config: unknown): GlobalSyrinConfig {
     // Transform to opaque types
     // Note: project_name must be literal 'GlobalSyrin' for global config
     const validated: GlobalSyrinConfig = {
-      version: makeSyrinVersion(parsed.version),
       project_name: 'GlobalSyrin',
+      version: parsed.version ? makeSyrinVersion(parsed.version) : undefined,
       agent_name: makeAgentName(parsed.agent_name),
       llm: Object.fromEntries(
         Object.entries(parsed.llm).map(([key, provider]) => [

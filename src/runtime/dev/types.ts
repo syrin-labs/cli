@@ -14,6 +14,8 @@ import type { LLMMessage } from '@/runtime/llm/types';
 export interface DevSessionConfig {
   /** Syrin configuration */
   config: SyrinConfig;
+  /** Syrin CLI version (for event payloads) */
+  syrinVersion?: string;
   /** LLM provider */
   llmProvider: LLMProvider;
   /** MCP client manager */

@@ -387,7 +387,7 @@ llm:
 
 **Key Differences from Local Config:**
 
-- No `transport`, `mcp_url`, or `script` fields
+- No `transport`, `url`, or `script` fields
 - `project_name` is always `GlobalSyrin`
 - Focuses only on LLM provider configuration
 

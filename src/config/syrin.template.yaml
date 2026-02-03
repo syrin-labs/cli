@@ -26,12 +26,12 @@ transport: "{{TRANSPORT}}"
 # MCP Server URL (required for http transport)
 # The HTTP endpoint where your MCP server is running
 # Example: "http://localhost:8000/mcp"
-mcp_url: "{{MCP_URL}}"
+url: "{{URL}}"
 {{/IF_HTTP}}
 {{#IF_STDIO}}
 # MCP Server URL (not used for stdio transport)
 # Uncomment and configure if you switch to http transport
-# mcp_url: "http://localhost:8000/mcp"
+# url: "http://localhost:8000/mcp"
 {{/IF_STDIO}}
 
 # Script Configuration
@@ -49,9 +49,7 @@ script: "{{SCRIPT}}"
 # LLM Provider Configuration
 # ---------------------------
 # Configure one or more LLM providers for Syrin to use.
-# API keys and model names can be set as:
-#   - Environment variable names (recommended for security)
-#   - Direct values (not recommended for production)
+# Use environment variable names (keys in .env) for API_KEY and MODEL_NAME.
 # At least one provider must be marked as default: true
 
 llm:
@@ -59,21 +57,14 @@ llm:
   # {{PROVIDER_NAME}} Provider
   {{PROVIDER_NAME}}:
 {{#IF_OLLAMA}}
-    # Model name: Required for Ollama (e.g., "llama2", "mistral", "codellama")
-    # Can be set as environment variable name or direct value
-    # Example: "OLLAMA_MODEL_NAME" (reads from process.env.OLLAMA_MODEL_NAME)
-    # Or: "llama2" (direct value)
+    # Model name: env var name in .env (e.g. OLLAMA_MODEL_NAME)
     MODEL_NAME: "{{MODEL_NAME}}"
 {{/IF_OLLAMA}}
 {{#IF_CLOUD_PROVIDER}}
-    # API key: Set as environment variable name or direct value
-    # Example: "{{PROVIDER_NAME_UPPER}}_API_KEY" (reads from process.env.{{PROVIDER_NAME_UPPER}}_API_KEY)
-    # Or: "sk-..." (direct value, not recommended)
+    # API key: env var name in .env (e.g. {{PROVIDER_NAME_UPPER}}_API_KEY)
     API_KEY: "{{API_KEY}}"
 
-    # Model name: Set as environment variable name or direct value
-    # Example: "{{PROVIDER_NAME_UPPER}}_MODEL_NAME" (reads from process.env.{{PROVIDER_NAME_UPPER}}_MODEL_NAME)
-    # Or: "gpt-4" (direct value)
+    # Model name: env var name in .env (e.g. {{PROVIDER_NAME_UPPER}}_MODEL_NAME)
     MODEL_NAME: "{{MODEL_NAME}}"
 {{/IF_CLOUD_PROVIDER}}
 {{#IF_DEFAULT}}
@@ -103,12 +94,12 @@ llm:
 
   # Ollama Provider - uncomment to enable
   # ollama:
-  #   MODEL_NAME: "OLLAMA_MODEL_NAME"  # or "llama2", "mistral", etc.
+  #   MODEL_NAME: "OLLAMA_MODEL_NAME"
   #   default: false
 {{/IF_NO_OLLAMA}}
 
 {{/LLM_PROVIDERS}}
-# Tool Validation Configuration (v1.3.0)
+# Tool Validation Configuration
 # ---------------------------
 # Configure tool-level structural safety validation
 # This section is optional but recommended for production use

@@ -172,7 +172,7 @@ agent_name: 'My Agent'
 
 transport: 'stdio' # or "http"
 
-mcp_url: 'http://localhost:3000' # required for http
+url: 'http://localhost:3000' # required for http
 script: 'python server.py' # required for stdio
 
 llm:

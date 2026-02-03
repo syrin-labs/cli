@@ -76,7 +76,7 @@ describe('generateConfigFile', () => {
 
       const content = fs.readFileSync(configPath, 'utf-8');
       expect(content).toContain('transport: "http"');
-      expect(content).toContain('mcp_url: "http://localhost:8000/mcp"');
+      expect(content).toContain('url: "http://localhost:8000/mcp"');
       expect(content).toContain('claude:');
       expect(content).toContain('API_KEY: "CLAUDE_API_KEY"');
       expect(content).toContain('MODEL_NAME: "CLAUDE_MODEL_NAME"');
@@ -250,7 +250,7 @@ describe('generateConfigFile', () => {
       const configPath = generateConfigFile(options, tempDir);
       const content = fs.readFileSync(configPath, 'utf-8');
 
-      expect(content).toContain('# Tool Validation Configuration (v1.3.0)');
+      expect(content).toContain('# Tool Validation Configuration');
       expect(content).toContain('check:');
       expect(content).toContain('timeout_ms: 30000');
     });
@@ -352,7 +352,7 @@ describe('generateConfigFile', () => {
       const content = fs.readFileSync(configPath, 'utf-8');
       // Verify template was used (should contain template comments)
       expect(content).toContain('# Syrin Configuration File');
-      expect(content).toContain('# Tool Validation Configuration (v1.3.0)');
+      expect(content).toContain('# Tool Validation Configuration');
     });
   });
 });

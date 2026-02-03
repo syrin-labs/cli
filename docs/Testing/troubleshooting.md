@@ -366,7 +366,7 @@ Cannot connect to MCP server
 
    ```yaml
    transport: 'http'
-   mcp_url: 'http://localhost:3000' # Correct URL
+   url: 'http://localhost:3000' # Correct URL
    ```
 
 3. **Test Server Manually**

@@ -285,60 +285,70 @@ export async function promptInitOptions(
         return true;
       },
     },
-    {
-      type: 'list',
-      name: 'transport',
-      message: 'Transport type:',
-      choices: [
-        {
-          name: `${TransportTypes.STDIO} - Spawn MCP server as a subprocess`,
-          value: TransportTypes.STDIO,
-        },
-        {
-          name: `${TransportTypes.HTTP} - Connect to a running MCP server via HTTP`,
-          value: TransportTypes.HTTP,
-        },
-      ],
-      default: defaults?.transport || Defaults.TRANSPORT,
-    },
-    {
-      type: 'input',
-      name: 'mcpUrl',
-      message: 'MCP server URL:',
-      default: defaults?.mcpUrl ? String(defaults.mcpUrl) : Defaults.MCP_URL,
-      when: (answers: Partial<InitAnswers>): boolean =>
-        answers?.transport === TransportTypes.HTTP,
-      validate: (
-        input: string,
-        answers?: Partial<InitAnswers>
-      ): boolean | string => {
-        if (answers?.transport === TransportTypes.HTTP) {
-          if (!input.trim()) {
-            return Messages.PROMPT_MCP_URL_REQUIRED;
-          }
-          try {
-            new URL(input);
-            return true;
-          } catch {
-            return Messages.PROMPT_URL_INVALID;
-          }
-        }
-        return true;
-      },
-    },
-    {
-      type: 'input',
-      name: 'script',
-      message: 'Script command to run MCP server:',
-      default: defaults?.script ? String(defaults.script) : 'python3 server.py',
-      validate: (input: string): boolean | string => {
-        if (!input.trim()) {
-          return Messages.PROMPT_SCRIPT_REQUIRED;
-        }
-        return true;
-      },
-    },
   ];
+
+  const transportQuestion = {
+    type: 'rawlist',
+    name: 'transport',
+    message:
+      'Select transport type (Use arrow keys or number keys, ENTER to confirm):',
+    choices: [
+      {
+        name: `${TransportTypes.STDIO} - Spawn MCP server as a subprocess`,
+        value: TransportTypes.STDIO,
+      },
+      {
+        name: `${TransportTypes.HTTP} - Connect to a running MCP server via HTTP`,
+        value: TransportTypes.HTTP,
+      },
+    ],
+    pageSize: 2,
+    loop: false,
+  } as const;
+
+  projectPrompts.push({
+    ...transportQuestion,
+    default: defaults?.transport ?? TransportTypes.STDIO,
+  });
+
+  projectPrompts.push({
+    type: 'input',
+    name: 'mcpUrl',
+    message: 'MCP server URL:',
+    default: defaults?.mcpUrl ? String(defaults.mcpUrl) : Defaults.MCP_URL,
+    when: (answers: Partial<InitAnswers>): boolean =>
+      answers?.transport === TransportTypes.HTTP,
+    validate: (
+      input: string,
+      answers?: Partial<InitAnswers>
+    ): boolean | string => {
+      if (answers?.transport === TransportTypes.HTTP) {
+        if (!input.trim()) {
+          return Messages.PROMPT_MCP_URL_REQUIRED;
+        }
+        try {
+          new URL(input);
+          return true;
+        } catch {
+          return Messages.PROMPT_URL_INVALID;
+        }
+      }
+      return true;
+    },
+  });
+
+  projectPrompts.push({
+    type: 'input',
+    name: 'script',
+    message: 'Script command to run MCP server:',
+    default: defaults?.script ? String(defaults.script) : 'python3 server.py',
+    validate: (input: string): boolean | string => {
+      if (!input.trim()) {
+        return Messages.PROMPT_SCRIPT_REQUIRED;
+      }
+      return true;
+    },
+  });
 
   // Combine project prompts with LLM provider prompts
   const llmPrompts = getLLMProviderPrompts(

@@ -41,8 +41,8 @@ export function displayConfigList(
     log.labelValue('  project_name', String(config.project_name));
     log.labelValue('  agent_name', String(config.agent_name));
     log.labelValue('  transport', config.transport);
-    if (config.mcp_url) {
-      log.labelValue('  mcp_url', String(config.mcp_url));
+    if (config.url) {
+      log.labelValue('  url', String(config.url));
     }
     if (config.script) {
       log.labelValue('  script', String(config.script));

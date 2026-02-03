@@ -182,7 +182,7 @@ Resolution
 
 - Ensure `transport` matches the configured fields
 - Use `script` for `stdio`
-- Use `mcp_url` for `http`
+- Use `url` for `http`
 
 ## Exit Codes
 

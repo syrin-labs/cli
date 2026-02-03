@@ -127,6 +127,8 @@ Requirements: Node.js >= 20.12, npm >= 9
 | `syrin doctor`  | Environment check — validate config and connections      |
 | `syrin list`    | Inspect tools, resources, and prompts from your server   |
 
+**Zero-config:** For `syrin test --connection`, `syrin list`, and `syrin analyse`, no config file is required when you pass `--url <url>` (or `--script <command>` for stdio). `syrin dev` needs local or global config for LLM credentials.
+
 ---
 
 ## Global Configuration

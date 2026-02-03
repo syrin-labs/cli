@@ -17,9 +17,9 @@ import type {
 export type TransportType = 'stdio' | 'http';
 
 export interface LLMProviderConfig {
-  /** API key for the LLM provider (can be an environment variable name) - required for cloud providers */
+  /** API key env var name from .env (e.g. OPENAI_API_KEY) - required for cloud providers */
   API_KEY?: APIKey;
-  /** Model name to use (can be an environment variable name) - required for cloud providers and Ollama */
+  /** Model name env var name from .env (e.g. OPENAI_MODEL_NAME) - required for cloud providers and Ollama */
   MODEL_NAME?: ModelName;
   /** Whether this is the default LLM provider */
   default?: boolean;
@@ -48,7 +48,7 @@ export interface CheckConfig {
 
 export interface SyrinConfig {
   /** Configuration version */
-  version: SyrinVersion;
+  version?: SyrinVersion;
   /** Project name */
   project_name: ProjectName;
   /** Agent name */
@@ -56,12 +56,12 @@ export interface SyrinConfig {
   /** Transport type (stdio or http) */
   transport: TransportType;
   /** MCP server URL (required for http transport) */
-  mcp_url?: MCPURL;
+  url?: MCPURL;
   /** Script command to run the MCP server (required for stdio transport) */
   script?: ScriptCommand;
-  /** LLM provider configurations */
+  /** LLM provider configurations (keys must be env var names from .env) */
   llm: Record<string, LLMProviderConfig>;
-  /** Tool testing configuration (v1.3.0) */
+  /** Tool validation configuration */
   check?: CheckConfig;
 }
 
@@ -71,12 +71,12 @@ export interface SyrinConfig {
  */
 export interface GlobalSyrinConfig {
   /** Configuration version */
-  version: SyrinVersion;
+  version?: SyrinVersion;
   /** Project name (always "GlobalSyrin") */
   project_name: 'GlobalSyrin';
   /** Agent name (defaults to system username, can be customized) */
   agent_name: AgentName;
-  /** LLM provider configurations */
+  /** LLM provider configurations (keys must be env var names from .env) */
   llm: Record<string, LLMProviderConfig>;
 }
 

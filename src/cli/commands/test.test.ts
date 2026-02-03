@@ -10,6 +10,9 @@ import { resolveTransportConfig } from '@/cli/utils';
 import { TestOrchestrator } from '@/runtime/test/orchestrator';
 import { ERROR_CODES } from '@/runtime/analysis/rules/error-codes';
 
+/** Stable test-only URL (mocked; no real external dependency). */
+const TEST_MCP_URL = 'http://test-mcp.example/mcp';
+
 // Mock dependencies
 vi.mock('@/runtime/mcp');
 vi.mock('@/runtime/test/orchestrator');
@@ -231,6 +234,41 @@ describe('executeTest', () => {
       });
 
       exitSpy.mockRestore();
+    });
+
+    it('should succeed with --url only (zero-config: no syrin.yaml required)', async () => {
+      const mockResult = {
+        success: true,
+        transport: 'http' as const,
+        message: 'Connection successful',
+      };
+
+      vi.mocked(resolveTransportConfig).mockReturnValue({
+        transport: 'http' as const,
+        url: TEST_MCP_URL,
+        script: undefined,
+        urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
+      });
+
+      vi.mocked(connectMCP).mockResolvedValue(mockResult);
+
+      await executeTest({
+        connection: true,
+        url: TEST_MCP_URL,
+      });
+
+      expect(resolveTransportConfig).toHaveBeenCalledWith({
+        connection: true,
+        url: TEST_MCP_URL,
+      });
+      expect(connectMCP).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transport: 'http',
+          url: TEST_MCP_URL,
+        })
+      );
     });
 
     it('should use CLI-provided script over config', async () => {

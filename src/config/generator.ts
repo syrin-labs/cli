@@ -7,8 +7,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import type { InitOptions, SyrinConfig } from '@/config/types';
-import { makeSyrinVersion } from '@/types/factories';
 import { Paths } from '@/constants';
+import { makeSyrinVersion } from '@/types/factories';
 
 /**
  * Get the path to the template file.
@@ -68,27 +68,30 @@ function buildConfigContent(options: InitOptions): string {
 
   // Add transport-specific fields
   if (options.transport === 'http' && options.mcpUrl) {
-    config.mcp_url = options.mcpUrl;
+    config.url = options.mcpUrl;
   }
 
   // Read template
   let template = readTemplate();
 
   // Replace simple placeholders
-  template = template.replace(/\{\{VERSION\}\}/g, String(config.version));
   template = template.replace(
     /\{\{PROJECT_NAME\}\}/g,
     String(config.project_name)
   );
   template = template.replace(/\{\{AGENT_NAME\}\}/g, String(config.agent_name));
   template = template.replace(/\{\{TRANSPORT\}\}/g, config.transport);
+  template = template.replace(
+    /\{\{VERSION\}\}/g,
+    config.version ? String(config.version) : ''
+  );
 
   // Handle transport-specific blocks
-  if (config.transport === 'http' && config.mcp_url) {
+  if (config.transport === 'http' && config.url) {
     template = template.replace(
       /\{\{#IF_HTTP\}\}([\s\S]*?)\{\{\/IF_HTTP\}\}/g,
       (match, content) => {
-        return content.replace(/\{\{MCP_URL\}\}/g, String(config.mcp_url));
+        return content.replace(/\{\{URL\}\}/g, String(config.url));
       }
     );
     template = template.replace(

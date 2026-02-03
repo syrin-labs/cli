@@ -110,7 +110,7 @@ In this mode, **Syrin does not own the server lifecycle**.
 
 ```yaml
 transport: 'http'
-mcp_url: 'http://localhost:3000'
+url: 'http://localhost:3000'
 ```
 
 ### How It Works
@@ -139,25 +139,25 @@ This transport is common in **production deployments**.
 Local server:
 
 ```yaml
-mcp_url: 'http://localhost:3000'
+url: 'http://localhost:3000'
 ```
 
 Remote server:
 
 ```yaml
-mcp_url: 'https://api.example.com/mcp'
+url: 'https://api.example.com/mcp'
 ```
 
 With custom path:
 
 ```yaml
-mcp_url: 'http://localhost:3000/mcp/v1'
+url: 'http://localhost:3000/mcp/v1'
 ```
 
 With authentication:
 
 ```yaml
-mcp_url: 'https://user:pass@api.example.com/mcp'
+url: 'https://user:pass@api.example.com/mcp'
 ```
 
 ### Behaviour in Syrin Commands
@@ -207,7 +207,7 @@ The transport choice affects **how much execution control Syrin can exercise**.
 
 ```yaml
 transport: 'http'
-mcp_url: 'http://localhost:3000'
+url: 'http://localhost:3000'
 ```
 
 2. Start the HTTP server

@@ -15,6 +15,9 @@ import {
 import { TransportTypes } from '@/constants';
 import { log } from '@/utils/logger';
 
+/** Stable test-only URL (mocked; no real external dependency). */
+const TEST_MCP_URL = 'http://test-mcp.example/mcp';
+
 // Mock dependencies
 vi.mock('@/cli/utils');
 vi.mock('@/runtime/analysis');
@@ -509,6 +512,56 @@ describe('executeAnalyse', () => {
         transport: TransportTypes.STDIO,
         script: 'custom-script.sh',
       });
+
+      exitSpy.mockRestore();
+    });
+
+    it('should succeed with --url only (zero-config: no syrin.yaml required)', async () => {
+      const mockClient = { id: 'mock-client' };
+      const mockTransport = { id: 'mock-transport' };
+      const mockResult = {
+        verdict: 'pass' as const,
+        diagnostics: [],
+        errors: [],
+        warnings: [],
+        dependencies: [],
+        toolCount: 1,
+      };
+
+      vi.mocked(resolveTransportConfig).mockReturnValue({
+        transport: TransportTypes.HTTP,
+        url: TEST_MCP_URL,
+        script: undefined,
+        urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
+      });
+
+      vi.mocked(establishConnection).mockResolvedValue({
+        client: mockClient as any,
+        transport: mockTransport as any,
+      });
+
+      vi.mocked(analyseTools).mockResolvedValue(mockResult);
+      vi.mocked(safeCloseConnection).mockResolvedValue(undefined);
+
+      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+        throw new Error('process.exit(0)');
+      });
+
+      await expect(
+        executeAnalyse({ url: TEST_MCP_URL })
+      ).rejects.toThrow('process.exit(0)');
+
+      expect(resolveTransportConfig).toHaveBeenCalledWith({
+        url: TEST_MCP_URL,
+      });
+      expect(establishConnection).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transport: TransportTypes.HTTP,
+          url: TEST_MCP_URL,
+        })
+      );
 
       exitSpy.mockRestore();
     });

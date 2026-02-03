@@ -10,7 +10,7 @@ import { ConfigurationError } from '@/utils/errors';
 import type { GlobalSyrinConfig, LLMProviderConfig } from './types';
 import { Paths, Messages } from '@/constants';
 import { getDefaultAgentName } from './types';
-import { makeSyrinVersion, makeAgentName } from '@/types/factories';
+import { makeAgentName, makeSyrinVersion } from '@/types/factories';
 
 /**
  * Get the path to the global Syrin directory.
@@ -111,12 +111,10 @@ export function loadGlobalConfig(
     if (skipValidation) {
       const data = configData as Record<string, unknown>;
 
-      // Sanitize version: coerce to string and use makeSyrinVersion or default
-      let version: ReturnType<typeof makeSyrinVersion>;
+      // Sanitize version
+      let version: ReturnType<typeof makeSyrinVersion> | undefined;
       if (typeof data.version === 'string' && data.version.length > 0) {
         version = makeSyrinVersion(data.version);
-      } else {
-        version = makeSyrinVersion('1.0');
       }
 
       // Sanitize agent_name: coerce to string and use makeAgentName or default
@@ -141,8 +139,8 @@ export function loadGlobalConfig(
 
       // Return sanitized structure (not using 'as GlobalSyrinConfig' to avoid unsafe cast)
       return {
-        version,
         project_name: 'GlobalSyrin' as const,
+        version,
         agent_name,
         llm,
       };
@@ -162,11 +160,9 @@ export function loadGlobalConfig(
       const raw = loadGlobalConfigRaw();
       if (raw) {
         // Sanitize version
-        let version: ReturnType<typeof makeSyrinVersion>;
+        let version: ReturnType<typeof makeSyrinVersion> | undefined;
         if (typeof raw.version === 'string' && raw.version.length > 0) {
           version = makeSyrinVersion(raw.version);
-        } else {
-          version = makeSyrinVersion('1.0');
         }
 
         // Sanitize agent_name
@@ -190,15 +186,15 @@ export function loadGlobalConfig(
         }
 
         return {
-          version,
           project_name: 'GlobalSyrin' as const,
+          version,
           agent_name,
           llm,
         };
       }
       return {
-        version: makeSyrinVersion('1.0'),
         project_name: 'GlobalSyrin',
+        version: makeSyrinVersion('1.0'),
         agent_name: makeAgentName(getDefaultAgentName()),
         llm: {},
       };
@@ -234,7 +230,7 @@ export function saveGlobalConfig(
 
     // Convert config to plain object for YAML serialization
     const configObject = {
-      version: config.version,
+      ...(config.version ? { version: config.version } : {}),
       project_name: config.project_name,
       agent_name: config.agent_name,
       llm: Object.fromEntries(
@@ -278,8 +274,8 @@ export function saveGlobalConfig(
  */
 export function createDefaultGlobalConfig(): GlobalSyrinConfig {
   return {
-    version: makeSyrinVersion('1.0'),
     project_name: 'GlobalSyrin',
+    version: makeSyrinVersion('1.0'),
     agent_name: makeAgentName(getDefaultAgentName()),
     llm: {},
   };

@@ -61,7 +61,7 @@ export const Messages = {
 
   // Config Fix Messages
   CONFIG_ADD_MCP_URL:
-    'Add `mcp_url` to your config.yaml file when using http transport',
+    'Add `url` to your config.yaml file when using http transport',
   CONFIG_ADD_SCRIPTS:
     'Add `scripts` section to your config.yaml with `dev` and `start` commands. For stdio transport, `scripts.dev` is required.',
   CONFIG_ADD_SCRIPT_STDIO:
@@ -150,6 +150,7 @@ export const Messages = {
   PROMPT_PROJECT_NAME_INVALID:
     'Project name can only contain letters, numbers, and hyphens',
   PROMPT_AGENT_NAME_REQUIRED: 'Agent name is required',
+  PROMPT_TRANSPORT_REQUIRED: 'Transport selection is required',
   PROMPT_MCP_URL_REQUIRED: 'MCP server URL is required for http transport',
   PROMPT_URL_INVALID: 'Invalid URL format',
   PROMPT_SCRIPT_REQUIRED: 'Script command is required',

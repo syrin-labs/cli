@@ -110,7 +110,10 @@ export function loadConfigWithGlobal(
   const globalConfig = loadGlobalConfig();
 
   if (localConfig) {
-    return { config: mergeConfigs(localConfig, globalConfig), source: 'local' };
+    return {
+      config: mergeConfigs(localConfig, globalConfig, flags),
+      source: 'local',
+    };
   }
 
   if (globalConfig) {
@@ -141,11 +144,11 @@ export function saveLocalConfig(
   try {
     // Convert config to plain object for YAML serialization
     const configObject = {
-      version: config.version,
+      ...(config.version ? { version: config.version } : {}),
       project_name: config.project_name,
       agent_name: config.agent_name,
       transport: config.transport,
-      ...(config.mcp_url ? { mcp_url: config.mcp_url } : {}),
+      ...(config.url ? { url: config.url } : {}),
       ...(config.script ? { script: config.script } : {}),
       llm: Object.fromEntries(
         Object.entries(config.llm).map(([key, provider]) => [

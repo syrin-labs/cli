@@ -100,7 +100,7 @@ export async function executeDev(
     try {
       const configResult = loadConfigWithGlobal(projectRoot, {
         transport: options.transport,
-        mcp_url: options.url,
+        url: options.url,
         script: options.script,
       });
       config = configResult.config;
@@ -146,7 +146,7 @@ export async function executeDev(
     }
 
     // Validate transport configuration
-    if (config.transport === TransportTypes.HTTP && !config.mcp_url) {
+    if (config.transport === TransportTypes.HTTP && !config.url) {
       throw new ConfigurationError(Messages.TRANSPORT_URL_REQUIRED_CONFIG);
     }
 
@@ -210,7 +210,7 @@ export async function executeDev(
     // Create MCP client manager
     const mcpClientManager = createMCPClientManager(
       config.transport,
-      config.mcp_url,
+      config.url,
       serverCommand,
       eventEmitter,
       shouldSpawn
@@ -271,9 +271,19 @@ export async function executeDev(
     // Get available tools
     const availableTools = await mcpClientManager.getAvailableTools();
 
+    // Get version info for welcome banner and session events
+    const versionChecker = (await import('@/utils/version-checker')) as {
+      checkSyrinVersion: () => Promise<VersionInfo>;
+      formatVersionWithUpdate: (info: VersionInfo) => string;
+    };
+    const versionInfo = await versionChecker.checkSyrinVersion();
+    const versionDisplayString =
+      versionChecker.formatVersionWithUpdate(versionInfo);
+
     // Create dev session
     const session = new DevSession({
       config,
+      syrinVersion: versionInfo.current,
       llmProvider,
       mcpClientManager,
       eventEmitter,
@@ -288,15 +298,6 @@ export async function executeDev(
     const displayCommand =
       shouldSpawn && serverCommand ? serverCommand : undefined;
     const initialMessages = buildDevWelcomeMessages();
-
-    // Get version info for welcome banner - use same approach as other commands
-    const versionChecker = (await import('@/utils/version-checker')) as {
-      checkSyrinVersion: () => Promise<VersionInfo>;
-      formatVersionWithUpdate: (info: VersionInfo) => string;
-    };
-    const versionInfo = await versionChecker.checkSyrinVersion();
-    const versionDisplayString =
-      versionChecker.formatVersionWithUpdate(versionInfo);
 
     // Create Chat UI
     const historyFile = path.join(projectRoot, Paths.DEV_HISTORY_FILE);
@@ -317,7 +318,7 @@ export async function executeDev(
         llmProvider: llmProvider.getName(),
         toolCount: availableTools.length,
         transport: config.transport,
-        mcpUrl: config.mcp_url,
+        mcpUrl: config.url,
         command: displayCommand,
       },
       historyFile,

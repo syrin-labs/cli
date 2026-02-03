@@ -64,7 +64,7 @@ export class DevSession {
       SessionLifecycleEventType.SESSION_STARTED,
       {
         project_name: this.config.config.project_name,
-        syrin_version: this.config.config.version,
+        syrin_version: this.config.syrinVersion ?? 'unknown',
       }
     );
 

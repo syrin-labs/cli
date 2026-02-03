@@ -90,7 +90,6 @@ describe('executeDoctor', () => {
   describe('successful execution', () => {
     it('should load config and generate report', async () => {
       const mockConfig: SyrinConfig = {
-        version: '1.0.0' as any,
         project_name: 'test-project' as any,
         agent_name: 'test-agent' as any,
         transport: TransportTypes.STDIO,
@@ -119,7 +118,6 @@ describe('executeDoctor', () => {
 
     it('should exit with code 0 when all checks pass', async () => {
       const mockConfig: SyrinConfig = {
-        version: '1.0.0' as any,
         project_name: 'test-project' as any,
         agent_name: 'test-agent' as any,
         transport: TransportTypes.STDIO,
@@ -148,7 +146,6 @@ describe('executeDoctor', () => {
 
     it('should exit with code 1 when command check fails', async () => {
       const mockConfig: SyrinConfig = {
-        version: '1.0.0' as any,
         project_name: 'test-project' as any,
         agent_name: 'test-agent' as any,
         transport: TransportTypes.STDIO,
@@ -184,7 +181,6 @@ describe('executeDoctor', () => {
 
     it('should exit with code 1 when env var check fails', async () => {
       const mockConfig: SyrinConfig = {
-        version: '1.0.0' as any,
         project_name: 'test-project' as any,
         agent_name: 'test-agent' as any,
         transport: TransportTypes.STDIO,
@@ -222,11 +218,10 @@ describe('executeDoctor', () => {
   describe('transport validation', () => {
     it('should validate HTTP transport with URL', async () => {
       const mockConfig: SyrinConfig = {
-        version: '1.0.0' as any,
         project_name: 'test-project' as any,
         agent_name: 'test-agent' as any,
         transport: TransportTypes.HTTP,
-        mcp_url: 'http://localhost:8000' as any,
+        url: 'http://localhost:8000' as any,
         llm: {},
       };
 
@@ -245,7 +240,6 @@ describe('executeDoctor', () => {
 
     it('should fail HTTP transport without URL', async () => {
       const mockConfig: SyrinConfig = {
-        version: '1.0.0' as any,
         project_name: 'test-project' as any,
         agent_name: 'test-agent' as any,
         transport: TransportTypes.HTTP,
@@ -265,7 +259,6 @@ describe('executeDoctor', () => {
 
     it('should validate stdio transport with script', async () => {
       const mockConfig: SyrinConfig = {
-        version: '1.0.0' as any,
         project_name: 'test-project' as any,
         agent_name: 'test-agent' as any,
         transport: TransportTypes.STDIO,
@@ -292,7 +285,6 @@ describe('executeDoctor', () => {
   describe('LLM provider validation', () => {
     it('should check API key and model for cloud providers', async () => {
       const mockConfig: SyrinConfig = {
-        version: '1.0.0' as any,
         project_name: 'test-project' as any,
         agent_name: 'test-agent' as any,
         transport: TransportTypes.STDIO,

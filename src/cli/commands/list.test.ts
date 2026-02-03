@@ -12,6 +12,9 @@ import {
 } from '@/cli/utils';
 import { ListTypes, TransportTypes } from '@/constants';
 
+/** Stable test-only URL (mocked; no real external dependency). */
+const TEST_MCP_URL = 'http://test-mcp.example/mcp';
+
 // Mock dependencies
 vi.mock('@/runtime/mcp');
 vi.mock('@/cli/utils', async () => {
@@ -339,6 +342,43 @@ describe('executeList', () => {
         transport: TransportTypes.STDIO,
         script: 'custom-script.sh',
       });
+    });
+
+    it('should succeed with --url only (zero-config: no syrin.yaml required)', async () => {
+      const mockClient = { id: 'mock-client' };
+      const mockTransport = { id: 'mock-transport' };
+
+      vi.mocked(resolveTransportConfig).mockReturnValue({
+        transport: TransportTypes.HTTP,
+        url: TEST_MCP_URL,
+        script: undefined,
+        urlSource: 'cli',
+        env: undefined,
+        authHeaders: undefined,
+      });
+
+      vi.mocked(establishConnection).mockResolvedValue({
+        client: mockClient as any,
+        transport: mockTransport as any,
+      });
+
+      vi.mocked(listTools).mockResolvedValue({ tools: [] });
+
+      await executeList({
+        type: ListTypes.TOOLS,
+        url: TEST_MCP_URL,
+      });
+
+      expect(resolveTransportConfig).toHaveBeenCalledWith({
+        type: ListTypes.TOOLS,
+        url: TEST_MCP_URL,
+      });
+      expect(establishConnection).toHaveBeenCalledWith(
+        expect.objectContaining({
+          transport: TransportTypes.HTTP,
+          url: TEST_MCP_URL,
+        })
+      );
     });
 
     it('should pass env vars to stdio transport', async () => {

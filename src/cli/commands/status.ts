@@ -57,9 +57,7 @@ function generateStatusReport(projectRoot: string): StatusReport {
     report.configPath = path.join(projectRoot, Paths.CONFIG_FILE);
     report.projectName = String(localConfig.project_name);
     report.transport = String(localConfig.transport);
-    report.mcpUrl = localConfig.mcp_url
-      ? String(localConfig.mcp_url)
-      : undefined;
+    report.mcpUrl = localConfig.url ? String(localConfig.url) : undefined;
     report.script = localConfig.script ? String(localConfig.script) : undefined;
   } else if (globalConfig) {
     report.configPath = getGlobalConfigPath();

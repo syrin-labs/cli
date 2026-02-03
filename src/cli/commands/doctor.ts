@@ -65,7 +65,7 @@ interface DoctorReport {
  */
 function checkTransport(config: SyrinConfig): CheckResult {
   if (config.transport === TransportTypes.HTTP) {
-    if (!config.mcp_url) {
+    if (!config.url) {
       return {
         isValid: false,
         message: 'MCP URL is missing',
@@ -74,7 +74,7 @@ function checkTransport(config: SyrinConfig): CheckResult {
     }
     return {
       isValid: true,
-      message: Messages.DOCTOR_MCP_URL_INFO(String(config.mcp_url)),
+      message: Messages.DOCTOR_MCP_URL_INFO(String(config.url)),
     };
   } else {
     // stdio transport

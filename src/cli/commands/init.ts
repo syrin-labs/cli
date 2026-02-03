@@ -28,7 +28,7 @@ import {
   saveGlobalConfig,
   getGlobalConfigPath,
 } from '@/config/global-loader';
-import { makeSyrinVersion, makeAPIKey, makeModelName } from '@/types/factories';
+import { makeAPIKey, makeModelName, makeSyrinVersion } from '@/types/factories';
 
 export interface InitCommandOptions {
   /** Skip interactive prompts, use defaults */

@@ -15,11 +15,11 @@ interface CheckResult {
 
 interface DoctorReport {
   config: {
-    version: unknown;
+    version?: unknown;
     project_name: unknown;
     agent_name: unknown;
     transport: string;
-    mcp_url?: unknown;
+    url?: unknown;
     script?: unknown;
   };
   configSource?: 'local' | 'global';
@@ -156,8 +156,8 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
   log.labelValue('  Type:', config.transport);
   if (config.transport === 'http') {
     const urlValue =
-      config.mcp_url !== undefined && config.mcp_url !== null
-        ? (config.mcp_url as unknown as string)
+      config.url !== undefined && config.url !== null
+        ? (config.url as unknown as string)
         : null;
     const urlText = urlValue ? `URL: ${urlValue}` : 'URL: Not configured';
     if (transportCheck.isValid) {

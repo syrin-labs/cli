@@ -16,8 +16,8 @@ import {
 export interface CLIConfigFlags {
   /** Transport type override */
   transport?: 'stdio' | 'http';
-  /** MCP URL override (for http transport) */
-  mcp_url?: string;
+  /** URL override (for http transport) */
+  url?: string;
   /** Script command override (for stdio transport) */
   script?: string;
   /** LLM provider override */
@@ -50,7 +50,7 @@ export function mergeConfigs(
       ...local,
       llm: mergedLLM,
       transport: flags.transport || local.transport,
-      mcp_url: flags.mcp_url ? makeMCPURL(flags.mcp_url) : local.mcp_url,
+      url: flags.url ? makeMCPURL(flags.url) : local.url,
       script: flags.script ? makeScriptCommand(flags.script) : local.script,
     };
 
@@ -87,7 +87,7 @@ export function createConfigFromGlobal(
   }
 
   // Validate transport-specific requirements
-  if (flags.transport === 'http' && !flags.mcp_url) {
+  if (flags.transport === 'http' && !flags.url) {
     throw new Error(
       'MCP URL is required for HTTP transport. Use --url <url> flag.'
     );
@@ -100,11 +100,10 @@ export function createConfigFromGlobal(
   }
 
   return {
-    version: global.version,
     project_name: makeProjectName('GlobalSyrin'),
     agent_name: global.agent_name,
     transport: flags.transport as 'stdio' | 'http',
-    mcp_url: flags.mcp_url ? makeMCPURL(flags.mcp_url) : undefined,
+    url: flags.url ? makeMCPURL(flags.url) : undefined,
     script: flags.script ? makeScriptCommand(flags.script) : undefined,
     llm: global.llm,
   };

@@ -123,7 +123,6 @@ describe('executeDev', () => {
 
     // Setup default mocks
     mockConfig = {
-      version: '1.0.0',
       project_name: 'test-project',
       agent_name: 'test-agent',
       transport: TransportTypes.STDIO,
@@ -255,7 +254,7 @@ describe('executeDev', () => {
       const httpConfig: SyrinConfig = {
         ...mockConfig,
         transport: TransportTypes.HTTP,
-        mcp_url: undefined,
+        url: undefined,
       };
 
       vi.mocked(loadConfigWithGlobal).mockReturnValue({
@@ -284,7 +283,7 @@ describe('executeDev', () => {
       const httpConfig: SyrinConfig = {
         ...mockConfig,
         transport: TransportTypes.HTTP,
-        mcp_url: 'http://localhost:8000',
+        url: 'http://localhost:8000',
         script: 'python server.py',
       };
 
@@ -308,7 +307,7 @@ describe('executeDev', () => {
       const httpConfig: SyrinConfig = {
         ...mockConfig,
         transport: TransportTypes.HTTP,
-        mcp_url: 'http://localhost:8000',
+        url: 'http://localhost:8000',
       };
 
       vi.mocked(loadConfigWithGlobal).mockReturnValue({
@@ -348,7 +347,7 @@ describe('executeDev', () => {
       const httpConfig: SyrinConfig = {
         ...mockConfig,
         transport: TransportTypes.HTTP,
-        mcp_url: 'http://localhost:8000',
+        url: 'http://localhost:8000',
         script: undefined,
       };
 
@@ -428,6 +427,7 @@ describe('executeDev', () => {
 
       expect(DevSession).toHaveBeenCalledWith({
         config: mockConfig,
+        syrinVersion: '1.0.0',
         llmProvider: mockLLMProvider,
         mcpClientManager: mockMCPClientManager,
         eventEmitter: mockEventEmitter,

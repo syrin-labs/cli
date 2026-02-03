@@ -75,7 +75,7 @@ This will automatically spawn the server using the script in syrin.yaml.
 
 1. Update `syrin.yaml`:
    - Change `transport: 'http'`
-   - Uncomment and set `mcp_url: 'http://localhost:8000/mcp'`
+   - Uncomment and set `url: 'http://localhost:8000/mcp'`
    - Update `script: '.venv/bin/python server.py --mode http'`
 
 2. Option A: Spawn server internally

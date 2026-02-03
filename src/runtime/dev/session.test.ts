@@ -61,7 +61,6 @@ describe('DevSession', () => {
 
     mockConfig = {
       project_name: 'test-project',
-      version: '1.0.0',
       agent_name: 'Test Agent',
       transport: 'stdio',
       script: 'python server.py',
@@ -82,6 +81,7 @@ describe('DevSession', () => {
 
     sessionConfig = {
       config: mockConfig,
+      syrinVersion: '1.0.0',
       llmProvider: mockLLMProvider,
       mcpClientManager: mockMCPClientManager,
       eventEmitter: mockEventEmitter,

@@ -35,7 +35,7 @@ agent_name: 'My Agent'
 
 transport: 'stdio' # or "http"
 
-mcp_url: 'http://localhost:3000' # Required for http transport
+url: 'http://localhost:3000' # Required for http transport
 script: 'python server.py' # Required for stdio transport
 
 llm:
@@ -65,7 +65,7 @@ Changes take effect immediately.
 | `project_name` | string                | Yes         | Logical project identifier                |
 | `agent_name`   | string                | Yes         | Logical agent name used in execution      |
 | `transport`    | `"stdio"` or `"http"` | Yes         | MCP transport type                        |
-| `mcp_url`      | string                | Conditional | Required when `transport` is `http`       |
+| `url`          | string                | Conditional | Required when `transport` is `http`       |
 | `script`       | string                | Conditional | Required when `transport` is `stdio`      |
 | `llm`          | object                | Yes         | LLM provider definitions                  |
 
@@ -101,7 +101,7 @@ Use `http` when the MCP server exposes an HTTP endpoint.
 
 ```yaml
 transport: 'http'
-mcp_url: 'http://localhost:3000'
+url: 'http://localhost:3000'
 ```
 
 The server must already be running.\
