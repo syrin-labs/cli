@@ -1,6 +1,6 @@
 ---
-title: "W108: Hidden Side Effects"
-description: "Hidden Side Effects - Schema & Contract warning in Syrin"
+title: 'W108: Hidden Side Effects'
+description: 'Hidden Side Effects - Schema & Contract warning in Syrin'
 weight: 9
 ---
 
@@ -14,21 +14,25 @@ weight: 9
 Tool appears to have side effects not reflected in schema. Execution surprises.
 
 **What Causes It**:
+
 - Tool name/description suggests mutation (create, delete, update, etc.)
 - Schema doesn't reflect state changes
 - No output indicating mutation occurred
 
 **Why This Is a Warning**:
+
 - Execution surprises
 - Hard to reason about tool behavior
 - Hidden state changes
 
 **How to Fix**:
+
 - Update output schema to reflect state changes
 - Add success status, created ID, or mutation confirmation
 - Document side effects in description
 
 **Example**:
+
 ```python
 # ⚠️ Warning: Hidden side effects
 @mcp.tool()
@@ -41,7 +45,7 @@ def create_user(data: dict) -> User:  # Name suggests mutation
 @mcp.tool()
 def create_user(data: dict) -> CreateUserResult:
     """Create a new user.
-    
+
     Returns:
         Result with success status and created user ID
     """

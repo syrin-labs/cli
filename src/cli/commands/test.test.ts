@@ -49,7 +49,7 @@ vi.mock('@/utils/logger', () => ({
     warnSymbol: vi.fn(),
     tick: vi.fn(() => '✓'),
     cross: vi.fn(() => '✗'),
-    styleText: vi.fn((text) => text),
+    styleText: vi.fn(text => text),
   },
 }));
 
@@ -380,11 +380,9 @@ describe('executeTest', () => {
         }),
       };
 
-      vi.mocked(TestOrchestrator).mockImplementation(
-        function (this: void) {
-          return mockOrchestrator as any;
-        }
-      );
+      vi.mocked(TestOrchestrator).mockImplementation(function (this: void) {
+        return mockOrchestrator as any;
+      });
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(0)');
@@ -416,11 +414,9 @@ describe('executeTest', () => {
         }),
       };
 
-      vi.mocked(TestOrchestrator).mockImplementation(
-        function (this: void) {
-          return mockOrchestrator as any;
-        }
-      );
+      vi.mocked(TestOrchestrator).mockImplementation(function (this: void) {
+        return mockOrchestrator as any;
+      });
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(1)');
@@ -444,11 +440,9 @@ describe('executeTest', () => {
         }),
       };
 
-      vi.mocked(TestOrchestrator).mockImplementation(
-        function (this: void) {
-          return mockOrchestrator as any;
-        }
-      );
+      vi.mocked(TestOrchestrator).mockImplementation(function (this: void) {
+        return mockOrchestrator as any;
+      });
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(0)');
@@ -478,11 +472,9 @@ describe('executeTest', () => {
         }),
       };
 
-      vi.mocked(TestOrchestrator).mockImplementation(
-        function (this: void) {
-          return mockOrchestrator as any;
-        }
-      );
+      vi.mocked(TestOrchestrator).mockImplementation(function (this: void) {
+        return mockOrchestrator as any;
+      });
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
         throw new Error('process.exit(1)');
@@ -510,11 +502,9 @@ describe('executeTest', () => {
         }),
       };
 
-      vi.mocked(TestOrchestrator).mockImplementation(
-        function (this: void) {
-          return mockOrchestrator as any;
-        }
-      );
+      vi.mocked(TestOrchestrator).mockImplementation(function (this: void) {
+        return mockOrchestrator as any;
+      });
 
       const { formatJSONResults } = await import('@/presentation/test-ui');
       const { log } = await import('@/utils/logger');

@@ -1,6 +1,6 @@
 ---
-title: "Introduction"
-description: "Execution visibility and reproducibility for MCP servers"
+title: 'Introduction'
+description: 'Execution visibility and reproducibility for MCP servers'
 ---
 
 ## Real MCP Failures You Will Hit in Production

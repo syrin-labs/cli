@@ -1,6 +1,6 @@
 ---
-title: "GitLab CI Setup"
-description: "How to integrate Syrin with GitLab CI"
+title: 'GitLab CI Setup'
+description: 'How to integrate Syrin with GitLab CI'
 weight: 3
 ---
 
@@ -38,7 +38,7 @@ syrin-validation:
           exit 1
         fi
       fi
-      
+
       if [ -f test-results.json ] && [ -s test-results.json ]; then
         VERDICT=$(jq -r '.verdict // "pass"' test-results.json)
         if [ "$VERDICT" != "pass" ]; then
@@ -64,8 +64,8 @@ Configure Syrin behavior:
 
 ```yaml
 variables:
-  SYRIN_STRICT_MODE: "true"
-  SYRIN_TIMEOUT_MS: "60000"
+  SYRIN_STRICT_MODE: 'true'
+  SYRIN_TIMEOUT_MS: '60000'
 ```
 
 ## See Also

@@ -1,6 +1,6 @@
 ---
-title: "Reporting Results"
-description: "How to report and visualize CI results"
+title: 'Reporting Results'
+description: 'How to report and visualize CI results'
 weight: 10
 ---
 
@@ -18,7 +18,7 @@ Annotate PRs with error messages:
     if [ -f analysis.json ]; then
       jq -r '.tools[] | select(.status == "error") | "::error file=\(.name).yaml::\(.issues[0].message)"' analysis.json
     fi
-    
+
     if [ -f test-results.json ]; then
       jq -r '.toolResults[] | select(.passed == false) | "::error::Tool \(.toolName) failed tests"' test-results.json
     fi
@@ -32,7 +32,7 @@ Use GitLab's built-in reporting:
 syrin-validation:
   artifacts:
     reports:
-      junit: test-results.xml  # Convert JSON to JUnit format
+      junit: test-results.xml # Convert JSON to JUnit format
 ```
 
 ## Custom Reporting Script

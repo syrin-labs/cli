@@ -45,10 +45,10 @@ syrin dev --exec --transport stdio --mcp-command "node examples/demo-server/serv
 
 ## Tools Available
 
-| Tool | Description |
-|------|-------------|
-| `get_user` | Gets a user by ID |
-| `fetch_user` | Fetches user data (duplicate) |
-| `create_report` | Creates a detailed report |
-| `send_notification` | Sends a notification |
-| `process` | Generic processor |
+| Tool                | Description                   |
+| ------------------- | ----------------------------- |
+| `get_user`          | Gets a user by ID             |
+| `fetch_user`        | Fetches user data (duplicate) |
+| `create_report`     | Creates a detailed report     |
+| `send_notification` | Sends a notification          |
+| `process`           | Generic processor             |

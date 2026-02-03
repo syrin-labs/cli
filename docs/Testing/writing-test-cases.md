@@ -1,7 +1,7 @@
 ---
-title: "Writing Test Cases"
-description: "Complete guide to writing test cases and tool contracts for MCP tools in Syrin"
-weight: "1"
+title: 'Writing Test Cases'
+description: 'Complete guide to writing test cases and tool contracts for MCP tools in Syrin'
+weight: '1'
 ---
 
 ## Define contracts and test your tools
@@ -120,9 +120,9 @@ A unique identifier for the test case. Use descriptive names that explain what t
 
 ```yaml
 tests:
-  - name: fetch_existing_user          # ✅ Good: Clear and descriptive
-  - name: test1                        # ❌ Bad: Not descriptive
-  - name: fetch_user_with_invalid_id   # ✅ Good: Describes the scenario
+  - name: fetch_existing_user # ✅ Good: Clear and descriptive
+  - name: test1 # ❌ Bad: Not descriptive
+  - name: fetch_user_with_invalid_id # ✅ Good: Describes the scenario
 ```
 
 ### `input` (required)
@@ -140,6 +140,7 @@ tests:
 **Input Types**:
 
 - **Strings**: Use quotes for string values
+
   ```yaml
   input:
     name: 'John Doe'
@@ -147,6 +148,7 @@ tests:
   ```
 
 - **Numbers**: No quotes for numeric values
+
   ```yaml
   input:
     age: 30
@@ -154,6 +156,7 @@ tests:
   ```
 
 - **Booleans**: Use `true` or `false`
+
   ```yaml
   input:
     active: true
@@ -161,6 +164,7 @@ tests:
   ```
 
 - **Arrays**: Use YAML list syntax
+
   ```yaml
   input:
     tags: ['admin', 'user', 'moderator']
@@ -168,6 +172,7 @@ tests:
   ```
 
 - **Objects**: Use YAML object syntax
+
   ```yaml
   input:
     address:
@@ -253,7 +258,7 @@ tests:
       user_id: '123'
     expect:
       output_schema: User
-  
+
   - name: fetch_user_by_email
     input:
       email: 'user@example.com'
@@ -272,7 +277,7 @@ tests:
       include_permissions: true
     expect:
       output_schema: User
-  
+
   - name: fetch_user_minimal
     input:
       user_id: '123'
@@ -292,7 +297,7 @@ Test that tools reject invalid input:
 tests:
   - name: test_invalid_user_id_type
     input:
-      user_id: 123  # Wrong type (should be string)
+      user_id: 123 # Wrong type (should be string)
     expect:
       error:
         type: input_validation
@@ -396,14 +401,14 @@ tests:
 
 ### Available Error Types
 
-| Error Type | Error Code | When to Use |
-|------------|------------|-------------|
-| `input_validation` | E200 | Tool input doesn't match schema |
-| `output_validation` | E300 | Tool output doesn't match schema |
-| `execution_error` | E400 | Tool crashes or fails at runtime |
-| `side_effect` | E500 | Tool writes to project files |
-| `output_explosion` | E301 | Tool output exceeds size limit |
-| `unbounded_execution` | E403 | Tool execution times out |
+| Error Type            | Error Code | When to Use                      |
+| --------------------- | ---------- | -------------------------------- |
+| `input_validation`    | E200       | Tool input doesn't match schema  |
+| `output_validation`   | E300       | Tool output doesn't match schema |
+| `execution_error`     | E400       | Tool crashes or fails at runtime |
+| `side_effect`         | E500       | Tool writes to project files     |
+| `output_explosion`    | E301       | Tool output exceeds size limit   |
+| `unbounded_execution` | E403       | Tool execution times out         |
 
 See [Error Rules Documentation](/errors/) for complete details on each error type.
 
@@ -418,14 +423,14 @@ tests:
   - name: test_max_days
     input:
       location: 'London'
-      days: 16  # Maximum allowed
+      days: 16 # Maximum allowed
     expect:
       output_schema: Forecast
-  
+
   - name: test_max_days_plus_one
     input:
       location: 'London'
-      days: 17  # One over maximum
+      days: 17 # One over maximum
     expect:
       error:
         type: input_validation
@@ -441,7 +446,7 @@ tests:
     expect:
       error:
         type: input_validation
-  
+
   - name: test_empty_array
     input:
       items: []
@@ -533,7 +538,7 @@ tests:
       API_URL: 'https://api.example.com'
     expect:
       output_schema: Result
-  
+
   - name: test_staging_api
     input:
       api_key: 'staging-key'
@@ -557,14 +562,14 @@ tests:
       user_id: '123'
     expect:
       output_schema: User
-  
+
   - name: fetch_user_with_profile
     input:
       user_id: '123'
       include_profile: true
     expect:
       output_schema: User
-  
+
   # Error scenarios
   - name: fetch_nonexistent_user
     input:
@@ -572,7 +577,7 @@ tests:
     expect:
       error:
         type: execution_error
-  
+
   - name: fetch_user_invalid_id
     input:
       user_id: 'invalid'
@@ -587,10 +592,10 @@ tests:
 tests:
   - name: fetch_user_by_valid_uuid
     # ✅ Good: Clear what it tests
-  
+
   - name: fetch_user_missing_required_field
     # ✅ Good: Describes the error case
-  
+
   - name: test1
     # ❌ Bad: Not descriptive
 ```
@@ -608,7 +613,7 @@ tests:
       user_id: '123'
     expect:
       output_schema: User
-  
+
   - name: error_case
     input:
       user_id: 'invalid'
@@ -628,13 +633,13 @@ tests:
       count: 0
     expect:
       output_schema: Result
-  
+
   - name: test_max_value
     input:
       count: 100
     expect:
       output_schema: Result
-  
+
   - name: test_empty_input
     input:
       query: ''
@@ -651,7 +656,7 @@ Use realistic test data that reflects actual usage:
 tests:
   - name: fetch_real_user
     input:
-      user_id: '550e8400-e29b-41d4-a716-446655440000'  # Realistic UUID
+      user_id: '550e8400-e29b-41d4-a716-446655440000' # Realistic UUID
     expect:
       output_schema: User
 ```
@@ -683,7 +688,7 @@ tests:
       include_profile: true
     expect:
       output_schema: User
-  
+
   - name: test_without_optional_field
     input:
       user_id: '123'
@@ -717,7 +722,7 @@ tests:
       email: 'user@example.com'
     expect:
       output_schema: Result
-  
+
   - name: test_invalid_email_format
     input:
       email: 'not-an-email'
@@ -736,7 +741,7 @@ tests:
       # Optional fields use defaults
     expect:
       output_schema: User
-  
+
   - name: test_with_custom_values
     input:
       user_id: '123'

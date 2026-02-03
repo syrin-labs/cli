@@ -50,7 +50,7 @@ vi.mock('@/utils/logger', () => ({
     warnSymbol: vi.fn(),
     tick: vi.fn(() => '✓'),
     cross: vi.fn(() => '✗'),
-    styleText: vi.fn((text) => text),
+    styleText: vi.fn(text => text),
   },
 }));
 

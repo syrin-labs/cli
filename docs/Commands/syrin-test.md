@@ -1,7 +1,7 @@
 ---
-title: "syrin test"
-description: "Validate MCP tool contracts through sandboxed execution and behavioral testing"
-weight: "3"
+title: 'syrin test'
+description: 'Validate MCP tool contracts through sandboxed execution and behavioral testing'
+weight: '3'
 ---
 
 ## Put your tools to the test
@@ -74,26 +74,26 @@ syrin test --connection --transport stdio --script "python server.py"
 
 ### Tool Validation Options
 
-| Flag                    | Description                                                      | Default            |
-| ----------------------- | ---------------------------------------------------------------- | ------------------ |
-| `--tool <name>`         | Test specific tool only                                          | All tools          |
-| `--path <path>`         | Test tools in specific path (relative to tools directory)       | All paths          |
-| `--strict`              | Treat warnings as errors                                         | `false`            |
-| `--json`                | Output results as JSON                                           | `false`            |
-| `--ci`                  | CI mode: minimal output, exit code 1 on errors                 | `false`            |
-| `--show-errors`         | Show sandbox process error output (stderr from MCP server)      | `false`            |
-| `--tools-dir <path>`    | Tools directory (overrides config)                               | From `syrin.yaml`  |
-| `--project-root <path>` | Syrin project root directory                                     | Current directory  |
+| Flag                    | Description                                                | Default           |
+| ----------------------- | ---------------------------------------------------------- | ----------------- |
+| `--tool <name>`         | Test specific tool only                                    | All tools         |
+| `--path <path>`         | Test tools in specific path (relative to tools directory)  | All paths         |
+| `--strict`              | Treat warnings as errors                                   | `false`           |
+| `--json`                | Output results as JSON                                     | `false`           |
+| `--ci`                  | CI mode: minimal output, exit code 1 on errors             | `false`           |
+| `--show-errors`         | Show sandbox process error output (stderr from MCP server) | `false`           |
+| `--tools-dir <path>`    | Tools directory (overrides config)                         | From `syrin.yaml` |
+| `--project-root <path>` | Syrin project root directory                               | Current directory |
 
 ### Connection Testing Options (Legacy)
 
-| Flag                  | Description                                                      | Default            |
-| --------------------- | ---------------------------------------------------------------- | ------------------ |
-| `--connection`        | Test MCP connection only (legacy behavior)                      | `false`            |
-| `[url-or-script]`     | MCP URL (HTTP) or execution script (stdio)                       | From `syrin.yaml` |
-| `--transport <type>`  | Transport type: `http` or `stdio`                                | From config        |
-| `--url <url>`         | MCP URL to test (HTTP transport)                                 | From config or positional |
-| `--script <script>`   | Script to test (stdio transport)                                | From config or positional |
+| Flag                 | Description                                | Default                   |
+| -------------------- | ------------------------------------------ | ------------------------- |
+| `--connection`       | Test MCP connection only (legacy behavior) | `false`                   |
+| `[url-or-script]`    | MCP URL (HTTP) or execution script (stdio) | From `syrin.yaml`         |
+| `--transport <type>` | Transport type: `http` or `stdio`          | From config               |
+| `--url <url>`        | MCP URL to test (HTTP transport)           | From config or positional |
+| `--script <script>`  | Script to test (stdio transport)           | From config or positional |
 
 **Note**: When using `--connection`, tool validation options (`--tool`, `--strict`, `--tools-dir`) are ignored.
 
@@ -208,10 +208,10 @@ syrin test --ci
 
 ## Exit Codes
 
-| Code | Meaning                                                          |
-| ---- | ---------------------------------------------------------------- |
-| `0`  | All tests passed (no errors)                                    |
-| `1`  | Tests failed (errors found, or warnings in strict mode)          |
+| Code | Meaning                                                 |
+| ---- | ------------------------------------------------------- |
+| `0`  | All tests passed (no errors)                            |
+| `1`  | Tests failed (errors found, or warnings in strict mode) |
 
 ## Examples
 
@@ -300,11 +300,11 @@ Configure testing in `syrin.yaml`:
 
 ```yaml
 check:
-  timeout_ms: 30000           # Global timeout (30 seconds)
-  mcp_root: ./mcp-server       # MCP server root directory
-  tools_dir: tools             # Tools directory
-  max_output_size_kb: 50       # Default max output size
-  strict_mode: false           # Treat warnings as errors
+  timeout_ms: 30000 # Global timeout (30 seconds)
+  mcp_root: ./mcp-server # MCP server root directory
+  tools_dir: tools # Tools directory
+  max_output_size_kb: 50 # Default max output size
+  strict_mode: false # Treat warnings as errors
 ```
 
 See [Test Configuration](/testing/test-configuration/) for complete configuration options.

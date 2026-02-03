@@ -1,7 +1,7 @@
 ---
-title: "syrin doctor"
-description: "Validate and enforce the correctness of a Syrin-governed MCP project"
-weight: "2"
+title: 'syrin doctor'
+description: 'Validate and enforce the correctness of a Syrin-governed MCP project'
+weight: '2'
 ---
 
 ## Hey doctor, how is the setup?

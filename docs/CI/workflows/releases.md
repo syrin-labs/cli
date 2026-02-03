@@ -1,6 +1,6 @@
 ---
-title: "Release Validation"
-description: "Full validation before releases"
+title: 'Release Validation'
+description: 'Full validation before releases'
 weight: 9
 ---
 
@@ -26,14 +26,14 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-      
+
       - name: Full Validation
         run: |
           npm install -g @syrin/cli
           npm install
           syrin analyse --ci --strict --json > analysis.json
           syrin test --ci --strict --json > test-results.json
-      
+
       - name: Upload Results
         uses: actions/upload-artifact@v3
         with:

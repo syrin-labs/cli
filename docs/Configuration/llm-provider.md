@@ -1,7 +1,7 @@
 ---
-title: "LLM Providers"
-description: "How Syrin configures and governs LLM providers for MCP execution"
-weight: "3"
+title: 'LLM Providers'
+description: 'How Syrin configures and governs LLM providers for MCP execution'
+weight: '3'
 ---
 
 # Do My Job
@@ -43,8 +43,8 @@ This separation is intentional.
 ```yaml
 llm:
   openai:
-    API_KEY: "OPENAI_API_KEY"
-    MODEL_NAME: "OPENAI_MODEL"
+    API_KEY: 'OPENAI_API_KEY'
+    MODEL_NAME: 'OPENAI_MODEL'
     default: true
 ```
 
@@ -85,8 +85,8 @@ syrin dev --llm openai
 ```yaml
 llm:
   claude:
-    API_KEY: "ANTHROPIC_API_KEY"
-    MODEL_NAME: "ANTHROPIC_MODEL"
+    API_KEY: 'ANTHROPIC_API_KEY'
+    MODEL_NAME: 'ANTHROPIC_MODEL'
     default: false
 ```
 
@@ -119,7 +119,7 @@ Ollama allows you to run models locally.
 ```yaml
 llm:
   ollama:
-    MODEL_NAME: "OLLAMA_MODEL_NAME"
+    MODEL_NAME: 'OLLAMA_MODEL_NAME'
     default: false
 ```
 
@@ -134,7 +134,7 @@ export OLLAMA_MODEL_NAME="llama2"
 ```yaml
 llm:
   ollama:
-    MODEL_NAME: "llama2"
+    MODEL_NAME: 'llama2'
     default: false
 ```
 
@@ -176,17 +176,17 @@ You may configure multiple providers simultaneously:
 ```yaml
 llm:
   openai:
-    API_KEY: "OPENAI_API_KEY"
-    MODEL_NAME: "OPENAI_MODEL"
+    API_KEY: 'OPENAI_API_KEY'
+    MODEL_NAME: 'OPENAI_MODEL'
     default: true
 
   claude:
-    API_KEY: "ANTHROPIC_API_KEY"
-    MODEL_NAME: "ANTHROPIC_MODEL"
+    API_KEY: 'ANTHROPIC_API_KEY'
+    MODEL_NAME: 'ANTHROPIC_MODEL'
     default: false
 
   ollama:
-    MODEL_NAME: "llama2"
+    MODEL_NAME: 'llama2'
     default: false
 ```
 

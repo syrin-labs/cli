@@ -1,6 +1,6 @@
 ---
-title: "W301: Unstable Defaults"
-description: "Unstable Defaults - Output Validation warning in Syrin"
+title: 'W301: Unstable Defaults'
+description: 'Unstable Defaults - Output Validation warning in Syrin'
 weight: 13
 ---
 
@@ -14,22 +14,26 @@ weight: 13
 Tool behavior changes significantly with default values, breaking agent expectations.
 
 **What Causes It**:
+
 - Default values change tool behavior dramatically
 - Different defaults produce different outputs
 - Defaults are not stable across runs
 
 **Why This Is a Warning**:
+
 - Defaults should be stable and predictable
 - Changing defaults breaks agent expectations
 - Indicates design inconsistency
 
 **How to Fix**:
+
 - Ensure default values are stable and predictable
 - Avoid defaults that change behavior significantly
 - Document default behavior clearly
 - Use consistent defaults across tool versions
 
 **Example**:
+
 ```python
 # ⚠️ Warning: Unstable defaults
 @mcp.tool()

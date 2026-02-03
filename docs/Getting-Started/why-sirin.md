@@ -1,6 +1,6 @@
 ---
-title: "Why Syrin?"
-description: "The missing runtime layer MCP systems need in production"
+title: 'Why Syrin?'
+description: 'The missing runtime layer MCP systems need in production'
 ---
 
 ## Why This Page Exists

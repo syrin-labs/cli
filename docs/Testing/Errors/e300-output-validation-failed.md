@@ -1,6 +1,6 @@
 ---
-title: "E300: Output Validation Failed"
-description: "Output Validation Failed - Output Validation error in Syrin"
+title: 'E300: Output Validation Failed'
+description: 'Output Validation Failed - Output Validation error in Syrin'
 weight: 14
 ---
 
@@ -14,22 +14,26 @@ weight: 14
 Tool output doesn't match declared output schema.
 
 **What Causes It**:
+
 - Missing required output fields
 - Invalid output types
 - Output structure mismatches
 - Schema drift between implementation and contract
 
 **Why This Is Fatal**:
+
 - Downstream tools cannot consume output
 - Breaks tool chaining
 - Indicates implementation doesn't match contract
 
 **How to Fix**:
+
 - Ensure output matches declared schema
 - Update implementation to match contract
 - Fix missing or incorrect fields
 
 **Example in Test**:
+
 ```yaml
 tests:
   - name: test_invalid_output

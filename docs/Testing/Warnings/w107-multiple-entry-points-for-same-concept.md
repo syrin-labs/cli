@@ -1,6 +1,6 @@
 ---
-title: "W107: Multiple Entry Points for Same Concept"
-description: "Multiple Entry Points for Same Concept - Schema & Contract warning in Syrin"
+title: 'W107: Multiple Entry Points for Same Concept'
+description: 'Multiple Entry Points for Same Concept - Schema & Contract warning in Syrin'
 weight: 8
 ---
 
@@ -14,21 +14,25 @@ weight: 8
 Multiple tools capture the same concept. Conflicting sources of truth.
 
 **What Causes It**:
+
 - Multiple tools ask for same conceptual data (location, user_id, email, etc.)
 - Tools have overlapping input fields
 - No single source of truth
 
 **Why This Is a Warning**:
+
 - Conflicting sources of truth
 - Ambiguous data collection
 - Inconsistent tool usage
 
 **How to Fix**:
+
 - Consolidate concept collection into a single tool
 - Use one tool to provide the data
 - Remove duplicate entry points
 
 **Example**:
+
 ```python
 # ⚠️ Warning: Multiple entry points
 @mcp.tool()

@@ -1,7 +1,7 @@
 ---
-title: "syrin config"
-description: "Manage local and global Syrin configurations"
-weight: "3"
+title: 'syrin config'
+description: 'Manage local and global Syrin configurations'
+weight: '3'
 ---
 
 ## Manage Syrin Configuration
@@ -86,10 +86,10 @@ syrin config set agent_name "GlobalAgent" --global
 
 **Options:**
 
-| Flag        | Description                    | Default |
-| ----------- | ------------------------------ | ------- |
-| `--global`  | Set value in global config     | Auto    |
-| `--local`   | Set value in local config      | Auto    |
+| Flag       | Description                | Default |
+| ---------- | -------------------------- | ------- |
+| `--global` | Set value in global config | Auto    |
+| `--local`  | Set value in local config  | Auto    |
 
 ### `syrin config get <key> [--global]`
 
@@ -119,10 +119,10 @@ syrin config get agent_name --global
 
 **Options:**
 
-| Flag        | Description                    | Default |
-| ----------- | ------------------------------ | ------- |
-| `--global`  | Get value from global config   | Auto    |
-| `--local`   | Get value from local config    | Auto    |
+| Flag       | Description                  | Default |
+| ---------- | ---------------------------- | ------- |
+| `--global` | Get value from global config | Auto    |
+| `--local`  | Get value from local config  | Auto    |
 
 ### `syrin config list [--global]`
 
@@ -158,10 +158,10 @@ LLM Providers:
 
 **Options:**
 
-| Flag        | Description                    | Default |
-| ----------- | ------------------------------ | ------- |
-| `--global`  | List global config             | Auto    |
-| `--local`   | List local config              | Auto    |
+| Flag       | Description        | Default |
+| ---------- | ------------------ | ------- |
+| `--global` | List global config | Auto    |
+| `--local`  | List local config  | Auto    |
 
 ### `syrin config show [--global]`
 
@@ -184,10 +184,10 @@ syrin config show --global
 
 **Options:**
 
-| Flag        | Description                    | Default |
-| ----------- | ------------------------------ | ------- |
-| `--global`  | Show global config             | Auto    |
-| `--local`   | Show local config              | Auto    |
+| Flag       | Description        | Default |
+| ---------- | ------------------ | ------- |
+| `--global` | Show global config | Auto    |
+| `--local`  | Show local config  | Auto    |
 
 ### `syrin config edit [--global]`
 
@@ -225,10 +225,10 @@ The command respects your environment:
 
 **Options:**
 
-| Flag        | Description                    | Default |
-| ----------- | ------------------------------ | ------- |
-| `--global`  | Edit global config             | Auto    |
-| `--local`   | Edit local config              | Auto    |
+| Flag       | Description        | Default |
+| ---------- | ------------------ | ------- |
+| `--global` | Edit global config | Auto    |
+| `--local`  | Edit local config  | Auto    |
 
 ### `syrin config edit-env [--global]`
 
@@ -268,10 +268,10 @@ When creating a new `.env` file, a template is provided with:
 
 **Options:**
 
-| Flag        | Description                    | Default |
-| ----------- | ------------------------------ | ------- |
-| `--global`  | Edit global .env               | Auto    |
-| `--local`   | Edit local .env                | Auto    |
+| Flag       | Description      | Default |
+| ---------- | ---------------- | ------- |
+| `--global` | Edit global .env | Auto    |
+| `--local`  | Edit local .env  | Auto    |
 
 ### `syrin config set-default <provider> [--global]`
 
@@ -299,10 +299,10 @@ syrin config set-default openai --global
 
 **Options:**
 
-| Flag        | Description                    | Default |
-| ----------- | ------------------------------ | ------- |
-| `--global`  | Set default in global config   | Auto    |
-| `--local`   | Set default in local config    | Auto    |
+| Flag       | Description                  | Default |
+| ---------- | ---------------------------- | ------- |
+| `--global` | Set default in global config | Auto    |
+| `--local`  | Set default in local config  | Auto    |
 
 ### `syrin config remove <provider> [--global]`
 
@@ -335,10 +335,10 @@ syrin config remove ollama --global
 
 **Options:**
 
-| Flag        | Description                    | Default |
-| ----------- | ------------------------------ | ------- |
-| `--global`  | Remove from global config      | Auto    |
-| `--local`   | Remove from local config       | Auto    |
+| Flag       | Description               | Default |
+| ---------- | ------------------------- | ------- |
+| `--global` | Remove from global config | Auto    |
+| `--local`  | Remove from local config  | Auto    |
 
 ## Context Detection
 
@@ -371,7 +371,7 @@ Global config is automatically used when:
 Global config is stored in `~/.syrin/syrin.yaml` and has a simplified structure:
 
 ```yaml
-version: "1.0"
+version: '1.0'
 project_name: GlobalSyrin
 agent_name: YourAgentName
 llm:
@@ -459,14 +459,17 @@ API keys and model names can be set in multiple locations with clear precedence.
 ### Environment Variable Names
 
 **OpenAI:**
+
 - `OPENAI_API_KEY` - API key
 - `OPENAI_MODEL` - Model name
 
 **Claude:**
+
 - `ANTHROPIC_API_KEY` - API key
 - `ANTHROPIC_MODEL` - Model name
 
 **Ollama:**
+
 - `OLLAMA_MODEL_NAME` - Model name (no API key needed)
 
 ### Example `.env` File
@@ -552,52 +555,60 @@ syrin config list
 ### No Config Found
 
 **Error:**
+
 ```
 No config found. Create a local config with `syrin init` or set up global config with `syrin init --global`.
 ```
 
 **Resolution:**
+
 - Create local config: `syrin init`
 - Create global config: `syrin init --global`
 
 ### Invalid Key
 
 **Error:**
+
 ```
 Cannot set "invalid.key" in global config. Global config only supports "agent_name" and LLM provider settings.
 ```
 
 **Resolution:**
+
 - Use valid keys: `agent_name`, `<provider>.api_key`, `<provider>.model`
 - For local config, use `syrin init` to set transport/URL/script
 
 ### Provider Not Found
 
 **Error:**
+
 ```
 LLM provider "invalid" not found in local config.
 ```
 
 **Resolution:**
+
 - Check available providers: `syrin config list`
 - Add provider first: `syrin config set invalid.model "model-name"`
 
 ### Cannot Remove Last Provider
 
 **Error:**
+
 ```
 Cannot remove the last LLM provider. At least one provider is required.
 ```
 
 **Resolution:**
+
 - Add another provider first: `syrin config set <provider>.model "model-name"`
 - Then remove the unwanted provider
 
 ## Exit Codes
 
-| Code | Meaning                                    |
-| ---- | ------------------------------------------ |
-| `0`  | Command completed successfully              |
+| Code | Meaning                                            |
+| ---- | -------------------------------------------------- |
+| `0`  | Command completed successfully                     |
 | `1`  | Error occurred (invalid key, missing config, etc.) |
 
 Exit codes are stable and suitable for scripting and CI pipelines.

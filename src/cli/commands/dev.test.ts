@@ -77,7 +77,7 @@ vi.mock('@/utils/logger', () => ({
     warnSymbol: vi.fn(),
     tick: vi.fn(() => '✓'),
     cross: vi.fn(() => '✗'),
-    styleText: vi.fn((text) => text),
+    styleText: vi.fn(text => text),
   },
 }));
 vi.mock('@/presentation/dev-ui', () => ({
@@ -181,7 +181,10 @@ describe('executeDev', () => {
       stop: vi.fn(),
     };
 
-    vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: mockConfig, source: 'local' });
+    vi.mocked(loadConfigWithGlobal).mockReturnValue({
+      config: mockConfig,
+      source: 'local',
+    });
     vi.mocked(configExists).mockReturnValue(true);
     vi.mocked(loadGlobalConfig).mockReturnValue(null);
     vi.mocked(getLLMProvider).mockReturnValue(mockLLMProvider);
@@ -255,7 +258,10 @@ describe('executeDev', () => {
         mcp_url: undefined,
       };
 
-      vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: httpConfig, source: 'local' });
+      vi.mocked(loadConfigWithGlobal).mockReturnValue({
+        config: httpConfig,
+        source: 'local',
+      });
 
       await expect(executeDev({})).rejects.toThrow(ConfigurationError);
     });
@@ -282,7 +288,10 @@ describe('executeDev', () => {
         script: 'python server.py',
       };
 
-      vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: httpConfig, source: 'local' });
+      vi.mocked(loadConfigWithGlobal).mockReturnValue({
+        config: httpConfig,
+        source: 'local',
+      });
 
       await executeDev({ runScript: true });
 
@@ -302,7 +311,10 @@ describe('executeDev', () => {
         mcp_url: 'http://localhost:8000',
       };
 
-      vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: httpConfig, source: 'local' });
+      vi.mocked(loadConfigWithGlobal).mockReturnValue({
+        config: httpConfig,
+        source: 'local',
+      });
 
       await executeDev({});
 
@@ -322,7 +334,10 @@ describe('executeDev', () => {
         script: undefined,
       };
 
-      vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: stdioConfig, source: 'local' });
+      vi.mocked(loadConfigWithGlobal).mockReturnValue({
+        config: stdioConfig,
+        source: 'local',
+      });
       vi.mocked(configExists).mockReturnValue(true);
       vi.mocked(loadGlobalConfig).mockReturnValue(null);
 
@@ -337,7 +352,10 @@ describe('executeDev', () => {
         script: undefined,
       };
 
-      vi.mocked(loadConfigWithGlobal).mockReturnValue({ config: httpConfig, source: 'local' });
+      vi.mocked(loadConfigWithGlobal).mockReturnValue({
+        config: httpConfig,
+        source: 'local',
+      });
 
       await expect(executeDev({ runScript: true })).rejects.toThrow(
         ConfigurationError

@@ -1,6 +1,6 @@
 ---
-title: "What Is Syrin?"
-description: "Syrin is a runtime intelligence system that governs MCP execution"
+title: 'What Is Syrin?'
+description: 'Syrin is a runtime intelligence system that governs MCP execution'
 ---
 
 ## Hi, I'm Syrin 👋

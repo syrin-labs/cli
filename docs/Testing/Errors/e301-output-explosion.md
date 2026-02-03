@@ -1,6 +1,6 @@
 ---
-title: "E301: Output Explosion"
-description: "Output Explosion - Output Validation error in Syrin"
+title: 'E301: Output Explosion'
+description: 'Output Explosion - Output Validation error in Syrin'
 weight: 15
 ---
 
@@ -14,22 +14,26 @@ weight: 15
 Tool output exceeds declared size limit. Large outputs overwhelm LLM context and break agent reasoning.
 
 **What Causes It**:
+
 - Tool returns more data than declared
 - No pagination or filtering
 - Output size limit too small for actual use
 - Tool fetches all records instead of subset
 
 **Why This Is Fatal**:
+
 - Large outputs overwhelm LLM context
 - Breaks agent reasoning
 - Indicates design issue (pagination, filtering needed)
 
 **How to Fix**:
+
 - Reduce output size by paginating results
 - Add filters to limit data
 - Update contract limit if legitimate
 
 **Example**:
+
 ```yaml
 guarantees:
   max_output_size: 10kb

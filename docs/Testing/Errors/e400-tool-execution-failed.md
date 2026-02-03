@@ -1,6 +1,6 @@
 ---
-title: "E400: Tool Execution Failed"
-description: "Tool Execution Failed - Execution error in Syrin"
+title: 'E400: Tool Execution Failed'
+description: 'Tool Execution Failed - Execution error in Syrin'
 weight: 16
 ---
 
@@ -14,6 +14,7 @@ weight: 16
 Tool raises an exception during execution. Tool should handle errors gracefully instead of crashing.
 
 **What Causes It**:
+
 - Unhandled exceptions
 - External API failures
 - Resource exhaustion
@@ -21,16 +22,19 @@ Tool raises an exception during execution. Tool should handle errors gracefully 
 - Invalid assumptions about input
 
 **Why This Is Fatal**:
+
 - Tool crashes instead of handling errors gracefully
 - Breaks agent reliability
 - Indicates missing error handling or input validation
 
 **How to Fix**:
+
 - Fix tool implementation errors
 - Ensure tool handles all input cases gracefully
 - Add proper error handling and validation
 
 **Example in Test**:
+
 ```yaml
 tests:
   - name: test_api_failure

@@ -1,6 +1,6 @@
 ---
-title: "How Syrin Helps Write Safe MCPs"
-description: "Understanding how Syrin makes your MCP tools safer"
+title: 'How Syrin Helps Write Safe MCPs'
+description: 'Understanding how Syrin makes your MCP tools safer'
 weight: 6
 ---
 

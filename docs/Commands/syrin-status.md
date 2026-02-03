@@ -1,7 +1,7 @@
 ---
-title: "syrin status"
-description: "Quick overview of project health and configuration state"
-weight: "2.5"
+title: 'syrin status'
+description: 'Quick overview of project health and configuration state'
+weight: '2.5'
 ---
 
 ## What's the Situation?
@@ -183,13 +183,13 @@ syrin status || exit 1
 
 ## Differences from `syrin doctor`
 
-| Aspect               | `syrin status`        | `syrin doctor`           |
-| -------------------- | --------------------- | ------------------------ |
-| **Speed**            | Instant               | May take a moment        |
-| **Depth**            | Overview              | Comprehensive validation |
-| **Network**          | No connections        | May test connectivity    |
-| **Purpose**          | Quick check           | Full diagnostics         |
-| **When to use**      | Frequent, casual      | Before execution         |
+| Aspect          | `syrin status`   | `syrin doctor`           |
+| --------------- | ---------------- | ------------------------ |
+| **Speed**       | Instant          | May take a moment        |
+| **Depth**       | Overview         | Comprehensive validation |
+| **Network**     | No connections   | May test connectivity    |
+| **Purpose**     | Quick check      | Full diagnostics         |
+| **When to use** | Frequent, casual | Before execution         |
 
 Use `syrin status` for quick checks.\
 Use `syrin doctor` for thorough validation before running commands.

@@ -1,6 +1,6 @@
 ---
-title: "CI Best Practices"
-description: "Best practices for using Syrin in CI/CD pipelines"
+title: 'CI Best Practices'
+description: 'Best practices for using Syrin in CI/CD pipelines'
 weight: 5
 ---
 
@@ -62,7 +62,7 @@ Configure timeouts for long-running tests:
 ```yaml
 # syrin.yaml
 check:
-  timeout_ms: 60000  # 60 seconds for CI
+  timeout_ms: 60000 # 60 seconds for CI
 ```
 
 **Why**: CI environments may have different performance characteristics. Set timeouts based on your CI environment.
@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: syrin analyse --ci
-  
+
   test:
     runs-on: ubuntu-latest
     steps:

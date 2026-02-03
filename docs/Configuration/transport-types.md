@@ -1,7 +1,7 @@
 ---
-title: "Transport Types"
-description: "How Syrin connects to and governs MCP servers via stdio, and http transports"
-weight: "2"
+title: 'Transport Types'
+description: 'How Syrin connects to and governs MCP servers via stdio, and http transports'
+weight: '2'
 ---
 
 # What are the ways?

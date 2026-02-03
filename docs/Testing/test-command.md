@@ -1,7 +1,7 @@
 ---
-title: "Test Command"
-description: "How to run tests and use test command flags in Syrin"
-weight: "7.2"
+title: 'Test Command'
+description: 'How to run tests and use test command flags in Syrin'
+weight: '7.2'
 ---
 
 # Test Command
@@ -36,19 +36,19 @@ Tests all tools in the specified path (relative to tools directory).
 
 ## Command Flags
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `--tool <name>` | Test specific tool only | All tools |
-| `--path <path>` | Test tools in specific path (relative to tools directory) | All paths |
-| `--strict` | Treat warnings as errors | `false` |
-| `--json` | Output results as JSON | `false` |
-| `--ci` | CI mode: minimal output, exit code 1 on errors | `false` |
-| `--show-errors` | Show sandbox process error output (stderr from MCP server) | `false` |
-| `--tools-dir <path>` | Tools directory (overrides config) | From `syrin.yaml` |
-| `--transport <type>` | Transport type: `http` or `stdio` | From config |
-| `--url <url>` | MCP URL for HTTP transport | From config |
-| `--script <script>` | Script for stdio transport | From config |
-| `--project-root <path>` | Syrin project root directory | Current directory |
+| Flag                    | Description                                                | Default           |
+| ----------------------- | ---------------------------------------------------------- | ----------------- |
+| `--tool <name>`         | Test specific tool only                                    | All tools         |
+| `--path <path>`         | Test tools in specific path (relative to tools directory)  | All paths         |
+| `--strict`              | Treat warnings as errors                                   | `false`           |
+| `--json`                | Output results as JSON                                     | `false`           |
+| `--ci`                  | CI mode: minimal output, exit code 1 on errors             | `false`           |
+| `--show-errors`         | Show sandbox process error output (stderr from MCP server) | `false`           |
+| `--tools-dir <path>`    | Tools directory (overrides config)                         | From `syrin.yaml` |
+| `--transport <type>`    | Transport type: `http` or `stdio`                          | From config       |
+| `--url <url>`           | MCP URL for HTTP transport                                 | From config       |
+| `--script <script>`     | Script for stdio transport                                 | From config       |
+| `--project-root <path>` | Syrin project root directory                               | Current directory |
 
 ## Common Usage Patterns
 
@@ -93,6 +93,7 @@ syrin test
 ```
 
 Shows:
+
 - Test execution progress
 - Pass/fail status for each tool
 - Error and warning diagnostics
@@ -144,10 +145,10 @@ syrin test --ci
 
 ## Exit Codes
 
-| Code | Meaning |
-|------|---------|
-| `0` | All tests passed (no errors) |
-| `1` | Tests failed (errors found, or warnings in strict mode) |
+| Code | Meaning                                                 |
+| ---- | ------------------------------------------------------- |
+| `0`  | All tests passed (no errors)                            |
+| `1`  | Tests failed (errors found, or warnings in strict mode) |
 
 ## Examples
 

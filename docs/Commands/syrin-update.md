@@ -1,7 +1,7 @@
 ---
-title: "syrin update"
-description: "Update Syrin to the latest version"
-weight: "9"
+title: 'syrin update'
+description: 'Update Syrin to the latest version'
+weight: '9'
 ---
 
 ## Stay Current
@@ -150,10 +150,10 @@ Using `nvm` or similar tools avoids global permission issues entirely.
 
 ## Exit Codes
 
-| Code | Meaning                           |
-| ---- | --------------------------------- |
+| Code | Meaning                             |
+| ---- | ----------------------------------- |
 | `0`  | Update successful or already latest |
-| `1`  | Update failed                      |
+| `1`  | Update failed                       |
 
 ## After Updating
 

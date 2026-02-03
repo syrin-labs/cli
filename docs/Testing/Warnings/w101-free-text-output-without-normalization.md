@@ -1,6 +1,6 @@
 ---
-title: "W101: Free-Text Output Without Normalization"
-description: "Free-Text Output Without Normalization - Schema & Contract warning in Syrin"
+title: 'W101: Free-Text Output Without Normalization'
+description: 'Free-Text Output Without Normalization - Schema & Contract warning in Syrin'
 weight: 2
 ---
 
@@ -14,22 +14,26 @@ weight: 2
 Tool returns unconstrained free text. Consider normalizing output.
 
 **What Causes It**:
+
 - Output is string type
 - No enum values provided
 - No regex pattern for validation
 - No description explaining format
 
 **Why This Is a Warning**:
+
 - Hard to reuse in other tools
 - Hard to evolve and maintain
 - Unpredictable output format
 
 **How to Fix**:
+
 - Add enum values to constrain output
 - Add regex pattern for validation
 - Provide clear description of expected format
 
 **Example**:
+
 ```python
 # ⚠️ Warning: Unconstrained free text
 @mcp.tool()
@@ -40,7 +44,7 @@ def get_status() -> str:  # No constraints
 @mcp.tool()
 def get_status() -> str:
     """Get user status.
-    
+
     Returns:
         One of: "active", "inactive", "pending"
     """

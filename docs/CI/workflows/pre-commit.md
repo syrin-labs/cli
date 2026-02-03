@@ -1,6 +1,6 @@
 ---
-title: "Pre-Commit Hooks"
-description: "Using Syrin in pre-commit hooks"
+title: 'Pre-Commit Hooks'
+description: 'Using Syrin in pre-commit hooks'
 weight: 7
 ---
 
@@ -40,7 +40,7 @@ repos:
         entry: syrin analyse --ci
         language: system
         pass_filenames: false
-      
+
       - id: syrin-test
         name: Syrin Tests
         entry: syrin test --ci

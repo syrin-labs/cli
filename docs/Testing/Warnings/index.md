@@ -1,7 +1,7 @@
 ---
-title: "Warning Rules"
-description: "Comprehensive guide to all warning codes and rules in Syrin"
-weight: "6"
+title: 'Warning Rules'
+description: 'Comprehensive guide to all warning codes and rules in Syrin'
+weight: '6'
 ---
 
 ## Proceed with caution

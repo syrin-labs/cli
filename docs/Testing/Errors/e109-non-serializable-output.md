@@ -1,6 +1,6 @@
 ---
-title: "E109: Non-Serializable Output"
-description: "Non-Serializable Output - Schema & Contract error in Syrin"
+title: 'E109: Non-Serializable Output'
+description: 'Non-Serializable Output - Schema & Contract error in Syrin'
 weight: 11
 ---
 
@@ -14,21 +14,25 @@ weight: 11
 Output of tool is not serializable. Breaks MCP contract.
 
 **What Causes It**:
+
 - Output contains functions
 - Output contains class instances
 - Output contains unsupported types (undefined, symbol, bigint)
 
 **Why This Is Fatal**:
+
 - Breaks MCP contract
 - Breaks recording & replay
 - Cannot be transmitted over protocol
 
 **How to Fix**:
+
 - Change output type to serializable types
 - Convert objects to plain dictionaries
 - Remove non-serializable fields
 
 **Example**:
+
 ```python
 # ❌ Bad: Non-serializable
 @mcp.tool()

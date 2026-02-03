@@ -1,6 +1,6 @@
 ---
-title: "Pull Request Checks"
-description: "Setting up Syrin validation for pull requests"
+title: 'Pull Request Checks'
+description: 'Setting up Syrin validation for pull requests'
 weight: 8
 ---
 
@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: '18'
-      
+
       - name: Install and Run Syrin
         run: |
           npm install -g @syrin/cli

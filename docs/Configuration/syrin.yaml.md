@@ -1,7 +1,7 @@
 ---
-title: "syrin.yaml"
-description: "How Syrin defines and enforces execution assumptions via syrin.yaml"
-weight: "3"
+title: 'syrin.yaml'
+description: 'How Syrin defines and enforces execution assumptions via syrin.yaml'
+weight: '3'
 ---
 
 # Configuration Your Project Needs!
@@ -28,29 +28,29 @@ All Syrin commands resolve configuration relative to the project root.
 A minimal example looks like this:
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
-project_name: "my-project"
-agent_name: "My Agent"
+project_name: 'my-project'
+agent_name: 'My Agent'
 
-transport: "stdio" # or "http"
+transport: 'stdio' # or "http"
 
-mcp_url: "http://localhost:3000" # Required for http transport
-script: "python server.py"        # Required for stdio transport
+mcp_url: 'http://localhost:3000' # Required for http transport
+script: 'python server.py' # Required for stdio transport
 
 llm:
   openai:
-    API_KEY: "OPENAI_API_KEY"
-    MODEL_NAME: "OPENAI_MODEL"
+    API_KEY: 'OPENAI_API_KEY'
+    MODEL_NAME: 'OPENAI_MODEL'
     default: true
 
   claude:
-    API_KEY: "ANTHROPIC_API_KEY"
-    MODEL_NAME: "ANTHROPIC_MODEL"
+    API_KEY: 'ANTHROPIC_API_KEY'
+    MODEL_NAME: 'ANTHROPIC_MODEL'
     default: false
 
   ollama:
-    MODEL_NAME: "OLLAMA_MODEL_NAME"
+    MODEL_NAME: 'OLLAMA_MODEL_NAME'
     default: false
 ```
 
@@ -80,8 +80,8 @@ The `transport` field determines how Syrin connects to the MCP server.
 Use `stdio` when the MCP server runs as a process and communicates via standard input and output.
 
 ```yaml
-transport: "stdio"
-script: "python server.py"
+transport: 'stdio'
+script: 'python server.py'
 ```
 
 The `script` field defines the exact command Syrin will run.
@@ -100,8 +100,8 @@ When using `stdio`, Syrin manages the server lifecycle.
 Use `http` when the MCP server exposes an HTTP endpoint.
 
 ```yaml
-transport: "http"
-mcp_url: "http://localhost:3000"
+transport: 'http'
+mcp_url: 'http://localhost:3000'
 ```
 
 The server must already be running.\
@@ -120,8 +120,8 @@ Only declared providers may propose actions.
 ```yaml
 llm:
   openai:
-    API_KEY: "OPENAI_API_KEY"
-    MODEL_NAME: "OPENAI_MODEL"
+    API_KEY: 'OPENAI_API_KEY'
+    MODEL_NAME: 'OPENAI_MODEL'
     default: true
 ```
 
@@ -135,8 +135,8 @@ Required environment variables:
 ```yaml
 llm:
   claude:
-    API_KEY: "ANTHROPIC_API_KEY"
-    MODEL_NAME: "ANTHROPIC_MODEL"
+    API_KEY: 'ANTHROPIC_API_KEY'
+    MODEL_NAME: 'ANTHROPIC_MODEL'
     default: false
 ```
 
@@ -150,7 +150,7 @@ Required environment variables:
 ```yaml
 llm:
   ollama:
-    MODEL_NAME: "OLLAMA_MODEL_NAME"
+    MODEL_NAME: 'OLLAMA_MODEL_NAME'
     default: false
 ```
 
@@ -164,7 +164,7 @@ Example with direct value:
 ```yaml
 llm:
   ollama:
-    MODEL_NAME: "llama2"
+    MODEL_NAME: 'llama2'
     default: false
 ```
 

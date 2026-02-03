@@ -1,7 +1,7 @@
 ---
-title: "Error Rules"
-description: "Comprehensive guide to all error codes and rules in Syrin"
-weight: "5"
+title: 'Error Rules'
+description: 'Comprehensive guide to all error codes and rules in Syrin'
+weight: '5'
 ---
 
 ## When things go wrong
@@ -24,14 +24,14 @@ Errors are organized into categories similar to HTTP status codes:
 
 When writing test cases, you can specify error types in `expect.error.type`. The following error types map to error codes:
 
-| Error Type            | Error Code | Description                                          |
-| --------------------- | ---------- | ---------------------------------------------------- |
-| `input_validation`    | E200       | Tool input doesn't match declared input schema      |
-| `output_validation`   | E300       | Tool output doesn't match declared output schema    |
-| `execution_error`     | E400       | Tool execution failed due to runtime error          |
-| `side_effect`         | E500       | Tool attempted filesystem writes to project files    |
-| `output_explosion`    | E301       | Tool output exceeds declared size limit             |
-| `unbounded_execution` | E403       | Tool execution timed out or failed to terminate      |
+| Error Type            | Error Code | Description                                       |
+| --------------------- | ---------- | ------------------------------------------------- |
+| `input_validation`    | E200       | Tool input doesn't match declared input schema    |
+| `output_validation`   | E300       | Tool output doesn't match declared output schema  |
+| `execution_error`     | E400       | Tool execution failed due to runtime error        |
+| `side_effect`         | E500       | Tool attempted filesystem writes to project files |
+| `output_explosion`    | E301       | Tool output exceeds declared size limit           |
+| `unbounded_execution` | E403       | Tool execution timed out or failed to terminate   |
 
 ## Configuration & Setup Errors
 
@@ -175,7 +175,6 @@ Tool attempted filesystem write to project files. Tools should not mutate projec
 
 **Detection**: Runtime (Test Execution)  
 **Category**: Behavioral
-
 
 ## Test Framework Errors
 

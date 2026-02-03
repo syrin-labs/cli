@@ -62,7 +62,7 @@ vi.mock('@/utils/logger', () => ({
     warnSymbol: vi.fn(),
     tick: vi.fn(() => '✓'),
     cross: vi.fn(() => '✗'),
-    styleText: vi.fn((text) => text),
+    styleText: vi.fn(text => text),
   },
 }));
 
@@ -320,9 +320,17 @@ describe('executeDoctor', () => {
       // When all checks pass, function completes normally (no exit)
       await executeDoctor(tempDir);
 
-      expect(checkEnvVar).toHaveBeenCalledWith('OPENAI_API_KEY', tempDir, false);
+      expect(checkEnvVar).toHaveBeenCalledWith(
+        'OPENAI_API_KEY',
+        tempDir,
+        false
+      );
       expect(checkEnvVar).toHaveBeenCalledWith('OPENAI_MODEL', tempDir, false);
-      expect(checkEnvVar).toHaveBeenCalledWith('CLAUDE_API_KEY', tempDir, false);
+      expect(checkEnvVar).toHaveBeenCalledWith(
+        'CLAUDE_API_KEY',
+        tempDir,
+        false
+      );
       expect(checkEnvVar).toHaveBeenCalledWith('CLAUDE_MODEL', tempDir, false);
     });
   });

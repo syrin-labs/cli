@@ -1,6 +1,6 @@
 ---
-title: "W105: Optional Input Used as Required Downstream"
-description: "Optional Input Used as Required Downstream - Schema & Contract warning in Syrin"
+title: 'W105: Optional Input Used as Required Downstream'
+description: 'Optional Input Used as Required Downstream - Schema & Contract warning in Syrin'
 weight: 6
 ---
 
@@ -14,21 +14,25 @@ weight: 6
 Optional input is treated as required downstream. Hidden contract violation.
 
 **What Causes It**:
+
 - Source field is optional (`required: false`) or nullable (`nullable: true`)
 - Target field is required (`required: true`)
 - Tool chaining assumes optional field is always present
 
 **Why This Is a Warning**:
+
 - Hidden contract violation
 - Runtime failures when optional field is missing
 - Unpredictable tool chaining
 
 **How to Fix**:
+
 - Make source field required if it's always needed
 - Make target field optional if source can be missing
 - Add fallback handling in downstream tool
 
 **Example**:
+
 ```python
 # ⚠️ Warning: Optional as required
 def get_user() -> User:

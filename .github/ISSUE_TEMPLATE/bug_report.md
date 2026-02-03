@@ -1,9 +1,9 @@
 ---
 name: Bug Report
 about: Report a bug or unexpected behavior in Syrin
-title: "[Bug]: "
+title: '[Bug]: '
 labels: bug
-assignees: ""
+assignees: ''
 ---
 
 ## Describe the Bug

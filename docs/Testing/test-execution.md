@@ -1,7 +1,7 @@
 ---
-title: "Test Execution Process"
-description: "How Syrin executes tests and validates tool behavior"
-weight: "3"
+title: 'Test Execution Process'
+description: 'How Syrin executes tests and validates tool behavior'
+weight: '3'
 ---
 
 # Test Execution Process
@@ -200,6 +200,7 @@ syrin test
 ```
 
 Syrin optimises batch execution by:
+
 - Starting the MCP server once
 - Testing all tools
 - Closing the server after all tests are complete

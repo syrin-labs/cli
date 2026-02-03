@@ -1,6 +1,6 @@
 ---
-title: "Continuous Integration"
-description: "How Syrin helps you write safe MCPs through CI integration"
+title: 'Continuous Integration'
+description: 'How Syrin helps you write safe MCPs through CI integration'
 weight: 1
 ---
 

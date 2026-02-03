@@ -1,7 +1,7 @@
 ---
-title: "syrin init"
-description: "Initialise a Syrin-governed MCP project"
-weight: "1"
+title: 'syrin init'
+description: 'Initialise a Syrin-governed MCP project'
+weight: '1'
 ---
 
 ## Initialise Syrin
@@ -128,7 +128,7 @@ Global configuration contains **only LLM provider settings**:
 **Global config structure:**
 
 ```yaml
-version: "1.0"
+version: '1.0'
 project_name: GlobalSyrin
 agent_name: YourAgentName
 llm:
@@ -165,29 +165,29 @@ Creates global config with default OpenAI settings.
 This file is the **runtime contract** for the project.
 
 ```yaml
-version: "1.0"
+version: '1.0'
 
-project_name: "my-project"
-agent_name: "My Agent"
+project_name: 'my-project'
+agent_name: 'My Agent'
 
-transport: "stdio" # or "http"
+transport: 'stdio' # or "http"
 
-mcp_url: "http://localhost:3000" # required for http
-script: "python server.py"        # required for stdio
+mcp_url: 'http://localhost:3000' # required for http
+script: 'python server.py' # required for stdio
 
 llm:
   openai:
-    API_KEY: "OPENAI_API_KEY"
-    MODEL_NAME: "OPENAI_MODEL"
+    API_KEY: 'OPENAI_API_KEY'
+    MODEL_NAME: 'OPENAI_MODEL'
     default: true
 
   claude:
-    API_KEY: "ANTHROPIC_API_KEY"
-    MODEL_NAME: "ANTHROPIC_MODEL"
+    API_KEY: 'ANTHROPIC_API_KEY'
+    MODEL_NAME: 'ANTHROPIC_MODEL'
     default: false
 
   ollama:
-    MODEL_NAME: "OLLAMA_MODEL_NAME"
+    MODEL_NAME: 'OLLAMA_MODEL_NAME'
     default: false
 ```
 

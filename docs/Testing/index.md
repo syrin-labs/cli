@@ -1,7 +1,7 @@
 ---
-title: "Testing"
-description: "Comprehensive guide to testing MCP tools with Syrin"
-weight: "1"
+title: 'Testing'
+description: 'Comprehensive guide to testing MCP tools with Syrin'
+weight: '1'
 ---
 
 ## Test with confidence

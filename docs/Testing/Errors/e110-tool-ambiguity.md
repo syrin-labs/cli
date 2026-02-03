@@ -1,6 +1,6 @@
 ---
-title: "E110: Tool Ambiguity"
-description: "Tool Ambiguity - Schema & Contract error in Syrin"
+title: 'E110: Tool Ambiguity'
+description: 'Tool Ambiguity - Schema & Contract error in Syrin'
 weight: 12
 ---
 
@@ -14,21 +14,25 @@ weight: 12
 Multiple tools match the same intent. LLM tool selection is ambiguous.
 
 **What Causes It**:
+
 - Two or more tools have overlapping descriptions
 - Tools have overlapping schemas
 - No clear differentiator between tools
 
 **Why This Is Fatal**:
+
 - Tool selection becomes nondeterministic
 - Agent behavior changes across runs/models
 - Wrong tool may be selected
 
 **How to Fix**:
+
 - Make descriptions more distinct
 - Differentiate schemas
 - Add unique identifiers or names
 
 **Example**:
+
 ```python
 # ❌ Bad: Ambiguous tools
 @mcp.tool()

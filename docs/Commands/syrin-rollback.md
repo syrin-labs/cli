@@ -1,7 +1,7 @@
 ---
-title: "syrin rollback"
-description: "Rollback Syrin to a previous version"
-weight: "10"
+title: 'syrin rollback'
+description: 'Rollback Syrin to a previous version'
+weight: '10'
 ---
 
 ## Go Back in Time
@@ -33,8 +33,8 @@ syrin rollback <version>
 
 ## Arguments
 
-| Argument    | Description                                | Required |
-| ----------- | ------------------------------------------ | -------- |
+| Argument    | Description                                    | Required |
+| ----------- | ---------------------------------------------- | -------- |
 | `<version>` | Version to rollback to (e.g., 1.3.0 or v1.3.0) | Yes      |
 
 ## Version Format
@@ -195,9 +195,9 @@ syrin rollback 1.3.0
 
 ## Exit Codes
 
-| Code | Meaning                              |
-| ---- | ------------------------------------ |
-| `0`  | Rollback successful or already on version |
+| Code | Meaning                                                        |
+| ---- | -------------------------------------------------------------- |
+| `0`  | Rollback successful or already on version                      |
 | `1`  | Rollback failed (invalid version, not found, permission error) |
 
 ## After Rolling Back
@@ -234,12 +234,12 @@ If rolling back for a specific project, document the required version:
 
 ## Version Selection Guide
 
-| Scenario                    | Recommended Action                    |
-| --------------------------- | ------------------------------------- |
-| Bug in latest version       | Rollback to previous minor version    |
-| Team standardization        | Rollback to agreed version            |
+| Scenario                    | Recommended Action                             |
+| --------------------------- | ---------------------------------------------- |
+| Bug in latest version       | Rollback to previous minor version             |
+| Team standardization        | Rollback to agreed version                     |
 | Config incompatibility      | Check migration guide, then rollback if needed |
-| Testing historical behavior | Rollback, test, then update back      |
+| Testing historical behavior | Rollback, test, then update back               |
 
 ## Finding Available Versions
 

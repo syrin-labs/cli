@@ -1,7 +1,7 @@
 ---
-title: "syrin list"
-description: "Inspect and assert the declared execution surface of an MCP server under Syrin governance"
-weight: "4"
+title: 'syrin list'
+description: 'Inspect and assert the declared execution surface of an MCP server under Syrin governance'
+weight: '4'
 ---
 
 ## Hey MCP, What you got?
@@ -38,15 +38,15 @@ syrin list [type] [options]
 
 ## Options
 
-| Flag                    | Description                                                 | Default            |
-| ----------------------- | ----------------------------------------------------------- | ------------------ |
-| `[type]`                | Capability type to list: `tools`, `resources`, or `prompts` | `tools`            |
-| `--transport <type>`    | Transport type: `http` or `stdio`                           | From configuration |
-| `--url <url>`           | MCP URL for HTTP transport                                  | From configuration |
-| `--script <script>`     | Execution command for stdio transport                       | From configuration |
-| `--project-root <path>` | Syrin project root directory                                | Current directory  |
-| `--env <key=value>`     | Environment variable for stdio transport (repeatable)       | None               |
-| `--auth-header <header>` | Authentication header for HTTP transport (repeatable)      | None               |
+| Flag                     | Description                                                 | Default            |
+| ------------------------ | ----------------------------------------------------------- | ------------------ |
+| `[type]`                 | Capability type to list: `tools`, `resources`, or `prompts` | `tools`            |
+| `--transport <type>`     | Transport type: `http` or `stdio`                           | From configuration |
+| `--url <url>`            | MCP URL for HTTP transport                                  | From configuration |
+| `--script <script>`      | Execution command for stdio transport                       | From configuration |
+| `--project-root <path>`  | Syrin project root directory                                | Current directory  |
+| `--env <key=value>`      | Environment variable for stdio transport (repeatable)       | None               |
+| `--auth-header <header>` | Authentication header for HTTP transport (repeatable)       | None               |
 
 **Global Options:**
 

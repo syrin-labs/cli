@@ -119,13 +119,13 @@ Requirements: Node.js >= 20.12, npm >= 9
 
 ## Core Commands
 
-| Command | What It Does |
-|---------|--------------|
+| Command         | What It Does                                             |
+| --------------- | -------------------------------------------------------- |
 | `syrin analyse` | Static analysis — catches contract issues before runtime |
-| `syrin dev` | Interactive mode — see exactly what your LLM proposes |
-| `syrin test` | Contract testing — validate tools in sandboxed execution |
-| `syrin doctor` | Environment check — validate config and connections |
-| `syrin list` | Inspect tools, resources, and prompts from your server |
+| `syrin dev`     | Interactive mode — see exactly what your LLM proposes    |
+| `syrin test`    | Contract testing — validate tools in sandboxed execution |
+| `syrin doctor`  | Environment check — validate config and connections      |
+| `syrin list`    | Inspect tools, resources, and prompts from your server   |
 
 ---
 
@@ -180,6 +180,7 @@ syrin analyse --strict  # Treat warnings as errors
 ```
 
 **What it catches:**
+
 - Vague or missing tool descriptions
 - Parameters without descriptions (LLMs guess wrong)
 - Overlapping tools that confuse model selection
@@ -190,7 +191,7 @@ syrin analyse --strict  # Treat warnings as errors
 
 ### `syrin dev` — See What Your LLM Actually Does
 
-**The Problem:** Your LLM calls tools, but you can't see *why* it chose that tool, what parameters it's sending, or what happens between steps. You're debugging blind.
+**The Problem:** Your LLM calls tools, but you can't see _why_ it chose that tool, what parameters it's sending, or what happens between steps. You're debugging blind.
 
 **The Solution:** An interactive environment where you see every tool proposal before it executes.
 
@@ -200,6 +201,7 @@ syrin dev --exec  # Enable execution when ready
 ```
 
 **What you get:**
+
 - See exactly which tool the LLM wants to call and why
 - Inspect parameters before they're sent
 - Step through tool chains one call at a time
@@ -221,6 +223,7 @@ syrin test --json          # JSON output for CI
 ```
 
 **What it catches:**
+
 - Unexpected side effects (file writes, network calls)
 - Non-deterministic outputs
 - Output size explosions

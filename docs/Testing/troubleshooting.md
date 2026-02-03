@@ -1,7 +1,7 @@
 ---
-title: "Troubleshooting"
-description: "Common test issues and how to resolve them in Syrin"
-weight: "6"
+title: 'Troubleshooting'
+description: 'Common test issues and how to resolve them in Syrin'
+weight: '6'
 ---
 
 # Troubleshooting
@@ -43,7 +43,7 @@ Tool "fetch_user" not found in the MCP server
 
    ```yaml
    # tools/fetch_user.yaml
-   tool: fetch_user  # Must match @mcp.tool() function name
+   tool: fetch_user # Must match @mcp.tool() function name
    ```
 
 3. **Verify Server Script Path**
@@ -51,7 +51,7 @@ Tool "fetch_user" not found in the MCP server
    Check `syrin.yaml` configuration:
 
    ```yaml
-   script: "python server.py"  # Correct path
+   script: 'python server.py' # Correct path
    ```
 
 4. **Check Server File Location**
@@ -59,7 +59,7 @@ Tool "fetch_user" not found in the MCP server
    If tool is in a different file, update configuration:
 
    ```yaml
-   script: "python mcp/tools.py"  # Correct file path
+   script: 'python mcp/tools.py' # Correct file path
    ```
 
 ## Timeout Issues
@@ -86,11 +86,10 @@ Tool execution timed out
 
    ```yaml
    guarantees:
-     max_execution_time: 60s  # Increase if tool legitimately takes longer
+     max_execution_time: 60s # Increase if tool legitimately takes longer
    ```
 
 2. **Optimize Tool Performance**
-
    - Remove unnecessary operations
    - Add caching for repeated operations
    - Optimize database queries
@@ -109,7 +108,7 @@ Tool execution timed out
 
    ```yaml
    check:
-     timeout_ms: 60000  # 60 seconds
+     timeout_ms: 60000 # 60 seconds
    ```
 
 ## Side Effect Detection
@@ -136,7 +135,7 @@ Tool attempted filesystem write to project files
 
    ```python
    import tempfile
-   
+
    @mcp.tool()
    def create_file(data: str) -> str:
        with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
@@ -150,7 +149,7 @@ Tool attempted filesystem write to project files
 
    ```yaml
    guarantees:
-     side_effects: filesystem  # Allow temp directory writes
+     side_effects: filesystem # Allow temp directory writes
    ```
 
 3. **Remove Project File Writes**
@@ -161,7 +160,7 @@ Tool attempted filesystem write to project files
    # ❌ Bad: Writes to project
    with open('project/config.json', 'w') as f:
        f.write(data)
-   
+
    # ✅ Good: Writes to temp
    with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
        f.write(data)
@@ -191,7 +190,7 @@ Tool output exceeds declared size limit
 
    ```yaml
    guarantees:
-     max_output_size: 1mb  # Increase if legitimate
+     max_output_size: 1mb # Increase if legitimate
    ```
 
 2. **Implement Pagination**
@@ -255,7 +254,7 @@ Field "user_id" - Invalid type
    tests:
      - name: test_valid_input
        input:
-         user_id: '123'  # Correct type (string)
+         user_id: '123' # Correct type (string)
        expect:
          output_schema: User
    ```
@@ -331,7 +330,7 @@ Output doesn't match declared schema
 
    ```yaml
    contract:
-     output_schema: User  # Must match actual schema name
+     output_schema: User # Must match actual schema name
    ```
 
 ## Connection Issues
@@ -366,8 +365,8 @@ Cannot connect to MCP server
    Verify `syrin.yaml` settings:
 
    ```yaml
-   transport: "http"
-   mcp_url: "http://localhost:3000"  # Correct URL
+   transport: 'http'
+   mcp_url: 'http://localhost:3000' # Correct URL
    ```
 
 3. **Test Server Manually**
@@ -377,7 +376,7 @@ Cannot connect to MCP server
    ```bash
    # For stdio
    python server.py
-   
+
    # For HTTP
    curl http://localhost:3000
    ```
@@ -417,7 +416,6 @@ Tool execution exceeded memory limit
    ```
 
 2. **Optimize Memory Usage**
-
    - Process data in chunks
    - Use generators instead of lists
    - Release resources promptly

@@ -1,7 +1,7 @@
 ---
-title: "syrin analyse"
-description: "Static analysis of MCP tool contracts, structure, and dependencies"
-weight: "5"
+title: 'syrin analyse'
+description: 'Static analysis of MCP tool contracts, structure, and dependencies'
+weight: '5'
 ---
 
 ## Analyse why MCP doesn't work as expected
@@ -43,17 +43,17 @@ syrin analyse [options]
 
 ## Options
 
-| Flag                    | Description                                | Default            |
-| ----------------------- | ------------------------------------------ | ------------------ |
-| `--ci`                  | Run in CI mode, fail on warnings or errors | `false`            |
-| `--json`                | Emit analysis results as JSON              | `false`            |
-| `--graph`               | Generate a tool dependency graph           | `false`            |
-| `--transport <type>`    | Transport type: `http` or `stdio`          | From configuration |
-| `--url <url>`           | MCP URL for HTTP transport                 | From configuration |
-| `--script <script>`     | Script for stdio transport                 | From configuration |
-| `--project-root <path>` | Syrin project root directory               | Current directory  |
-| `--env <key=value>`     | Environment variable for stdio (repeatable) | None              |
-| `--auth-header <header>` | Auth header for HTTP transport (repeatable)| None              |
+| Flag                     | Description                                 | Default            |
+| ------------------------ | ------------------------------------------- | ------------------ |
+| `--ci`                   | Run in CI mode, fail on warnings or errors  | `false`            |
+| `--json`                 | Emit analysis results as JSON               | `false`            |
+| `--graph`                | Generate a tool dependency graph            | `false`            |
+| `--transport <type>`     | Transport type: `http` or `stdio`           | From configuration |
+| `--url <url>`            | MCP URL for HTTP transport                  | From configuration |
+| `--script <script>`      | Script for stdio transport                  | From configuration |
+| `--project-root <path>`  | Syrin project root directory                | Current directory  |
+| `--env <key=value>`      | Environment variable for stdio (repeatable) | None               |
+| `--auth-header <header>` | Auth header for HTTP transport (repeatable) | None               |
 
 **Global Options:**
 

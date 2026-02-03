@@ -1,6 +1,6 @@
 ---
-title: "W110: Weak Schema"
-description: "Weak Schema - Schema & Contract warning in Syrin"
+title: 'W110: Weak Schema'
+description: 'Weak Schema - Schema & Contract warning in Syrin'
 weight: 11
 ---
 
@@ -14,21 +14,25 @@ weight: 11
 Contract schema is too loose or does not match MCP tool schema structure.
 
 **What Causes It**:
+
 - Contract schema names don't match actual MCP tool schemas
 - Schema structure differs between contract and implementation
 - Contract is outdated
 
 **Why This Is a Warning**:
+
 - Loose schemas make validation less effective
 - Mismatch indicates contract needs update
 - Validation may miss issues
 
 **How to Fix**:
+
 - Update contract to match actual tool schema structure
 - Ensure `input_schema` and `output_schema` names reference correct schemas
 - Keep contract in sync with implementation
 
 **Example**:
+
 ```yaml
 # ⚠️ Warning: Schema mismatch
 contract:

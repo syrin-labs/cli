@@ -1,6 +1,6 @@
 ---
-title: "W100: Implicit Tool Dependency"
-description: "Implicit Tool Dependency - Schema & Contract warning in Syrin"
+title: 'W100: Implicit Tool Dependency'
+description: 'Implicit Tool Dependency - Schema & Contract warning in Syrin'
 weight: 1
 ---
 
@@ -14,21 +14,25 @@ weight: 1
 Tool appears to depend on another tool, but the dependency is implicit.
 
 **What Causes It**:
+
 - Medium confidence dependency inferred (0.6–0.8)
 - Dependency not stated explicitly in description
 - Tool name tokens don't appear in description
 
 **Why This Is a Warning**:
+
 - LLM may not chain tools reliably
 - Hidden dependencies make execution unpredictable
 - Tool selection becomes ambiguous
 
 **How to Fix**:
+
 - Mention the dependency tool in the description
 - Make dependencies explicit in contract (`guarantees.dependencies`)
 - Update description to reference dependent tools
 
 **Example**:
+
 ```python
 # ⚠️ Warning: Implicit dependency
 @mcp.tool()

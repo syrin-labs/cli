@@ -1,7 +1,7 @@
 ---
-title: "Test Results"
-description: "Understanding test results and output formats in Syrin"
-weight: "5"
+title: 'Test Results'
+description: 'Understanding test results and output formats in Syrin'
+weight: '5'
 ---
 
 # Test Results
@@ -25,6 +25,7 @@ syrin test
 ```
 
 Shows:
+
 - Test execution progress
 - Pass/fail status for each tool
 - Error and warning diagnostics
@@ -174,10 +175,10 @@ syrin test --ci
 
 ## Exit Codes
 
-| Code | Meaning |
-|------|---------|
-| `0` | All tests passed (no errors) |
-| `1` | Tests failed (errors found, or warnings in strict mode) |
+| Code | Meaning                                                 |
+| ---- | ------------------------------------------------------- |
+| `0`  | All tests passed (no errors)                            |
+| `1`  | Tests failed (errors found, or warnings in strict mode) |
 
 ## Understanding Results
 

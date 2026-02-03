@@ -1,6 +1,6 @@
 ---
-title: "W103: Overloaded Tool Responsibility"
-description: "Overloaded Tool Responsibility - Schema & Contract warning in Syrin"
+title: 'W103: Overloaded Tool Responsibility'
+description: 'Overloaded Tool Responsibility - Schema & Contract warning in Syrin'
 weight: 4
 ---
 
@@ -14,21 +14,25 @@ weight: 4
 Tool appears to handle multiple responsibilities. Tool selection becomes unstable.
 
 **What Causes It**:
+
 - Tool description contains multiple verbs (>3)
 - Description has multiple intents (>2)
 - Tool does multiple conceptual things
 
 **Why This Is a Warning**:
+
 - Tool selection becomes unstable
 - Hard to compose with other tools
 - Ambiguous tool purpose
 
 **How to Fix**:
+
 - Split tool into multiple focused tools
 - Each tool should handle a single responsibility
 - Make descriptions more specific
 
 **Example**:
+
 ```python
 # ⚠️ Warning: Overloaded responsibility
 @mcp.tool()

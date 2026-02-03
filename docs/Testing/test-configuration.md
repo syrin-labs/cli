@@ -1,7 +1,7 @@
 ---
-title: "Test Configuration"
-description: "How to configure testing behavior in Syrin"
-weight: "7.4"
+title: 'Test Configuration'
+description: 'How to configure testing behavior in Syrin'
+weight: '7.4'
 ---
 
 ## Test Configuration
@@ -14,10 +14,10 @@ Configure testing in `syrin.yaml`:
 
 ```yaml
 check:
-  timeout_ms: 30000           # Global timeout (30 seconds)
-  tools_dir: tools             # Tools directory
-  max_output_size_kb: 50       # Default max output size
-  strict_mode: false           # Treat warnings as errors
+  timeout_ms: 30000 # Global timeout (30 seconds)
+  tools_dir: tools # Tools directory
+  max_output_size_kb: 50 # Default max output size
+  strict_mode: false # Treat warnings as errors
 ```
 
 ## Configuration Options
@@ -29,9 +29,10 @@ Global timeout for tool execution in milliseconds.
 **Default**: `30000` (30 seconds)
 
 **Example**:
+
 ```yaml
 check:
-  timeout_ms: 60000  # 60 seconds
+  timeout_ms: 60000 # 60 seconds
 ```
 
 ### `tools_dir`
@@ -57,9 +58,8 @@ Default maximum output size in kilobytes.
 
 ```yaml
 check:
-  max_output_size_kb: 100  # 100 KB
+  max_output_size_kb: 100 # 100 KB
 ```
-
 
 ### `strict_mode`
 
@@ -71,7 +71,7 @@ Treat warnings as errors globally.
 
 ```yaml
 check:
-  strict_mode: true  # Warnings become errors
+  strict_mode: true # Warnings become errors
 ```
 
 ## Per-Tool Configuration
@@ -87,9 +87,9 @@ contract:
   output_schema: User
 
 guarantees:
-  max_output_size: 1mb         # Override global limit
-  max_execution_time: 5m       # Override global timeout
-  side_effects: none            # No side effects allowed
+  max_output_size: 1mb # Override global limit
+  max_execution_time: 5m # Override global timeout
+  side_effects: none # No side effects allowed
 ```
 
 ## Guarantee Options
@@ -101,6 +101,7 @@ Maximum output size for this tool.
 **Format**: `<number><unit>` (e.g., `"50kb"`, `"1mb"`, `"2gb"`)
 
 **Example**:
+
 ```yaml
 guarantees:
   max_output_size: 1mb
@@ -113,6 +114,7 @@ Maximum execution time for this tool.
 **Format**: `<number><unit>` (e.g., `"30s"`, `"5m"`, `"2h"`)
 
 **Example**:
+
 ```yaml
 guarantees:
   max_execution_time: 30s
@@ -123,10 +125,12 @@ guarantees:
 Allowed side effects for this tool.
 
 **Values**:
+
 - `none`: No side effects allowed
 - `filesystem`: Temp directory writes allowed
 
 **Example**:
+
 ```yaml
 guarantees:
   side_effects: none
@@ -137,6 +141,7 @@ guarantees:
 List of tools this tool depends on.
 
 **Example**:
+
 ```yaml
 guarantees:
   dependencies:
@@ -192,7 +197,7 @@ For tools that need more resources:
 
 ```yaml
 check:
-  timeout_ms: 120000      # 2 minutes
+  timeout_ms: 120000 # 2 minutes
   max_output_size_kb: 500 # 500 KB
 ```
 
@@ -202,7 +207,7 @@ For tools that should be quick:
 
 ```yaml
 check:
-  timeout_ms: 5000        # 5 seconds
+  timeout_ms: 5000 # 5 seconds
 ```
 
 ### Tools with Side Effects
@@ -223,8 +228,8 @@ Base limits on actual tool behavior:
 
 ```yaml
 guarantees:
-  max_output_size: 1mb      # Based on actual output size
-  max_execution_time: 30s   # Based on actual execution time
+  max_output_size: 1mb # Based on actual output size
+  max_execution_time: 30s # Based on actual execution time
 ```
 
 ### 2. Use Per-Tool Overrides
@@ -239,7 +244,7 @@ check:
 
 # Per-tool: Specific needs
 guarantees:
-  max_output_size: 1mb  # This tool needs more
+  max_output_size: 1mb # This tool needs more
 ```
 
 ### 3. Declare All Dependencies

@@ -1,6 +1,6 @@
 ---
-title: "CircleCI Setup"
-description: "How to integrate Syrin with CircleCI"
+title: 'CircleCI Setup'
+description: 'How to integrate Syrin with CircleCI'
 weight: 4
 ---
 
@@ -45,7 +45,7 @@ jobs:
               echo "❌ Static analysis found $ERRORS errors"
               exit 1
             fi
-            
+
             VERDICT=$(jq -r '.verdict // "pass"' test-results.json)
             if [ "$VERDICT" != "pass" ]; then
               echo "❌ Tests failed"
@@ -80,8 +80,8 @@ Configure Syrin behavior:
 jobs:
   validate:
     environment:
-      SYRIN_STRICT_MODE: "true"
-      SYRIN_TIMEOUT_MS: "60000"
+      SYRIN_STRICT_MODE: 'true'
+      SYRIN_TIMEOUT_MS: '60000'
 ```
 
 ## See Also

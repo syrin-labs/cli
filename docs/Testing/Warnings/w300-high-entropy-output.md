@@ -1,6 +1,6 @@
 ---
-title: "W300: High Entropy Output"
-description: "High Entropy Output - Output Validation warning in Syrin"
+title: 'W300: High Entropy Output'
+description: 'High Entropy Output - Output Validation warning in Syrin'
 weight: 12
 ---
 
@@ -14,23 +14,27 @@ weight: 12
 Tool output has high entropy, making it difficult for LLM to reason about.
 
 **What Causes It**:
+
 - Output has random or unpredictable structure
 - High variability in output format
 - Non-deterministic output patterns
 - Entropy score exceeds threshold (default: 0.7)
 
 **Why This Is a Warning**:
+
 - High entropy makes it hard for LLM to reason about output
 - Indicates potential design issues
 - May indicate non-determinism
 
 **How to Fix**:
+
 - Normalize output structure
 - Reduce randomness
 - Provide more predictable output format
 - Ensure deterministic output when possible
 
 **Example**:
+
 ```python
 # ⚠️ Warning: High entropy
 @mcp.tool()
