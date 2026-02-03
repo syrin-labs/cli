@@ -53,29 +53,28 @@ Documentation: [https://docs.syrin.dev](https://docs.syrin.dev)
 
 ## See It In Action
 
-### Catching Contract Issues (`syrin analyse`)
-
-![syrin analyse demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-analyse/analyse.gif)
-
-### Interactive Development (`syrin dev`)
-
-![syrin dev demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-dev/dev.gif)
-
-### Sandboxed Tool Testing (`syrin test`)
-
-![syrin test tool demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-test/test_tool.gif)
-
-### Connection Test (`syrin test --connection`)
-
-![syrin test connection demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-test/test_connection.gif)
-
-### Project Setup (`syrin init`)
-
-![syrin init demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-init/init.gif)
-
-### Inspect Tools (`syrin list`)
-
-![syrin list demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-list/list.gif)
+<table>
+<tr>
+<td width="33%"><strong>syrin analyse</strong><br/>Catch contract issues</td>
+<td width="33%"><strong>syrin dev</strong><br/>Interactive development</td>
+<td width="33%"><strong>syrin test</strong><br/>Sandboxed tool testing</td>
+</tr>
+<tr>
+<td><img src="https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-analyse/analyse.gif" width="280" alt="syrin analyse demo"/></td>
+<td><img src="https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-dev/dev.gif" width="280" alt="syrin dev demo"/></td>
+<td><img src="https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-test/test_tool.gif" width="280" alt="syrin test demo"/></td>
+</tr>
+<tr>
+<td width="33%"><strong>syrin init</strong><br/>Project setup</td>
+<td width="33%"><strong>syrin list</strong><br/>Inspect tools</td>
+<td width="33%"><strong>syrin test --connection</strong><br/>Connection test</td>
+</tr>
+<tr>
+<td><img src="https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-init/init.gif" width="280" alt="syrin init demo"/></td>
+<td><img src="https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-list/list.gif" width="280" alt="syrin list demo"/></td>
+<td><img src="https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-test/test_connection.gif" width="280" alt="syrin test --connection demo"/></td>
+</tr>
+</table>
 
 ---
 
