@@ -1,0 +1,26 @@
+# Tool contract for test_e300_output_mismatch
+# Tests E300: Output Structure Validation - output doesn't match schema
+# NOTE: E300 is tested via contract tests with wrong output schema expectations
+#       FastMCP validates at runtime, so actual mismatches are rare
+#       For testing, we use get_weather_wrong_schema test case
+
+version: 1
+tool: test_e300_output_mismatch
+
+contract:
+  input_schema: TestE300Input
+  output_schema: TestE300ExpectedOutput
+
+guarantees:
+  side_effects: none
+  max_output_size: 1kb
+  max_execution_time: '10s'  # Declare timeout to prevent false timeout errors
+
+tests:
+  # Test: Tool returns valid output matching schema
+  # E300 is actually tested via other test cases that expect wrong schemas
+  - name: test_valid_output
+    input:
+      data: 'test'
+    # Tool returns correct structure - no E300 expected
+    # E300 is tested in get_weather_wrong_schema test case

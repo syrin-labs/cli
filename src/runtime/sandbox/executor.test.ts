@@ -32,24 +32,28 @@ vi.mock('child_process', () => {
 let shouldFailListTools = false;
 
 vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
-  Client: vi.fn().mockImplementation(() => ({
-    connect: vi.fn().mockResolvedValue(undefined),
-    close: vi.fn().mockResolvedValue(undefined),
-    callTool: vi
-      .fn()
-      .mockResolvedValue({ content: [{ type: 'text', text: 'test output' }] }),
-    listTools: vi.fn().mockImplementation(() => {
-      if (shouldFailListTools) {
-        return Promise.reject(new Error('Command not found'));
-      }
-      return Promise.resolve({ tools: [] });
-    }),
-    onerror: null,
-  })),
+  Client: vi.fn(function MockClient() {
+    return {
+      connect: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+      callTool: vi
+        .fn()
+        .mockResolvedValue({ content: [{ type: 'text', text: 'test output' }] }),
+      listTools: vi.fn().mockImplementation(() => {
+        if (shouldFailListTools) {
+          return Promise.reject(new Error('Command not found'));
+        }
+        return Promise.resolve({ tools: [] });
+      }),
+      onerror: null,
+    };
+  }),
 }));
 
 vi.mock('@modelcontextprotocol/sdk/client/stdio.js', () => ({
-  StdioClientTransport: vi.fn().mockImplementation(() => ({})),
+  StdioClientTransport: vi.fn(function MockStdioClientTransport() {
+    return {};
+  }),
 }));
 
 describe('SandboxExecutor', () => {

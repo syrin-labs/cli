@@ -1,0 +1,143 @@
+# Tool contract for get_weather
+# This tool retrieves weather information for a location
+
+version: 1
+tool: get_weather
+
+contract:
+  input_schema: GetWeatherRequest
+  output_schema: WeatherResponse
+
+guarantees:
+  side_effects: none
+  max_output_size: 2kb
+
+tests:
+  - name: get_weather_for_city
+    input:
+      location: 'New York'
+    expect:
+      output_schema: WeatherResponse
+
+  - name: get_weather_for_location_with_state
+    input:
+      location: 'San Francisco, CA'
+    expect:
+      output_schema: WeatherResponse
+
+  # Missing required field - expects error
+  - name: get_weather_missing_location
+    input: {}
+    expect:
+      error:
+        type: input_validation
+        details:
+          error_type: missing_argument
+          field: location
+
+  # Empty string input - should succeed (empty string is valid)
+  - name: get_weather_empty_location
+    input:
+      location: ''
+    # Implicit success - inherits output_schema from contract
+
+  # Null value - expects error
+  - name: get_weather_null_location
+    input:
+      location: null
+    expect:
+      error:
+        type: input_validation
+        details:
+          error_type: string_type
+          field: location
+          received: NoneType
+
+  # Very long input (1000 characters) - should succeed
+  - name: get_weather_very_long_location
+    input:
+      location: 'A very long location name that exceeds normal limits and tests how the system handles extremely long input strings that might cause issues with validation or processing'
+    # Implicit success - inherits output_schema from contract
+
+  # Special characters - should succeed
+  - name: get_weather_special_chars
+    input:
+      location: 'São Paulo, Brasil! @#$%^&*()'
+    # Implicit success - inherits output_schema from contract
+
+  # Number instead of string - expects error
+  - name: get_weather_number_input
+    input:
+      location: 12345
+    expect:
+      error:
+        type: input_validation
+        details:
+          error_type: string_type
+          field: location
+          received: int
+
+  # Negative number - expects error
+  - name: get_weather_negative_number
+    input:
+      location: -100
+    expect:
+      error:
+        type: input_validation
+        details:
+          error_type: string_type
+          field: location
+          received: int
+
+  # Float number - expects error
+  - name: get_weather_float_input
+    input:
+      location: 3.14159
+    expect:
+      error:
+        type: input_validation
+        details:
+          error_type: string_type
+          field: location
+          received: float
+
+  # Boolean - expects error
+  - name: get_weather_boolean_input
+    input:
+      location: false
+    expect:
+      error:
+        type: input_validation
+        details:
+          error_type: string_type
+          field: location
+          received: bool
+
+  # Array - expects error
+  - name: get_weather_array_input
+    input:
+      location: ['New York', 'London']
+    expect:
+      error:
+        type: input_validation
+        details:
+          error_type: string_type
+          field: location
+          received: list
+
+  # Nested object - expects error
+  - name: get_weather_nested_object
+    input:
+      location: { city: 'Paris', country: 'France' }
+    expect:
+      error:
+        type: input_validation
+        details:
+          error_type: string_type
+          field: location
+          received: dict
+
+  # Malformed output schema - expects error
+  - name: get_weather_wrong_schema
+    input:
+      location: 'New York'

@@ -75,8 +75,8 @@ export interface DevCommandOptions {
   runScript?: boolean;
   /** Transport type override */
   transport?: 'stdio' | 'http';
-  /** MCP URL override (for http transport) */
-  mcpUrl?: string;
+  /** MCP server URL override (for http transport) */
+  url?: string;
   /** Script command override (for stdio transport) */
   script?: string;
 }
@@ -100,7 +100,7 @@ export async function executeDev(
     try {
       const configResult = loadConfigWithGlobal(projectRoot, {
         transport: options.transport,
-        mcp_url: options.mcpUrl,
+        mcp_url: options.url,
         script: options.script,
       });
       config = configResult.config;
@@ -122,12 +122,12 @@ export async function executeDev(
           log.info('💡 Using global config requires CLI flags:');
           log.info('   --transport <stdio|http>');
           if (options.transport === 'http') {
-            log.info('   --mcp-url <url>');
+            log.info('   --url <url>');
           } else if (options.transport === 'stdio') {
             log.info('   --script <command>');
           } else {
             // Show both options when transport is not specified
-            log.info('   --mcp-url <url> (for http transport)');
+            log.info('   --url <url> (for http transport)');
             log.info('   --script <command> (for stdio transport)');
           }
           log.blank();

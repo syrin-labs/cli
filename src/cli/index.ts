@@ -499,7 +499,7 @@ export function setupCLI(): void {
       'Transport type (stdio or http). Required when using global config.'
     )
     .option(
-      '--mcp-url <url>',
+      '--url <url>',
       'MCP server URL (required for http transport when using global config)'
     )
     .option(
@@ -515,7 +515,7 @@ export function setupCLI(): void {
         eventFile?: string;
         runScript?: boolean;
         transport?: 'stdio' | 'http';
-        mcpUrl?: string;
+        url?: string;
         script?: string;
       }) => {
         try {
@@ -527,7 +527,7 @@ export function setupCLI(): void {
             eventFile: options.eventFile,
             runScript: options.runScript || false,
             transport: options.transport,
-            mcpUrl: options.mcpUrl,
+            url: options.url,
             script: options.script,
           });
         } catch (error) {

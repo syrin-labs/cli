@@ -125,6 +125,8 @@ module.exports = [
     ignores: [
       'dist/**',
       'node_modules/**',
+      'examples/**',
+      '**/.venv/**',
       '*.js',
       'eslint.config.cjs',
       'parth/**',

@@ -1,0 +1,13 @@
+{
+  "name": "syrin-demo-server",
+  "version": "1.0.0",
+  "description": "Demo MCP server for trying Syrin",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  }
+}

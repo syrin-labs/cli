@@ -1,0 +1,41 @@
+# Tool contract for current_location
+# This tool prompts the user for their location
+
+version: 1
+tool: current_location
+
+contract:
+  input_schema: CurrentLocationRequest # No input parameters
+  output_schema: LocationResponse
+
+guarantees:
+  side_effects: none # No side effects - just prompts user
+  max_output_size: 1kb
+
+tests:
+  - name: prompt_user_for_location
+    input: {}
+    expect:
+      output_schema: LocationResponse
+
+  # Test: Invalid input (unexpected field) - expects error
+  - name: current_location_with_input
+    input:
+      unexpected_field: 'value'
+    expect:
+      error:
+        type: input_validation
+        details:
+          error_type: unexpected_keyword_argument
+          field: unexpected_field
+
+  # Test: Wrong output schema - will fail output validation (E300)
+  # Expect output validation error if output doesn't match declared schema
+  - name: current_location_wrong_schema
+    input: {}
+
+  # Test: Empty input (should be valid for tools with no required params)
+  - name: current_location_empty_input_explicit
+    input: {}
+    expect:
+      output_schema: LocationResponse

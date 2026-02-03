@@ -89,7 +89,7 @@ export function createConfigFromGlobal(
   // Validate transport-specific requirements
   if (flags.transport === 'http' && !flags.mcp_url) {
     throw new Error(
-      'MCP URL is required for HTTP transport. Use --mcp-url <url> flag.'
+      'MCP URL is required for HTTP transport. Use --url <url> flag.'
     );
   }
 

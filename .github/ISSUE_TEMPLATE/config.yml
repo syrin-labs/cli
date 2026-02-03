@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://docs.syrin.dev
+    about: Check our documentation for guides and API reference
+  - name: Discord Community
+    url: https://discord.gg/j8GUvHybSa
+    about: Ask questions and get help from the community
+  - name: Security Issues
+    url: https://github.com/Syrin-Labs/cli/security/policy
+    about: Report security vulnerabilities privately

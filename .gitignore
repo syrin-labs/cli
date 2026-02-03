@@ -16,3 +16,4 @@ bun.lock
 # OpenMemory - IDE/Assistant specific rules
 .cursor/rules/openmemory.mdc
 .syrin/data
+CLAUDE.md

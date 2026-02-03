@@ -381,7 +381,9 @@ describe('executeTest', () => {
       };
 
       vi.mocked(TestOrchestrator).mockImplementation(
-        () => mockOrchestrator as any
+        function (this: void) {
+          return mockOrchestrator as any;
+        }
       );
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
@@ -415,7 +417,9 @@ describe('executeTest', () => {
       };
 
       vi.mocked(TestOrchestrator).mockImplementation(
-        () => mockOrchestrator as any
+        function (this: void) {
+          return mockOrchestrator as any;
+        }
       );
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
@@ -441,7 +445,9 @@ describe('executeTest', () => {
       };
 
       vi.mocked(TestOrchestrator).mockImplementation(
-        () => mockOrchestrator as any
+        function (this: void) {
+          return mockOrchestrator as any;
+        }
       );
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
@@ -473,7 +479,9 @@ describe('executeTest', () => {
       };
 
       vi.mocked(TestOrchestrator).mockImplementation(
-        () => mockOrchestrator as any
+        function (this: void) {
+          return mockOrchestrator as any;
+        }
       );
 
       const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
@@ -503,7 +511,9 @@ describe('executeTest', () => {
       };
 
       vi.mocked(TestOrchestrator).mockImplementation(
-        () => mockOrchestrator as any
+        function (this: void) {
+          return mockOrchestrator as any;
+        }
       );
 
       const { formatJSONResults } = await import('@/presentation/test-ui');
