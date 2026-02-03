@@ -36,11 +36,9 @@ vi.mock('@modelcontextprotocol/sdk/client/index.js', () => ({
     return {
       connect: vi.fn().mockResolvedValue(undefined),
       close: vi.fn().mockResolvedValue(undefined),
-      callTool: vi
-        .fn()
-        .mockResolvedValue({
-          content: [{ type: 'text', text: 'test output' }],
-        }),
+      callTool: vi.fn().mockResolvedValue({
+        content: [{ type: 'text', text: 'test output' }],
+      }),
       listTools: vi.fn().mockImplementation(() => {
         if (shouldFailListTools) {
           return Promise.reject(new Error('Command not found'));
