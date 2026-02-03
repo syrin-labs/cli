@@ -22,7 +22,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 ### Prerequisites
 
-- **Node.js**: >= 18.0.0
+- **Node.js**: >= 20.12.0
 - **npm**: Latest version (comes with Node.js)
 - **Git**: For version control
 
@@ -39,7 +39,7 @@ By participating in this project, you agree to maintain a respectful and inclusi
 3. Add the upstream repository:
 
    ```bash
-   git remote add upstream https://github.com/syrin-labs/cli.git
+   git remote add upstream https://github.com/Syrin-Labs/cli.git
    ```
 
 ## Development Setup
@@ -95,12 +95,12 @@ Create a feature branch from `main`:
 ```bash
 git checkout main
 git pull upstream main
-git checkout -b feature/your-feature-name
+git checkout -b feat/your-feature-name
 ```
 
 **Branch naming conventions:**
 
-- `f/` - New features
+- `feat/` - New features
 - `fix/` - Bug fixes
 - `docs/` - Documentation updates
 - `refactor/` - Code refactoring
@@ -389,7 +389,7 @@ ls -la dist/
 ## Getting Help
 
 - **Documentation**: [https://docs.syrin.dev](https://docs.syrin.dev)
-- **Issues**: [https://github.com/syrin-labs/cli/issues](https://github.com/syrin-labs/cli/issues)
+- **Issues**: [https://github.com/Syrin-Labs/cli/issues](https://github.com/Syrin-Labs/cli/issues)
 - **Discussions**: Use GitHub Discussions for questions
 
 ## License

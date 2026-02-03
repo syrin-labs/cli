@@ -1,8 +1,8 @@
 # Syrin
 
-![Syrin Logo](/assets/syrin-logo-dark-bg.png)
+![Syrin Logo](https://github.com/Syrin-Labs/cli/raw/main/assets/syrin-logo-dark-bg.png)
 
-[![npm version](https://badge.fury.io/js/%40syrin%2Fsyrin.svg)](https://badge.fury.io/js/%40syrin%2Fsyrin) [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC) [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.12.0-brightgreen)](https://nodejs.org/) [![CI](https://github.com/Syrin-Labs/cli/actions/workflows/ci.yml/badge.svg)](https://github.com/Syrin-Labs/cli/actions/workflows/ci.yml)
+[![npm version](https://badge.fury.io/js/%40syrin%2Fcli.svg)](https://www.npmjs.com/package/@syrin/cli) [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC) [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.12.0-brightgreen)](https://nodejs.org/)
 
 ## Stop Silent Failures in AI Tool Calls
 
@@ -78,20 +78,22 @@ Documentation: [https://docs.syrin.dev](https://docs.syrin.dev)
 
 ---
 
-## Try It in 2 Minutes
+## Try It Now
 
 ```bash
-# Install globally
+# No install needed — run directly
+npx @syrin/cli analyse --transport http --url http://localhost:8000/mcp
+```
+
+Or install globally:
+
+```bash
 npm install -g @syrin/cli
 
-# Check your environment
-syrin doctor
-
-# Analyze an MCP server (HTTP)
-syrin analyse --transport http --url http://localhost:8000/mcp
-
-# Interactive dev mode with execution
-syrin dev --exec --transport http --url http://localhost:8000/mcp
+syrin init --global
+syrin doctor                                                    # Check your environment
+syrin analyse --transport http --url http://localhost:8000/mcp   # Analyze an MCP server
+syrin dev --exec --transport http --url http://localhost:8000/mcp # Interactive dev mode
 ```
 
 Or initialize a project with local config:
@@ -100,6 +102,15 @@ Or initialize a project with local config:
 npx @syrin/cli init
 syrin doctor
 syrin analyse
+```
+
+**Want to try with a sample server?** Clone the repo and use the included [example MCP server](./examples/demo-mcp-py/):
+
+```bash
+git clone https://github.com/Syrin-Labs/cli.git && cd cli/examples/demo-mcp-py
+python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+python server.py --mode http --port 8000 &
+npx @syrin/cli analyse --transport http --url http://localhost:8000/mcp
 ```
 
 Requirements: Node.js >= 20.12, npm >= 9
@@ -252,17 +263,12 @@ See [Tool Contracts Documentation](./docs/tool-contracts.md) for details.
 
 ## Configuration
 
-Syrin uses a single configuration file:
+Syrin supports **two configuration layers**:
 
-```bash
-syrin.yaml
-```
+- **Local** (`syrin.yaml` in project root) — transport, MCP connection, LLM providers
+- **Global** (`~/.syrin/syrin.yaml`) — shared LLM API keys and defaults across projects
 
-This file defines:
-
-- Transport type (`stdio` or `http`)
-- MCP server connection
-- Allowed LLM providers
+Local config overrides global config. CLI flags override both.
 
 Configuration reference: [https://docs.syrin.dev/configuration](https://docs.syrin.dev/configuration)
 
@@ -297,6 +303,10 @@ Provider configuration: [https://docs.syrin.dev/configuration/llm](https://docs.
 - [Discord](https://discord.gg/j8GUvHybSa) — Ask questions, share feedback
 - [GitHub Discussions](https://github.com/Syrin-Labs/cli/discussions) — Feature ideas, show & tell
 - [Documentation](https://docs.syrin.dev) — Full guides and API reference
+
+Found a bug or have a feature request? [Open an issue](https://github.com/Syrin-Labs/cli/issues) — we read every one.
+
+If Syrin helped you catch something your logs missed, a [star on GitHub](https://github.com/Syrin-Labs/cli) helps others find it too.
 
 ---
 

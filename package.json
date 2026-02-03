@@ -55,14 +55,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/syrin-labs/cli.git"
+    "url": "git+https://github.com/Syrin-Labs/cli.git"
   },
   "author": "Syrin Labs Team",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/syrin-labs/cli/issues"
+    "url": "https://github.com/Syrin-Labs/cli/issues"
   },
-  "homepage": "https://github.com/syrin-labs/cli#readme",
+  "homepage": "https://github.com/Syrin-Labs/cli#readme",
   "publishConfig": {
     "access": "public"
   },
