@@ -397,7 +397,7 @@ When using global config, you must provide transport details via CLI flags:
 
 ```bash
 # HTTP transport
-syrin dev --exec --transport http --mcp-url http://localhost:8000/mcp
+syrin dev --exec --transport http --url http://localhost:8000/mcp
 
 # stdio transport
 syrin dev --exec --transport stdio --script "python server.py"
@@ -514,7 +514,7 @@ syrin doctor
 syrin config list --global
 
 # 2. Run with transport flags
-syrin dev --transport http --mcp-url http://localhost:8000/mcp
+syrin dev --transport http --url http://localhost:8000/mcp
 ```
 
 ### Managing Multiple Projects

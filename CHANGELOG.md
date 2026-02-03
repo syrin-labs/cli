@@ -1,12 +1,23 @@
 # CHANGELOG
 
+## v1.4.1
+
+### Breaking Changes
+
+1. **`--mcp-url` renamed to `--url`** - The `--mcp-url` flag in `syrin dev` has been renamed to `--url` for consistency across all commands.
+
+### Improvements
+
+1. **Updated Dependencies** - Upgraded all CLI dependencies to their latest versions.
+2. **Updated README** - Restructured quickstart, added demo GIFs, and improved documentation for launch.
+
 ## v1.4.0
 
 ### Features
 
 1. **Global Configuration Support** - Syrin can now be used from anywhere without project-specific configuration.
    - `syrin init --global` creates user-wide LLM configuration at `~/.syrin/syrin.yaml`
-   - `syrin dev` works with global config using `--transport` and `--mcp-url`/`--script` flags
+   - `syrin dev` works with global config using `--transport` and `--url`/`--script` flags
    - Global `.env` support at `~/.syrin/.env` for shared API keys
    - Configuration precedence: CLI flags > Local config > Global config > Defaults
 

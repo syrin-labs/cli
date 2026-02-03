@@ -47,7 +47,7 @@ syrin dev [options]
 | `--event-file <path>`   | Directory for event files                        | `.syrin/events`    |
 | `--run-script`          | Spawn MCP server internally for HTTP transport   | `false`            |
 | `--transport <type>`    | Transport type (stdio or http)                   | From configuration |
-| `--mcp-url <url>`       | MCP server URL (required for http with global config) | From configuration |
+| `--url <url>`           | MCP server URL (required for http with global config) | From configuration |
 | `--script <command>`    | Script command (required for stdio with global config) | From configuration |
 
 **Global Options:**

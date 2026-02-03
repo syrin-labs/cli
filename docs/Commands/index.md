@@ -185,7 +185,7 @@ syrin init --global
 syrin config edit-env --global
 
 # 2. Test from any directory
-syrin dev --transport http --mcp-url http://localhost:8000/mcp
+syrin dev --transport http --url http://localhost:8000/mcp
 ```
 
 ### CI/CD Pipeline

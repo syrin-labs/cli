@@ -144,7 +144,7 @@ When using global config, provide transport details via CLI flags:
 
 ```bash
 # HTTP transport
-syrin dev --transport http --mcp-url http://localhost:8000/mcp
+syrin dev --transport http --url http://localhost:8000/mcp
 
 # stdio transport
 syrin dev --transport stdio --script "python server.py"
