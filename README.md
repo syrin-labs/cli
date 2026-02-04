@@ -14,7 +14,12 @@
 
 They usually are not.
 
-Tool descriptions are too vague for the LLM to pick the right one. Parameter schemas are missing or wrong. Two tools look so similar the model picks one at random. A tool returns 12MB of JSON and blows the context window. Another tool silently writes to disk when it should not. Your logs look fine. The agent is broken.
+- Tool descriptions too vague for the LLM to pick the right one
+- Two tools look so similar the model picks one at random
+- Parameter schemas missing or wrong — LLM hallucinates values
+- A tool returns 12MB of JSON and blows the context window
+- Another tool silently writes to disk when it should not
+- Your logs look fine. The agent is broken.
 
 **Syrin catches all of this before production.**
 
@@ -40,29 +45,13 @@ $ syrin analyse --transport http --url http://localhost:8000/mcp
 
 ## Try It Right Now
 
-You do not need an MCP server of your own. Use the included example:
+One command. No install, no config, no API keys:
 
 ```bash
-git clone https://github.com/Syrin-Labs/cli.git
-cd cli/examples/demo-mcp-py
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-python server.py --mode http --port 8000 &
+npx @syrin/cli analyse --transport http --url https://docs.syrin.dev/mcp
 ```
 
-Now point Syrin at it:
-
-```bash
-# List what tools the server exposes
-npx @syrin/cli list tools --transport http --url http://localhost:8000/mcp
-
-# Analyse tool contracts for issues
-npx @syrin/cli analyse --transport http --url http://localhost:8000/mcp
-```
-
-No API keys. No config files. No project setup.
-
-Already have your own MCP server running? Point Syrin at it directly:
+Have your own MCP server running? Point Syrin at it:
 
 ```bash
 npx @syrin/cli analyse --transport http --url http://localhost:8000/mcp
@@ -72,6 +61,19 @@ If your server uses stdio instead of HTTP:
 
 ```bash
 npx @syrin/cli analyse --transport stdio --script "python server.py"
+```
+
+Want to try more commands against a local example server?
+
+```bash
+git clone https://github.com/Syrin-Labs/cli.git
+cd cli/examples/demo-mcp-py
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python server.py --mode http --port 8000 &
+
+npx @syrin/cli list tools --transport http --url http://localhost:8000/mcp
+npx @syrin/cli analyse --transport http --url http://localhost:8000/mcp
 ```
 
 **Requirements:** Node.js >= 20.12, npm >= 9

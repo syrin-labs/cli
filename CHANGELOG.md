@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## v1.4.2
+
+### Improvements
+
+- **Init** – Transport type (http/stdio) shown as checklist; no free-text input.
+- **Status** – UI split into Local / Global; config, .env, project, and LLM providers per section; minimal styling aligned with doctor.
+- **Analyse** – Errors and warnings numbered (CLI and CI); dependency graph edges numbered; CI uses logger for success/error.
+- **Zero-config** – `syrin list`, `syrin analyse`, `syrin test --connection` work with `--url` or `--script` only; no local or global config required (dev still needs config for LLM).
+- **Config** – `mcp_url` renamed to `url` in `syrin.yaml`; version kept; template comments cleaned (no "v1.3.0" labels); LLM keys must be env var names only.
+
+### Documentation
+
+- Docs and README updated for new behaviour and commands.
+
 ## v1.4.1
 
 ### Breaking Changes
