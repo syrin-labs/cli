@@ -549,9 +549,9 @@ describe('executeAnalyse', () => {
         throw new Error('process.exit(0)');
       });
 
-      await expect(
-        executeAnalyse({ url: TEST_MCP_URL })
-      ).rejects.toThrow('process.exit(0)');
+      await expect(executeAnalyse({ url: TEST_MCP_URL })).rejects.toThrow(
+        'process.exit(0)'
+      );
 
       expect(resolveTransportConfig).toHaveBeenCalledWith({
         url: TEST_MCP_URL,

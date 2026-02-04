@@ -31,7 +31,7 @@ jobs:
         run: |
           npm install -g @syrin/cli
           npm install
-          syrin analyse --ci --strict --json > analysis.json
+          syrin analyse --ci --json > analysis.json
           syrin test --ci --strict --json > test-results.json
 
       - name: Upload Results
@@ -50,12 +50,12 @@ syrin-release-validation:
   stage: validate
   only:
     - tags
-  image: node:18
+  image: node:20
   before_script:
     - npm install -g @syrin/cli
     - npm install
   script:
-    - syrin analyse --ci --strict --json > analysis.json
+    - syrin analyse --ci --json > analysis.json
     - syrin test --ci --strict --json > test-results.json
   artifacts:
     paths:
@@ -69,12 +69,12 @@ syrin-release-validation:
 ```yaml
 release-validation:
   docker:
-    - image: cimg/node:18.0
+    - image: cimg/node:20.0
   steps:
     - checkout
     - run: npm install -g @syrin/cli
     - run: npm install
-    - run: syrin analyse --ci --strict --json > analysis.json
+    - run: syrin analyse --ci --json > analysis.json
     - run: syrin test --ci --strict --json > test-results.json
     - store_artifacts:
         path: analysis.json

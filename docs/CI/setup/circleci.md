@@ -16,7 +16,7 @@ version: 2.1
 jobs:
   validate:
     docker:
-      - image: cimg/node:18.0
+      - image: cimg/node:20.0
     steps:
       - checkout
       - run:
@@ -61,12 +61,12 @@ workflows:
 
 ## With Strict Mode
 
-Enable strict mode to treat warnings as errors:
+Enable strict mode on tests to treat warnings as errors:
 
 ```yaml
 - run:
     name: Run Static Analysis
-    command: syrin analyse --ci --strict --json > analysis.json
+    command: syrin analyse --ci --json > analysis.json
 - run:
     name: Run Tests
     command: syrin test --ci --strict --json > test-results.json

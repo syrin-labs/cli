@@ -29,7 +29,7 @@ jobs:
         run: |
           npm install -g @syrin/cli
           npm install
-          syrin analyse --ci --strict
+          syrin analyse --ci
           syrin test --ci --strict
 ```
 
@@ -40,12 +40,12 @@ syrin-pr-validation:
   stage: validate
   only:
     - merge_requests
-  image: node:18
+  image: node:20
   before_script:
     - npm install -g @syrin/cli
     - npm install
   script:
-    - syrin analyse --ci --strict
+    - syrin analyse --ci
     - syrin test --ci --strict
 ```
 

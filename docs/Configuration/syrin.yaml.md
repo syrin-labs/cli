@@ -172,7 +172,13 @@ llm:
 
 Syrin never stores secrets in configuration files.
 
-API keys and sensitive values must be supplied via environment variables.
+The values in `syrin.yaml` (like `OPENAI_API_KEY`) are **environment variable names**, not actual secrets. Syrin enforces this with an `UPPER_SNAKE_CASE` regex -- if you accidentally paste a real key, the schema rejects it.
+
+The actual secret values live in `.env` files (local or global) or in your shell environment.
+
+**Resolution order:** `process.env` > local `.env` > global `~/.syrin/.env`
+
+For the full explanation of how this works, see [Secrets & Environment Variables](/setup/secrets-and-env/).
 
 Examples:
 
@@ -250,10 +256,10 @@ Syrin does not auto-correct configuration.
 
 When configuration is updated through Syrin commands, backups are created automatically.
 
-To roll back:
+To roll back to a specific version:
 
 ```bash
-syrin rollback
+syrin rollback 1.4.0
 ```
 
 Manual edits should be version-controlled externally.

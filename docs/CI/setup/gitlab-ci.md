@@ -16,7 +16,7 @@ stages:
 
 syrin-validation:
   stage: validate
-  image: node:18
+  image: node:20
   before_script:
     - npm install -g @syrin/cli
     - npm install
@@ -50,11 +50,11 @@ syrin-validation:
 
 ## With Strict Mode
 
-Enable strict mode to treat warnings as errors:
+Enable strict mode on tests to treat warnings as errors:
 
 ```yaml
 script:
-  - syrin analyse --ci --strict --json > analysis.json || true
+  - syrin analyse --ci --json > analysis.json || true
   - syrin test --ci --strict --json > test-results.json || true
 ```
 

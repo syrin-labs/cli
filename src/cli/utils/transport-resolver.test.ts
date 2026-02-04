@@ -93,12 +93,12 @@ describe('resolveTransportConfig', () => {
         throw new ConfigurationError('Configuration file is empty or invalid.');
       });
 
-      expect(() =>
-        resolveTransportConfig({ url: TEST_MCP_URL })
-      ).toThrow(ConfigurationError);
-      expect(() =>
-        resolveTransportConfig({ url: TEST_MCP_URL })
-      ).toThrow('Configuration file is empty or invalid');
+      expect(() => resolveTransportConfig({ url: TEST_MCP_URL })).toThrow(
+        ConfigurationError
+      );
+      expect(() => resolveTransportConfig({ url: TEST_MCP_URL })).toThrow(
+        'Configuration file is empty or invalid'
+      );
     });
 
     it('should rethrow when loadConfigWithGlobal throws non-ConfigurationError', () => {
@@ -106,9 +106,9 @@ describe('resolveTransportConfig', () => {
         throw new Error('Unexpected error');
       });
 
-      expect(() =>
-        resolveTransportConfig({ url: TEST_MCP_URL })
-      ).toThrow('Unexpected error');
+      expect(() => resolveTransportConfig({ url: TEST_MCP_URL })).toThrow(
+        'Unexpected error'
+      );
     });
   });
 

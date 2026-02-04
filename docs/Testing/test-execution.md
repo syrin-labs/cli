@@ -4,7 +4,7 @@ description: 'How Syrin executes tests and validates tool behavior'
 weight: '3'
 ---
 
-# Test Execution Process
+## Test Execution Process
 
 This guide explains how Syrin executes tests and validates tool behaviour through sandboxed execution and behavioural observation.
 

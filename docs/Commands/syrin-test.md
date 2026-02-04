@@ -6,6 +6,8 @@ weight: '3'
 
 ## Put your tools to the test
 
+![syrin test demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-test/test_tool.gif)
+
 Validate MCP tool contracts through sandboxed execution, behavioral observation, and contract validation.
 
 `syrin test` is the **primary tool validation command** in Syrin v1.3.0. It validates that your MCP tools match their declared contracts, behave correctly, and are safe for agent-driven systems.
@@ -353,6 +355,5 @@ See [Troubleshooting](/testing/troubleshooting/) for more solutions.
 - [Test Configuration](/testing/test-configuration/) - Configuration options
 - [Test Results](/testing/test-results/) - Understanding test output
 - [Troubleshooting](/testing/troubleshooting/) - Common issues and solutions
-- [Error Rules](/errors/) - All error codes and rules
-- [Warning Rules](/warnings/) - All warning codes and rules
-- [Writing Test Cases](/testing/writing-test-cases/) - Tool contract and test case documentation
+- [Error Reference](/testing/error-reference/) -- All error codes explained
+- [Warning Reference](/testing/warning-reference/) -- All warning codes explained

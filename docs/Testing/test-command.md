@@ -4,7 +4,7 @@ description: 'How to run tests and use test command flags in Syrin'
 weight: '7.2'
 ---
 
-# Test Command
+## Test Command
 
 The `syrin test` command validates your MCP tools through sandboxed execution and behavioral observation. This guide covers how to use the test command and all available options.
 

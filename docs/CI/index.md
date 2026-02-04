@@ -82,6 +82,6 @@ syrin test --ci
 ## See Also
 
 - [Testing Documentation](/testing/)
-- [Error Rules Documentation](/errors/)
-- [Warning Rules Documentation](/warnings/)
+- [Error Reference](/testing/error-reference/)
+- [Warning Reference](/testing/warning-reference/)
 - [Writing Test Cases](/testing/writing-test-cases/) - Tool contract documentation

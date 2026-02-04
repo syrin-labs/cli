@@ -6,7 +6,11 @@ weight: '5'
 
 ## Analyse why MCP doesn't work as expected
 
+![syrin analyse demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-analyse/analyse.gif)
+
 Perform **static analysis** on MCP tool contracts.
+
+**Zero-config usage:** You can run `syrin analyse` without any project setup by providing `--transport` and `--url` flags directly. See [Quick Test Without Config](/guides/quick-test-without-config/).
 
 `syrin analyse` inspects the shape, clarity, and correctness of your MCP server’s declared tools **before execution**. It surfaces errors, warnings, and structural risks that otherwise appear later as runtime failures, confusing LLM behaviour, or hard-to-debug agent behaviour.
 
@@ -43,17 +47,17 @@ syrin analyse [options]
 
 ## Options
 
-| Flag                     | Description                                 | Default            |
-| ------------------------ | ------------------------------------------- | ------------------ |
-| `--ci`                   | Run in CI mode, fail on warnings or errors  | `false`            |
-| `--json`                 | Emit analysis results as JSON               | `false`            |
-| `--graph`                | Generate a tool dependency graph            | `false`            |
-| `--transport <type>`     | Transport type: `http` or `stdio`           | From configuration |
-| `--url <url>`            | MCP URL for HTTP transport                  | From configuration |
-| `--script <script>`      | Script for stdio transport                  | From configuration |
-| `--project-root <path>`  | Syrin project root directory                | Current directory  |
-| `--env <key=value>`      | Environment variable for stdio (repeatable) | None               |
-| `--auth-header <header>` | Auth header for HTTP transport (repeatable) | None               |
+| Flag                     | Description                                    | Default            |
+| ------------------------ | ---------------------------------------------- | ------------------ |
+| `--ci`                   | CI mode: minimal output, exit code 1 on errors | `false`            |
+| `--json`                 | Emit analysis results as JSON                  | `false`            |
+| `--graph`                | Generate a tool dependency graph               | `false`            |
+| `--transport <type>`     | Transport type: `http` or `stdio`              | From configuration |
+| `--url <url>`            | MCP URL for HTTP transport                     | From configuration |
+| `--script <script>`      | Script for stdio transport                     | From configuration |
+| `--project-root <path>`  | Syrin project root directory                   | Current directory  |
+| `--env <key=value>`      | Environment variable for stdio (repeatable)    | None               |
+| `--auth-header <header>` | Auth header for HTTP transport (repeatable)    | None               |
 
 **Global Options:**
 
@@ -298,6 +302,8 @@ Static correctness comes before runtime correctness.
 
 ## See Also
 
+- [Error Reference](/testing/error-reference/) -- All error codes explained
+- [Warning Reference](/testing/warning-reference/) -- All warning codes explained
 - [syrin list](/commands/list/)
 - [syrin test](/commands/test/)
 - [syrin dev](/commands/dev/)

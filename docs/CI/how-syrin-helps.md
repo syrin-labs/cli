@@ -91,7 +91,7 @@ Ensures tools match their contracts:
 
 ## See Also
 
-- [Error Rules Documentation](/errors/)
-- [Warning Rules Documentation](/warnings/)
+- [Error Reference](/testing/error-reference/)
+- [Warning Reference](/testing/warning-reference/)
 - [Writing Test Cases](/testing/writing-test-cases/) - Tool contract documentation
 - [Testing Documentation](/testing/)

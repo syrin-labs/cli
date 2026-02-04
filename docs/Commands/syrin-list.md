@@ -6,7 +6,11 @@ weight: '4'
 
 ## Hey MCP, What you got?
 
+![syrin list demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-list/list.gif)
+
 Inspect the **declared execution surface** of an MCP server under Syrin governance.
+
+**Zero-config usage:** You can run `syrin list` without any project setup by providing `--transport` and `--url` flags directly. See [Quick Test Without Config](/guides/quick-test-without-config/).
 
 `syrin list` connects to an MCP server and retrieves the capabilities the server explicitly exposes: tools, resources, and prompts. It does not infer behaviour, execute tools, or assume anything beyond what the server declares at the protocol level.
 

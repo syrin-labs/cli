@@ -75,11 +75,11 @@ jobs:
 
 ## With Strict Mode
 
-Enable strict mode to treat warnings as errors:
+Enable strict mode on tests to treat warnings as errors:
 
 ```yaml
 - name: Run Static Analysis
-  run: syrin analyse --ci --strict --json > analysis.json
+  run: syrin analyse --ci --json > analysis.json
 
 - name: Run Tests
   run: syrin test --ci --strict --json > test-results.json

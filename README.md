@@ -4,54 +4,114 @@
 
 [![npm version](https://badge.fury.io/js/%40syrin%2Fcli.svg)](https://www.npmjs.com/package/@syrin/cli) [![License: ISC](https://img.shields.io/badge/License-ISC-blue.svg)](https://opensource.org/licenses/ISC) [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.12.0-brightgreen)](https://nodejs.org/)
 
-## Stop Silent Failures in AI Tool Calls
-
-Your AI agent just called the same tool 47 times with identical parameters.
-Your logs look fine. You're silently burning $200 in tokens.
-
-**Syrin catches these failures before production.**
+**A linter + test runner for MCP servers.**
 
 ---
 
-## What Is This?
+## The Problem
 
-Syrin is a development toolkit for [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) servers — the standard way AI agents call external tools.
+[MCP (Model Context Protocol)](https://modelcontextprotocol.io/) is how AI agents call external tools — read files, query databases, hit APIs. If you are building or using an MCP server, your AI agent depends on those tool definitions being correct.
 
-**Without Syrin:**
+They usually are not.
 
-```txt
-Tool called 47x          →  No visibility
-$200 burned              →  Silent failure
-Logs look "fine"         →  Debug for hours
+Tool descriptions are too vague for the LLM to pick the right one. Parameter schemas are missing or wrong. Two tools look so similar the model picks one at random. A tool returns 12MB of JSON and blows the context window. Another tool silently writes to disk when it should not. Your logs look fine. The agent is broken.
+
+**Syrin catches all of this before production.**
+
+```bash
+$ syrin analyse --transport http --url http://localhost:8000/mcp
+
+ E110  Tool Ambiguity           get_user ↔ fetch_user
+ E101  Missing Tool Description process_data has no description
+ E102  Underspecified Input     user_id: no format, no example, no enum
+ E105  Free Text Propagation    get_status → update_user (unconstrained string)
+ W104  Generic Description      "Get data" — too vague for tool selection
+
+ 5 issues found (4 errors, 1 warning)
 ```
 
-**With Syrin:**
+---
 
-```txt
-Loop detected at call #3 →  Execution halted
-Full event trace         →  See exactly what happened
-Contract validated       →  Catch issues before runtime
+## See It In Action
+
+![syrin analyse demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-analyse/analyse.gif)
+
+---
+
+## Try It Right Now
+
+You do not need an MCP server of your own. Use the included example:
+
+```bash
+git clone https://github.com/Syrin-Labs/cli.git
+cd cli/examples/demo-mcp-py
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python server.py --mode http --port 8000 &
 ```
+
+Now point Syrin at it:
+
+```bash
+# List what tools the server exposes
+npx @syrin/cli list tools --transport http --url http://localhost:8000/mcp
+
+# Analyse tool contracts for issues
+npx @syrin/cli analyse --transport http --url http://localhost:8000/mcp
+```
+
+No API keys. No config files. No project setup.
+
+Already have your own MCP server running? Point Syrin at it directly:
+
+```bash
+npx @syrin/cli analyse --transport http --url http://localhost:8000/mcp
+```
+
+If your server uses stdio instead of HTTP:
+
+```bash
+npx @syrin/cli analyse --transport stdio --script "python server.py"
+```
+
+**Requirements:** Node.js >= 20.12, npm >= 9
 
 ---
 
 ## What Syrin Catches
 
-**Tool Loops** — Model proposes the same tool repeatedly with no progress
+| Code | Issue                 | What Happens Without Syrin                  |
+| ---- | --------------------- | ------------------------------------------- |
+| E110 | Tool Ambiguity        | LLM picks the wrong tool at random          |
+| E101 | Missing Description   | LLM has no idea what the tool does          |
+| E102 | Underspecified Input  | LLM hallucinates parameter values           |
+| E105 | Free Text Propagation | LLM passes sentences where data is expected |
+| E103 | Type Mismatch         | Tool chains break silently                  |
+| E107 | Circular Dependency   | Agent loops forever, burns tokens           |
+| E301 | Output Explosion      | 12MB response blows the context window      |
+| E500 | Side Effect Detected  | Tool writes to disk when it should not      |
 
-**Wrong Tool Selection** — Similar names, overlapping schemas, ambiguous descriptions cause silent misbehavior
-
-**Silent Failures** — Tool throws an error but execution continues with broken state
-
-**Contract Mismatches** — Input/output schemas don't align between chained tools
-
-**Hidden Dependencies** — Tools assume state that doesn't exist
-
-Documentation: [https://docs.syrin.dev](https://docs.syrin.dev)
+See the full list: [Error Reference](https://docs.syrin.dev/testing/error-reference) · [Warning Reference](https://docs.syrin.dev/testing/warning-reference)
 
 ---
 
-## See It In Action
+## Commands
+
+| Command         | What It Does                                                             |
+| --------------- | ------------------------------------------------------------------------ |
+| `syrin list`    | Show tools, resources, and prompts a server exposes                      |
+| `syrin analyse` | Static analysis — catch contract issues without executing tools          |
+| `syrin test`    | Run tools in a sandbox and validate behavior against contracts           |
+| `syrin dev`     | Interactive session — watch an LLM interact with your tools in real time |
+| `syrin doctor`  | Validate your config, environment, and connections                       |
+
+**Zero-config commands:** `list`, `analyse`, and `test --connection` work with just `--url` or `--script`. No config file needed.
+
+**Config required:** `dev` mode needs LLM API keys. Run `syrin init --global` to set up once.
+
+---
+
+## All Demos
 
 <table>
 <tr>
@@ -78,178 +138,30 @@ Documentation: [https://docs.syrin.dev](https://docs.syrin.dev)
 
 ---
 
-## Try It Now
+## Install
 
 ```bash
-# No install needed — run directly
+# Run without installing
 npx @syrin/cli analyse --transport http --url http://localhost:8000/mcp
-```
 
-Or install globally:
-
-```bash
+# Or install globally
 npm install -g @syrin/cli
-
-syrin init --global
-syrin doctor                                                    # Check your environment
-syrin analyse --transport http --url http://localhost:8000/mcp   # Analyze an MCP server
-syrin dev --exec --transport http --url http://localhost:8000/mcp # Interactive dev mode
+syrin --version
 ```
 
-Or initialize a project with local config:
+## Set Up for a Project
 
 ```bash
-npx @syrin/cli init
-syrin doctor
-syrin analyse
+syrin init                 # Creates syrin.yaml + tools/ directory
+syrin doctor               # Validates config and connections
+syrin analyse              # Analyse your MCP server
+syrin test                 # Run contract tests
+syrin dev --exec           # Interactive LLM-MCP session
 ```
-
-**Want to try with a sample server?** Clone the repo and use the included [example MCP server](./examples/demo-mcp-py/):
-
-```bash
-git clone https://github.com/Syrin-Labs/cli.git && cd cli/examples/demo-mcp-py
-python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
-python server.py --mode http --port 8000 &
-npx @syrin/cli analyse --transport http --url http://localhost:8000/mcp
-```
-
-Requirements: Node.js >= 20.12, npm >= 9
-
----
-
-## Core Commands
-
-| Command         | What It Does                                             |
-| --------------- | -------------------------------------------------------- |
-| `syrin analyse` | Static analysis — catches contract issues before runtime |
-| `syrin dev`     | Interactive mode — see exactly what your LLM proposes    |
-| `syrin test`    | Contract testing — validate tools in sandboxed execution |
-| `syrin doctor`  | Environment check — validate config and connections      |
-| `syrin list`    | Inspect tools, resources, and prompts from your server   |
-
-**Zero-config:** For `syrin test --connection`, `syrin list`, and `syrin analyse`, no config file is required when you pass `--url <url>` (or `--script <command>` for stdio). `syrin dev` needs local or global config for LLM credentials.
-
----
-
-## Global Configuration
-
-Syrin supports both **local** (project-specific) and **global** (user-wide) configurations. This allows you to:
-
-- Use Syrin from any directory without initializing a project
-- Share LLM API keys across multiple projects
-- Set default agent names and LLM providers globally
-
-### Quick Setup
-
-```bash
-# Set up global configuration
-syrin config setup --global
-
-# Set API keys in global .env
-syrin config edit-env --global
-
-# Use Syrin from any directory
-syrin dev --exec --transport http --url http://localhost:8000/mcp
-```
-
-### Configuration Management
-
-```bash
-# View global config
-syrin config list --global
-
-# Set global LLM provider
-syrin config set openai.model "gpt-4-turbo" --global
-
-# Set default provider
-syrin config set-default claude --global
-```
-
-See the [Configuration Guide](docs/Commands/syrin-config.md) for more details.
-
-## Key Capabilities
-
-### `syrin analyse` — Find Problems Before They Hit Production
-
-**The Problem:** Your LLM picks the wrong tool, or calls tools with missing parameters. You only find out after deployment when users report broken behavior.
-
-**The Solution:** Static analysis of your tool contracts catches issues before any code runs.
-
-```bash
-syrin analyse           # Check all tool contracts
-syrin analyse --ci      # Exit code 1 on errors (for CI pipelines)
-syrin analyse --strict  # Treat warnings as errors
-```
-
-**What it catches:**
-
-- Vague or missing tool descriptions
-- Parameters without descriptions (LLMs guess wrong)
-- Overlapping tools that confuse model selection
-- Schema mismatches between chained tools
-- Circular dependencies
-
----
-
-### `syrin dev` — See What Your LLM Actually Does
-
-**The Problem:** Your LLM calls tools, but you can't see _why_ it chose that tool, what parameters it's sending, or what happens between steps. You're debugging blind.
-
-**The Solution:** An interactive environment where you see every tool proposal before it executes.
-
-```bash
-syrin dev         # Preview mode (no execution)
-syrin dev --exec  # Enable execution when ready
-```
-
-**What you get:**
-
-- See exactly which tool the LLM wants to call and why
-- Inspect parameters before they're sent
-- Step through tool chains one call at a time
-- Full event trace of every decision
-
----
-
-### `syrin test` — Validate Tools in Isolation
-
-**The Problem:** A tool works fine in manual testing, but in production it has side effects you didn't expect, returns massive outputs that blow your context window, or behaves differently on repeated calls.
-
-**The Solution:** Sandboxed execution that validates each tool against its behavioral contract.
-
-```bash
-syrin test                 # Test all tools
-syrin test --tool fetch_user  # Test specific tool
-syrin test --strict        # Warnings become errors
-syrin test --json          # JSON output for CI
-```
-
-**What it catches:**
-
-- Unexpected side effects (file writes, network calls)
-- Non-deterministic outputs
-- Output size explosions
-- Hidden dependencies on external state
-- Contract violations
-
----
-
-### `syrin doctor` — Validate Your Setup
-
-**The Problem:** Something's misconfigured, but you're not sure what. API keys? Transport settings? MCP connection?
-
-**The Solution:** A single command that checks everything.
-
-```bash
-syrin doctor              # Check config, env, connections
-syrin test --connection   # Test MCP connection only
-```
-
----
 
 ## Tool Contracts
 
-Define behavioral guarantees for your tools in `tools/<tool-name>.yaml` files:
+Define behavioral guarantees for your tools in `tools/<tool-name>.yaml`:
 
 ```yaml
 version: 1
@@ -262,44 +174,62 @@ contract:
 guarantees:
   side_effects: none
   max_output_size: 10kb
+
+tests:
+  - name: 'valid user'
+    input:
+      user_id: '123'
+    expect:
+      output_schema: User
+
+  - name: 'invalid input'
+    input:
+      user_id: 123
+    expect:
+      error:
+        type: input_validation
 ```
 
-See [Tool Contracts Documentation](./docs/tool-contracts.md) for details.
+Run tests: `syrin test` or `syrin test --tool fetch_user`
 
-## Configuration
-
-Syrin supports **two configuration layers**:
-
-- **Local** (`syrin.yaml` in project root) — transport, MCP connection, LLM providers
-- **Global** (`~/.syrin/syrin.yaml`) — shared LLM API keys and defaults across projects
-
-Local config overrides global config. CLI flags override both.
-
-Configuration reference: [https://docs.syrin.dev/configuration](https://docs.syrin.dev/configuration)
+Documentation: [Writing Test Cases](https://docs.syrin.dev/testing/writing-test-cases) · [Test Your MCP Tools](https://docs.syrin.dev/guides/test-your-mcp-tools)
 
 ---
 
-## Transport Support
+## CI Integration
 
-- **stdio** – Syrin manages the MCP server process (recommended for development)
-- **http** – Syrin connects to an existing server (common in production)
+```yaml
+# .github/workflows/syrin.yml
+name: MCP Validation
+on: [push, pull_request]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install -g @syrin/cli
+      - run: syrin analyse --ci
+      - run: syrin test --ci --strict
+```
 
-Transport documentation: [https://docs.syrin.dev/configuration/transport](https://docs.syrin.dev/configuration/transport)
+See full CI docs: [Add Syrin to CI](https://docs.syrin.dev/guides/add-syrin-to-ci)
 
 ---
 
-## LLM Providers
+## Documentation
 
-Supported providers:
+Full docs at **[docs.syrin.dev](https://docs.syrin.dev)**
 
-- OpenAI
-- Claude (Anthropic)
-- Ollama (local models)
-
-LLMs propose actions.  
-Syrin governs execution.
-
-Provider configuration: [https://docs.syrin.dev/configuration/llm](https://docs.syrin.dev/configuration/llm)
+| Topic           | Link                                                                                     |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| Getting Started | [docs.syrin.dev/getting-started](https://docs.syrin.dev/getting-started)                 |
+| Setup Guide     | [docs.syrin.dev/setup](https://docs.syrin.dev/setup)                                     |
+| Configuration   | [docs.syrin.dev/configuration](https://docs.syrin.dev/configuration)                     |
+| All Commands    | [docs.syrin.dev/commands](https://docs.syrin.dev/commands)                               |
+| Error Reference | [docs.syrin.dev/testing/error-reference](https://docs.syrin.dev/testing/error-reference) |
 
 ---
 
@@ -307,33 +237,18 @@ Provider configuration: [https://docs.syrin.dev/configuration/llm](https://docs.
 
 - [Discord](https://discord.gg/j8GUvHybSa) — Ask questions, share feedback
 - [GitHub Discussions](https://github.com/Syrin-Labs/cli/discussions) — Feature ideas, show & tell
-- [Documentation](https://docs.syrin.dev) — Full guides and API reference
-
-Found a bug or have a feature request? [Open an issue](https://github.com/Syrin-Labs/cli/issues) — we read every one.
-
-If Syrin helped you catch something your logs missed, a [star on GitHub](https://github.com/Syrin-Labs/cli) helps others find it too.
-
----
-
-## Links
-
-- Documentation: [https://docs.syrin.dev](https://docs.syrin.dev)
-- GitHub: [https://github.com/Syrin-Labs/cli](https://github.com/Syrin-Labs/cli)
-- Issues: [https://github.com/Syrin-Labs/cli/issues](https://github.com/Syrin-Labs/cli/issues)
-- npm: [https://www.npmjs.com/package/@syrin/cli](https://www.npmjs.com/package/@syrin/cli)
+- [Issues](https://github.com/Syrin-Labs/cli/issues) — Bug reports, feature requests
 
 ---
 
 ## Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md) before submitting PRs.
+Contributions welcome. See [Contributing Guide](CONTRIBUTING.md) and [Code of Conduct](CODE_OF_CONDUCT.md).
 
-For security issues, please see our [Security Policy](SECURITY.md).
-
----
+For security issues: [Security Policy](SECURITY.md).
 
 ## License
 
-ISC License. See [LICENSE](LICENSE) for details.
+ISC License. See [LICENSE](LICENSE).
 
-Made with care by **Syrin Labs**.
+Made by [Syrin Labs](https://github.com/Syrin-Labs).

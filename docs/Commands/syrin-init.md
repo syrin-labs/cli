@@ -6,6 +6,8 @@ weight: '1'
 
 ## Initialise Syrin
 
+![syrin init demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-init/init.gif)
+
 Initialise Syrin in an MCP project and establish **runtime governance from the first execution**.
 
 This command creates the minimum structure required for Syrin to act as the **execution authority** for your MCP server. Until `syrin init` is run, Syrin does not exist in the project, and no execution can be trusted or replayed.
@@ -251,8 +253,12 @@ syrin dev      # start governed development
 
 ## See Also
 
+- [Setup](/setup/) -- Choose your setup path (global vs local)
+- [Global Setup](/setup/global-setup/) -- Global init walkthrough
+- [Local Setup](/setup/local-setup/) -- Local init walkthrough
+- [Secrets & Environment Variables](/setup/secrets-and-env/) -- How env vars work
 - [Configuration](/configuration/)
-- [syrin config](/commands/config/) - Manage configuration after initialization
+- [syrin config](/commands/config/) -- Manage configuration after initialization
 - [syrin doctor](/commands/doctor/)
 - [syrin dev](/commands/dev/)
 - [syrin test](/commands/test/)

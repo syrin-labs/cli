@@ -4,7 +4,7 @@ description: 'Common test issues and how to resolve them in Syrin'
 weight: '6'
 ---
 
-# Troubleshooting
+## Troubleshooting
 
 This guide addresses common issues that may arise when testing MCP tools with Syrin and provides guidance on how to resolve them.
 
@@ -12,7 +12,7 @@ This guide addresses common issues that may arise when testing MCP tools with Sy
 
 ### Error
 
-```
+```bash
 E000: Tool Not Found
 Tool "fetch_user" not found in the MCP server
 ```
@@ -432,4 +432,4 @@ Tool execution exceeded memory limit
 
 - [Test Command](/testing/test-command/)
 - [Test Results](/testing/test-results/)
-- [Error Rules Documentation](/errors/)
+- [Error Reference](/testing/error-reference/)

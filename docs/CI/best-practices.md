@@ -24,14 +24,14 @@ syrin test --ci
 
 ## 2. Use Strict Mode
 
-Enable strict mode to catch warnings:
+Enable strict mode on `syrin test` to treat warnings as errors:
 
 ```bash
-syrin analyse --ci --strict
+syrin analyse --ci
 syrin test --ci --strict
 ```
 
-**Why**: Warnings indicate potential issues that should be addressed. Strict mode ensures they don't slip through.
+**Why**: Warnings from `syrin test` indicate potential issues. Strict mode ensures they don't slip through. `syrin analyse --ci` already exits with code 1 on errors.
 
 ## 3. Store Results as Artifacts
 

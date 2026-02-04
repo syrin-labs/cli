@@ -37,21 +37,21 @@ function formatDependencyGraph(dependencies: Dependency[]): string {
 
   if (highConf.length > 0) {
     lines.push('High Confidence (≥0.8):');
-    for (const dep of highConf) {
+    highConf.forEach((dep, i) => {
       lines.push(
-        `  ${dep.fromTool}.${dep.fromField} → ${dep.toTool}.${dep.toField} (${dep.confidence.toFixed(2)})`
+        `  ${i + 1}. ${dep.fromTool}.${dep.fromField} → ${dep.toTool}.${dep.toField} (${dep.confidence.toFixed(2)})`
       );
-    }
+    });
     lines.push('');
   }
 
   if (mediumConf.length > 0) {
     lines.push('Medium Confidence (0.6-0.8):');
-    for (const dep of mediumConf) {
+    mediumConf.forEach((dep, i) => {
       lines.push(
-        `  ${dep.fromTool}.${dep.fromField} → ${dep.toTool}.${dep.toField} (${dep.confidence.toFixed(2)})`
+        `  ${i + 1}. ${dep.fromTool}.${dep.fromField} → ${dep.toTool}.${dep.toField} (${dep.confidence.toFixed(2)})`
       );
-    }
+    });
     lines.push('');
   }
 
@@ -60,12 +60,15 @@ function formatDependencyGraph(dependencies: Dependency[]): string {
 
 /**
  * Format diagnostic for CLI output.
+ * @param diagnostic - The diagnostic to format
+ * @param index - Optional 1-based index for numbering (e.g. "1. ERROR: ...")
  */
-function formatDiagnostic(diagnostic: Diagnostic): string {
+function formatDiagnostic(diagnostic: Diagnostic, index?: number): string {
   const icon = diagnostic.severity === 'error' ? '❌' : '⚠️';
   const severity = diagnostic.severity === 'error' ? 'ERROR' : 'WARNING';
+  const prefix = index !== undefined ? `${index}. ` : '';
 
-  let message = `${icon} ${severity}: ${diagnostic.message}`;
+  let message = `${prefix}${icon} ${severity}: ${diagnostic.message}`;
 
   if (diagnostic.tool) {
     message += `\n   Tool: ${diagnostic.tool}`;
@@ -109,20 +112,20 @@ export function displayCLIOutput(
   if (result.errors.length > 0) {
     log.plain(Messages.ANALYSE_ERRORS_HEADER);
     log.blank();
-    for (const error of result.errors) {
-      log.plain(formatDiagnostic(error));
+    result.errors.forEach((error, i) => {
+      log.plain(formatDiagnostic(error, i + 1));
       log.blank();
-    }
+    });
   }
 
   // Warnings
   if (result.warnings.length > 0) {
     log.plain(Messages.ANALYSE_WARNINGS_HEADER);
     log.blank();
-    for (const warning of result.warnings) {
-      log.plain(formatDiagnostic(warning));
+    result.warnings.forEach((warning, i) => {
+      log.plain(formatDiagnostic(warning, i + 1));
       log.blank();
-    }
+    });
   }
 
   // Graph (if requested)
@@ -204,23 +207,23 @@ export function displayCIOutput(
 ): void {
   // CI mode: minimal output, exit codes handled by caller
   if (result.errors.length > 0) {
-    console.log(
-      `✗ Analysis failed: ${result.errors.length} error(s), ${result.warnings.length} warning(s)`
+    log.error(
+      `Analysis failed: ${result.errors.length} error(s), ${result.warnings.length} warning(s)`
     );
-    // Print errors only (no warnings in CI)
-    for (const error of result.errors) {
-      console.log(`${error.code}: ${error.message}`);
-    }
+    // Print errors only (no warnings in CI), numbered
+    result.errors.forEach((error, i) => {
+      log.plain(`${i + 1}. ${error.code}: ${error.message}`);
+    });
   } else {
-    console.log(`✓ Analysis passed: ${result.toolCount} tool(s) analyzed`);
+    log.success(`Analysis passed: ${result.toolCount} tool(s) analyzed`);
     if (result.warnings.length > 0) {
-      console.log(`  ${result.warnings.length} warning(s) (non-blocking)`);
+      log.warning(`  ${result.warnings.length} warning(s) (non-blocking)`);
     }
   }
 
   // Show graph if requested
   if (options.graph) {
-    console.log(formatDependencyGraph(result.dependencies));
+    log.plain(formatDependencyGraph(result.dependencies));
   }
 }
 
@@ -232,7 +235,7 @@ export function displayAnalysisResult(
   options: AnalysisOutputOptions
 ): void {
   if (options.json) {
-    console.log(generateJSONOutput(result, options));
+    log.plain(generateJSONOutput(result, options));
     return;
   }
 

@@ -4,7 +4,7 @@ description: 'Understanding test results and output formats in Syrin'
 weight: '5'
 ---
 
-# Test Results
+## Test Results
 
 This guide explains how to interpret test results from Syrin, including various output formats and their corresponding meanings.
 
@@ -33,7 +33,7 @@ Shows:
 
 ### Example Output
 
-```
+```bash
 Testing MCP Tools
 ================
 

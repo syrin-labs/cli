@@ -4,7 +4,7 @@ description: 'Complete reference for all Syrin CLI commands, flags, and options'
 weight: '0'
 ---
 
-# Syrin CLI Reference
+## Syrin CLI Reference
 
 Complete reference for all Syrin CLI commands, global options, and command aliases.
 
@@ -261,9 +261,11 @@ syrin --version
 
 ### Documentation
 
+- **Getting Started:** [Install & quick try](/getting-started/)
+- **Setup:** [Configure Syrin for your workflow](/setup/)
+- **Guides:** [Step-by-step walkthroughs](/guides/)
 - **Full documentation:** https://docs.syrin.dev
-- **GitHub issues:** https://github.com/syrin-labs/cli/issues
-- **Examples:** https://github.com/syrin-labs/examples
+- **GitHub issues:** https://github.com/Syrin-Labs/cli/issues
 
 ## Command Index
 

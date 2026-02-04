@@ -6,6 +6,8 @@ weight: '6'
 
 # Rock 'n' Roll
 
+![syrin dev demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-dev/dev.gif)
+
 Enter **governed interactive development mode** for MCP systems.
 
 `syrin dev` is the primary interface for **understanding real MCP execution**. It allows you to interact with your MCP server using natural language while Syrin remains the execution authority.
@@ -224,6 +226,7 @@ This is where MCP systems stop being theoretical and become observable.
 
 ## See Also
 
+- [Interactive Dev Session Guide](/guides/interactive-dev-session/) -- Step-by-step walkthrough
 - [syrin test](/commands/test/)
 - [syrin list](/commands/list/)
 - [syrin doctor](/commands/doctor/)

@@ -1,115 +1,118 @@
 ---
 title: 'What Is Syrin?'
-description: 'Syrin is a runtime intelligence system that governs MCP execution'
+description: 'A CLI that validates, tests, and monitors MCP tool execution'
+weight: 2
 ---
 
-## Hi, I'm Syrin 👋
+## What Is Syrin?
 
 ![Syrin Logo Dark Bg](/logo/syrin-logo-dark-bg.png)
 
-> **Syrin is a runtime intelligence system for MCP execution.**
+Syrin is a **CLI tool that validates and tests MCP servers**. It sits between your LLM and your MCP tools, and answers three questions:
 
-It runs alongside an MCP server and governs how execution happens at runtime.
+1. Are my tool definitions good enough for an LLM to use correctly?
+2. Do my tools actually behave the way their contracts say they do?
+3. What happens when an LLM interacts with my tools in real time?
 
-Syrin does not define protocols.\
-Syrin does not generate prompts.\
-Syrin does not replace models or tools.
+## What It Does, Concretely
 
-Its responsibility is singular:
+### Static Analysis (`syrin analyse`)
 
-> **Make MCP execution observable, enforceable, and reproducible.**
+Syrin connects to your MCP server, reads every tool definition, and checks for problems -- without executing anything.
 
-## Runtime Authority
+```bash
+syrin analyse --transport http --url http://localhost:8000/mcp
+```
 
-Syrin introduces a strict separation of responsibilities:
+It catches issues like:
 
-| Component     | Responsibility                    |
-| ------------- | --------------------------------- |
-| LLM           | Propose actions                   |
-| Syrin Runtime | Validate, order, execute, enforce |
-| Tools         | Perform bounded work              |
-| Adapters      | Emit execution facts              |
-| UI / CLI      | Visualize only                    |
+- **E101**: Tool has no description -- the LLM cannot figure out when to use it
+- **E102**: Required parameter is just `type: string` with no explanation -- the LLM will guess
+- **E110**: Two tools have overlapping descriptions -- the LLM picks randomly
+- **E107**: Tool A depends on Tool B, which depends on Tool A -- infinite loop
 
-In this model:
+These are the kinds of problems that work fine in manual testing but break under real agent traffic.
 
-- The LLM is **advisory**
-- The runtime is **authoritative**
+### Contract Testing (`syrin test`)
 
-> **LLM proposes. Runtime decides.**
+Syrin executes your tools inside a sandbox and validates their behavior against contracts you write in YAML.
 
-## Execution Model
+```bash
+syrin test --tool fetch_user
+```
 
-Syrin treats every MCP run as an explicit state machine.
+It catches:
 
-A run moves through defined states, for example:
+- **E500**: Tool wrote to the filesystem when its contract says `side_effects: none`
+- **E301**: Tool returned 2MB of JSON when the contract says `max_output_size: 10kb`
+- **E300**: Tool output does not match the declared output schema
+- **E403**: Tool did not respond within the declared time limit
 
-INIT → SESSION_STARTED → CONTEXT_BUILT → LLM_PROPOSED → VALIDATED → TOOL_EXECUTED (0..n) → SESSION_COMPLETED | SESSION_HALTED
+### Interactive Dev Mode (`syrin dev`)
 
-There are no implicit transitions.
+Syrin lets you chat with your MCP server through an LLM and see exactly what happens at each step.
 
-If a state change is not recorded, it did not happen.
+```bash
+syrin dev --exec
+```
 
-## Events, Not Logs
+![syrin dev demo](https://github.com/Syrin-Labs/cli/raw/main/assets/demo/syrin-dev/dev.gif)
 
-Syrin records execution as **ordered, immutable events**.
+You type a natural language instruction. The LLM proposes a tool call. In preview mode, you see the proposal without executing it. In execute mode, Syrin runs the tool and shows the result.
 
-Events are the unit of truth.
+This lets you compare how different LLMs (OpenAI, Claude, Ollama) interact with the same tools.
 
-Logs are implementation details.
+## How It Works
 
-If something happened and there is no event, Syrin does not consider it real.
+When you run `syrin dev --exec` and type "What is the weather in San Francisco?", here is what happens:
 
-This makes execution auditable and replayable by construction.
+```
+You type a question
+  -> Syrin sends it to the LLM with your tool definitions
+  -> LLM proposes: call get_weather(location="San Francisco")
+  -> Syrin validates the proposal against tool contracts
+  -> Syrin executes the tool via MCP
+  -> Tool returns { temperature: 62, condition: "foggy" }
+  -> Syrin records the entire sequence as events
+  -> Result displayed to you
+```
 
-## Determinism First
+Every step is recorded as a typed, ordered event. Events are saved to `.syrin/events/` as JSONL files. You can inspect them later to understand exactly what happened.
 
-Determinism in Syrin applies to execution, not text output.
+## The Key Idea: LLM Proposes, Runtime Decides
 
-Identical inputs must produce identical event sequences.
+In an MCP system without Syrin, the LLM calls tools directly. If it picks the wrong tool, passes bad parameters, or triggers an infinite loop, nothing stops it.
 
-Testing, debugging, and regression detection operate on events, not prompts or logs.
+With Syrin:
 
-If execution cannot be replayed, Syrin treats it as a failure mode.
+| Component | Role                                                             |
+| --------- | ---------------------------------------------------------------- |
+| LLM       | Proposes which tool to call and with what parameters             |
+| Syrin     | Validates the proposal, executes the tool, records what happened |
+| MCP Tools | Do the actual work (read files, query APIs, etc.)                |
 
-## What Syrin Is Not
+The LLM is advisory. Syrin is the authority.
 
-Syrin is intentionally constrained.
+## What Syrin Does Not Do
 
-It does **not**:
+- It does not generate prompts or modify LLM behavior
+- It does not replace your MCP server or tools
+- It does not require changes to your existing code
+- It does not run as a daemon or background service -- it is a CLI you run when you need it
 
-- Infer intent
-- Guess why something failed
-- Explain behaviour, it cannot be replayed
-- Continue after invariant violations
+## The Four Commands
 
-Strictness is deliberate.
+| Command         | Purpose                                           | Needs Setup?     |
+| --------------- | ------------------------------------------------- | ---------------- |
+| `syrin list`    | See what tools/resources/prompts a server exposes | No               |
+| `syrin analyse` | Static analysis of tool contracts                 | No               |
+| `syrin test`    | Execute tools in sandbox, validate behavior       | Yes (local init) |
+| `syrin dev`     | Interactive LLM-MCP session                       | Yes (LLM keys)   |
 
-## What Changes When Syrin Is Present
-
-When Syrin governs MCP execution:
-
-- Execution order is explicit
-- Failures are bounded and terminal
-- Tool behaviour is accountable
-- Executions are replayable
-- Regressions are detectable
-
-These are not features layered on top.
-
-They are properties enforced by the runtime.
-
-## How Syrin Should Be Understood
-
-Syrin is:
-
-- Execution governance for MCP
-- Runtime intelligence, not model intelligence
-- Event-sourced execution, not log-based debugging
-
-It exists because MCP systems require **controlled execution**, not best-effort behaviour.
+Two more utility commands: `syrin doctor` (validate config) and `syrin status` (project health overview).
 
 ## Next
 
-**Installation**\
-Attach Syrin to an MCP project to capture execution from the first meaningful run.
+- [Installation](/getting-started/installation/) -- Install Syrin globally or use npx
+- [Setup](/setup/) -- Configure Syrin for your workflow
+- [Quick Test Without Config](/guides/quick-test-without-config/) -- Try Syrin immediately

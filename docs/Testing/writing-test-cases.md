@@ -410,7 +410,7 @@ tests:
 | `output_explosion`    | E301       | Tool output exceeds size limit   |
 | `unbounded_execution` | E403       | Tool execution times out         |
 
-See [Error Rules Documentation](/errors/) for complete details on each error type.
+See [Error Reference](/testing/error-reference/) for complete details on each error type.
 
 ## Edge Case Testing
 
@@ -882,5 +882,5 @@ See `examples/tools/` for example contracts.
 
 - [Test Execution Process](/testing/test-execution/)
 - [Test Configuration](/testing/test-configuration/)
-- [Error Rules Documentation](/errors/)
-- [Warning Rules Documentation](/warnings/)
+- [Error Reference](/testing/error-reference/)
+- [Warning Reference](/testing/warning-reference/)

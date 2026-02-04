@@ -151,7 +151,7 @@ Check test output for:
 
 ## See Also
 
-- [Error Rules Documentation](/errors/)
-- [Warning Rules Documentation](/warnings/)
-- [Writing Test Cases](/testing/writing-test-cases/) - Includes tool contract structure
+- [Error Reference](/testing/error-reference/) -- All error codes explained
+- [Warning Reference](/testing/warning-reference/) -- All warning codes explained
+- [Writing Test Cases](/testing/writing-test-cases/) -- Includes tool contract structure
 - [CI Integration Documentation](/ci/)

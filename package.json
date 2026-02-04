@@ -39,6 +39,7 @@
     "doc": "docs"
   },
   "scripts": {
+    "prepare": "husky",
     "build": "tsc && tsc-alias -p tsconfig.json -f && npm run copy:template",
     "copy:template": "cp src/config/syrin.template.yaml dist/config/syrin.template.yaml",
     "prepublishOnly": "npm run build",
@@ -86,7 +87,8 @@
     "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "husky": "^9.1.7"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.72.1",
