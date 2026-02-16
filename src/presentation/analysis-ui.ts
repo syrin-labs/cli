@@ -15,6 +15,7 @@ export interface AnalysisOutputOptions {
   ci?: boolean;
   json?: boolean;
   graph?: boolean;
+  sarif?: boolean;
 }
 
 /**
@@ -239,10 +240,74 @@ export function displayAnalysisResult(
     return;
   }
 
+  if (options.sarif) {
+    log.plain(generateSARIFOutput(result));
+    return;
+  }
+
   if (options.ci) {
     displayCIOutput(result, options);
     return;
   }
 
   displayCLIOutput(result, options);
+}
+
+/**
+ * Generate SARIF (Static Analysis Results Interchange Format) output.
+ * SARIF is a JSON-based format for sharing static analysis results.
+ * Used by GitHub Advanced Security and other CI tools.
+ */
+function generateSARIFOutput(result: AnalysisResult): string {
+  const sarif = {
+    version: '2.1.0',
+    $schema:
+      'https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json',
+    runs: [
+      {
+        tool: {
+          driver: {
+            name: 'Syrin',
+            version: '1.6.0',
+            informationUri: 'https://github.com/syrin-labs/syrin',
+            rules: result.diagnostics.map(d => ({
+              id: d.code,
+              name: d.code,
+              shortDescription: {
+                text: d.message.substring(0, 200),
+              },
+              helpUri: `https://docs.syrin.dev/rules/${d.code}`,
+            })),
+          },
+        },
+        results: result.diagnostics.map(d => ({
+          ruleId: d.code,
+          level: d.severity === 'error' ? 'error' : 'warning',
+          message: {
+            text: d.message,
+          },
+          locations: d.tool
+            ? [
+                {
+                  physicalLocation: {
+                    artifactLocation: {
+                      uri: `tool://${d.tool}`,
+                    },
+                    region: d.field
+                      ? {
+                          message: {
+                            text: `Parameter: ${d.field}`,
+                          },
+                        }
+                      : undefined,
+                  },
+                },
+              ]
+            : [],
+        })),
+      },
+    ],
+  };
+
+  return JSON.stringify(sarif, null, 2);
 }

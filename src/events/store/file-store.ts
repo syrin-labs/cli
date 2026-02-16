@@ -9,10 +9,14 @@ import { Paths, FileExtensions } from '@/constants';
  * File-based event store implementation.
  * Stores events in JSONL (JSON Lines) format for append-only, streamable storage.
  * Events are persisted to `.syrin/events/{sessionId}.jsonl`
+ *
+ * v1.5.0: Added write queue to prevent race conditions during concurrent appends.
  */
 export class FileEventStore implements EventStore {
   private readonly eventsDir: string;
   private writeStreams: Map<SessionID, fs.FileHandle> = new Map();
+  // v1.5.0: Write queues per session to serialize concurrent writes
+  private writeQueues: Map<SessionID, Promise<void>> = new Map();
 
   constructor(eventsDir: string = Paths.EVENTS_DIR) {
     this.eventsDir = eventsDir;
@@ -57,13 +61,32 @@ export class FileEventStore implements EventStore {
   }
 
   async append(event: EventEnvelope): Promise<void> {
-    const handle = await this.getWriteStream(event.session_id);
-    const line = JSON.stringify(event) + '\n';
-    const buffer = Buffer.from(line, 'utf-8');
+    const sessionId = event.session_id;
 
-    // Get file stats to determine write position (end of file)
-    const stats = await handle.stat();
-    await handle.write(buffer, 0, buffer.length, stats.size);
+    // v1.5.0: Serialize writes per session to prevent race conditions
+    // Chain this write after any pending writes for this session
+    const previousWrite = this.writeQueues.get(sessionId) ?? Promise.resolve();
+
+    const currentWrite = previousWrite.then(async () => {
+      const handle = await this.getWriteStream(sessionId);
+      const line = JSON.stringify(event) + '\n';
+      const buffer = Buffer.from(line, 'utf-8');
+
+      // Get file stats to determine write position (end of file)
+      const stats = await handle.stat();
+      await handle.write(buffer, 0, buffer.length, stats.size);
+    });
+
+    // Store the current write promise
+    this.writeQueues.set(sessionId, currentWrite);
+
+    // Wait for this write to complete
+    await currentWrite;
+
+    // Clean up if this was the last pending write
+    if (this.writeQueues.get(sessionId) === currentWrite) {
+      this.writeQueues.delete(sessionId);
+    }
   }
 
   async load(sessionId: SessionID): Promise<EventEnvelope[]> {
@@ -99,8 +122,16 @@ export class FileEventStore implements EventStore {
   /**
    * Close all open file handles.
    * Should be called before process exit.
+   * v1.5.0: Waits for all pending writes to complete before closing.
    */
   async close(): Promise<void> {
+    // v1.5.0: Wait for all pending writes to complete
+    const pendingWrites = Array.from(this.writeQueues.values());
+    if (pendingWrites.length > 0) {
+      await Promise.all(pendingWrites);
+    }
+    this.writeQueues.clear();
+
     const closePromises = Array.from(this.writeStreams.values()).map(handle =>
       handle.close()
     );

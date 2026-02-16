@@ -28,6 +28,7 @@ import {
   getGlobalConfigPath,
   getGlobalEnvPath,
 } from '@/config/global-loader';
+import { connectHTTP } from '@/runtime/mcp/connection';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
@@ -45,6 +46,7 @@ interface DoctorReport {
   configPath?: string;
   envSource?: 'local.env' | 'global.env' | 'process.env';
   transportCheck: CheckResult;
+  mcpConnectivityCheck?: CheckResult;
   scriptCheck: CheckResult | null;
   llmChecks: Array<{
     provider: string;
@@ -97,6 +99,51 @@ function checkTransport(config: SyrinConfig): CheckResult {
     return {
       isValid: true,
       message: Messages.DOCTOR_SCRIPT_INFO(String(config.script)),
+    };
+  }
+}
+
+/**
+ * Test MCP server connectivity.
+ * Attempts to connect to the MCP server and verify it's responding.
+ */
+async function testMCPConnectivity(config: SyrinConfig): Promise<CheckResult> {
+  if (config.transport === TransportTypes.HTTP) {
+    if (!config.url) {
+      return {
+        isValid: false,
+        message: 'MCP URL is missing',
+      };
+    }
+
+    try {
+      const result = await connectHTTP(String(config.url), undefined, 5000);
+      if (result.success) {
+        return {
+          isValid: true,
+          message: `Successfully connected to MCP server at ${config.url}`,
+        };
+      } else {
+        return {
+          isValid: false,
+          message: `Failed to connect to MCP server: ${result.error || 'Unknown error'}`,
+          fix: 'Ensure the MCP server is running and the URL is correct',
+        };
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return {
+        isValid: false,
+        message: `Failed to connect to MCP server: ${errorMessage}`,
+        fix: 'Ensure the MCP server is running and the URL is correct',
+      };
+    }
+  } else {
+    return {
+      isValid: true,
+      message:
+        'Skipping connectivity check for stdio transport (requires server to be running)',
     };
   }
 }
@@ -236,15 +283,18 @@ function checkLocalLLMProviders(
 /**
  * Generate doctor report.
  */
-function generateReport(
+async function generateReport(
   config: SyrinConfig,
   projectRoot: string,
   configSource: 'local' | 'global',
   configPath: string
-): DoctorReport {
+): Promise<DoctorReport> {
   // Call checkLLMProviders once and reuse the result
   const llmChecks = checkLLMProviders(config, projectRoot);
   const envSource = llmChecks[0]?.envSource;
+
+  // Test MCP server connectivity
+  const mcpConnectivityCheck = await testMCPConnectivity(config);
 
   return {
     config,
@@ -252,6 +302,7 @@ function generateReport(
     configPath,
     envSource,
     transportCheck: checkTransport(config),
+    mcpConnectivityCheck,
     scriptCheck: checkScript(config),
     llmChecks,
     localLlmChecks: checkLocalLLMProviders(config, projectRoot),
@@ -308,7 +359,7 @@ export async function executeDoctor(
     }
 
     // Generate report
-    const report = generateReport(
+    const report = await generateReport(
       config,
       projectRoot,
       configSource,
@@ -321,6 +372,8 @@ export async function executeDoctor(
     // Exit with appropriate code
     const allValid =
       report.transportCheck.isValid &&
+      (report.mcpConnectivityCheck === undefined ||
+        report.mcpConnectivityCheck.isValid) &&
       (report.scriptCheck === null || report.scriptCheck.isValid) &&
       report.llmChecks.every(
         l => l.apiKeyCheck.isValid && l.modelCheck.isValid

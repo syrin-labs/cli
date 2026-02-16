@@ -26,6 +26,7 @@ export interface EnvCheckResult {
 
 /**
  * Parse .env file and return key-value pairs.
+ * Handles: inline comments, export prefix, multi-line values
  * @param envFilePath - Path to .env file
  * @returns Map of environment variables
  */
@@ -40,22 +41,62 @@ function parseEnvFile(envFilePath: string): Map<string, string> {
     const content = fs.readFileSync(envFilePath, 'utf-8');
     const lines = content.split('\n');
 
-    for (const line of lines) {
-      // Skip comments and empty lines
+    for (let i = 0; i < lines.length; i++) {
+      let line: string = lines[i]!;
+
+      // Skip empty lines and pure comment lines
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith('#')) {
         continue;
       }
 
-      // Parse KEY=VALUE format
-      const match = trimmed.match(/^([^=:#]+)=(.*)$/);
+      // Handle inline comments (only outside of quoted values)
+      // Split on # but not if it's inside quotes
+      let commentIndex = -1;
+      let inQuotes = false;
+      let quoteChar = '';
+
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        if (!inQuotes && (char === '"' || char === "'")) {
+          inQuotes = true;
+          quoteChar = char;
+        } else if (inQuotes && char === quoteChar) {
+          inQuotes = false;
+          quoteChar = '';
+        } else if (!inQuotes && char === '#') {
+          commentIndex = j;
+          break;
+        }
+      }
+
+      if (commentIndex !== -1) {
+        line = line.substring(0, commentIndex).trimEnd();
+      }
+
+      // Parse KEY=VALUE format (with optional export prefix)
+      // Allow: KEY=VALUE, export KEY=VALUE, export KEY = VALUE
+      const match = line.match(/^(?:export\s+)?([^=\s]+)\s*=\s*(.*)$/);
       if (match) {
-        const key = match[1]?.trim();
-        const value = match[2]?.trim() || '';
-        // Remove quotes if present
-        const unquotedValue = value.replace(/^["']|["']$/g, '');
+        let key = match[1]?.trim();
+        let value = match[2] || '';
+
+        // Handle multi-line values (values ending with \)
+        while (value.endsWith('\\') && i < lines.length - 1) {
+          value = value.slice(0, -1) + '\n' + lines[i + 1];
+          i++;
+        }
+
+        // Remove surrounding quotes
+        if (
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))
+        ) {
+          value = value.slice(1, -1);
+        }
+
         if (key) {
-          envMap.set(key, unquotedValue);
+          envMap.set(key, value);
         }
       }
     }

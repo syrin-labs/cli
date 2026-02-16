@@ -26,6 +26,7 @@ interface DoctorReport {
   configPath?: string;
   envSource?: 'local.env' | 'global.env' | 'process.env';
   transportCheck: CheckResult;
+  mcpConnectivityCheck?: CheckResult;
   scriptCheck: CheckResult | null;
   llmChecks: Array<{
     provider: string;
@@ -106,6 +107,7 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
     configPath,
     envSource,
     transportCheck,
+    mcpConnectivityCheck,
     scriptCheck,
     llmChecks,
     localLlmChecks,
@@ -113,6 +115,7 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
 
   const allValid =
     transportCheck.isValid &&
+    (mcpConnectivityCheck === undefined || mcpConnectivityCheck.isValid) &&
     (scriptCheck === null || scriptCheck.isValid) &&
     llmChecks.every(l => l.apiKeyCheck.isValid && l.modelCheck.isValid) &&
     (localLlmChecks === undefined ||
@@ -183,6 +186,20 @@ export async function displayDoctorReport(report: DoctorReport): Promise<void> {
     log.warnSymbol(`    ${transportCheck.fix}`);
   }
   log.blank();
+
+  // MCP Connectivity Section (for HTTP transport)
+  if (mcpConnectivityCheck) {
+    log.heading('MCP Connectivity');
+    if (mcpConnectivityCheck.isValid) {
+      log.plain(`  ${mcpConnectivityCheck.message} ${log.tick()}`);
+    } else {
+      log.plain(`  ${mcpConnectivityCheck.message} ${log.cross()}`);
+    }
+    if (!mcpConnectivityCheck.isValid && mcpConnectivityCheck.fix) {
+      log.warnSymbol(`    ${mcpConnectivityCheck.fix}`);
+    }
+    log.blank();
+  }
 
   // Script Section (if present)
   if (scriptCheck !== null && config.script) {

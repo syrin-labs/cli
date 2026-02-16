@@ -17,6 +17,17 @@ export interface LLMProvider {
   chat(request: LLMRequest): Promise<LLMResponse>;
 
   /**
+   * Send a chat request with streaming.
+   * @param request - The LLM request with messages and tools
+   * @param onChunk - Callback for each chunk of the response
+   * @returns Promise resolving to complete LLM response
+   */
+  chatStream(
+    request: LLMRequest,
+    onChunk: (chunk: string) => void
+  ): Promise<LLMResponse>;
+
+  /**
    * Check if this provider supports tool/function calling.
    * @returns true if tool calling is supported
    */

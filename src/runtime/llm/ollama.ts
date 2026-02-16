@@ -11,6 +11,7 @@ import type { LLMRequest, LLMResponse, ToolCall } from './types';
 import { ConfigurationError } from '@/utils/errors';
 import { log } from '@/utils/logger';
 import { checkCommandExists, checkEnvVar } from '@/config/env-checker';
+import { withRetry } from '@/utils/retry';
 
 /**
  * Static process manager for Ollama service.
@@ -296,35 +297,49 @@ export class OllamaProvider implements LLMProvider {
   }
 
   async chat(request: LLMRequest): Promise<LLMResponse> {
-    try {
-      // Ensure Ollama is running
-      await this.ensureOllamaRunning();
+    return withRetry(
+      async () => {
+        // Ensure Ollama is running
+        await this.ensureOllamaRunning();
 
-      // Ensure model exists (download if needed)
-      await this.ensureModelExists();
+        // Ensure model exists (download if needed)
+        await this.ensureModelExists();
 
-      // Build messages for Ollama
-      const messages = request.messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant' | 'system',
-        content: msg.content,
-      }));
+        // Build messages for Ollama
+        const messages = request.messages.map(msg => ({
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content: msg.content,
+        }));
 
-      // Add system prompt if provided
-      if (request.systemPrompt) {
-        messages.unshift({
-          role: 'system',
-          content: request.systemPrompt,
-        });
-      }
+        // Add system prompt if provided
+        if (request.systemPrompt) {
+          messages.unshift({
+            role: 'system',
+            content: request.systemPrompt,
+          });
+        }
 
-      // Convert tools to Ollama format if provided
-      // Ollama uses a 'tools' array with function definitions
-      const tools = request.tools?.map(tool => {
-        // Ollama expects tools in a specific format
-        // Format: { type: 'function', function: { name, description, parameters } }
-        const inputSchema = tool.inputSchema as {
-          type?: string;
-          properties?: Record<
+        // Convert tools to Ollama format if provided
+        // Ollama uses a 'tools' array with function definitions
+        const tools = request.tools?.map(tool => {
+          // Ollama expects tools in a specific format
+          // Format: { type: 'function', function: { name, description, parameters } }
+          const inputSchema = tool.inputSchema as {
+            type?: string;
+            properties?: Record<
+              string,
+              {
+                type?: string | string[];
+                items?: unknown;
+                description?: string;
+                enum?: unknown[];
+              }
+            >;
+            required?: string[];
+          };
+
+          // Convert properties to the format Ollama expects
+          const properties: Record<
             string,
             {
               type?: string | string[];
@@ -332,189 +347,215 @@ export class OllamaProvider implements LLMProvider {
               description?: string;
               enum?: unknown[];
             }
-          >;
-          required?: string[];
+          > = {};
+          if (inputSchema.properties) {
+            for (const [key, value] of Object.entries(inputSchema.properties)) {
+              if (
+                value &&
+                typeof value === 'object' &&
+                ('type' in value || 'description' in value)
+              ) {
+                properties[key] = value as {
+                  type?: string | string[];
+                  items?: unknown;
+                  description?: string;
+                  enum?: unknown[];
+                };
+              } else {
+                // Default structure if not properly formatted
+                const valueStr =
+                  typeof value === 'string'
+                    ? value
+                    : value && typeof value === 'object'
+                      ? JSON.stringify(value)
+                      : String(value);
+                properties[key] = {
+                  type: 'string',
+                  description: valueStr,
+                };
+              }
+            }
+          }
+
+          return {
+            type: 'function' as const,
+            function: {
+              name: tool.name,
+              description: tool.description,
+              parameters: {
+                type: 'object',
+                properties,
+                required: inputSchema.required || [],
+              },
+            },
+          };
+        });
+
+        // Call Ollama API according to official API: https://github.com/ollama/ollama-js
+        const chatRequest: Parameters<typeof this.client.chat>[0] = {
+          model: this.modelName,
+          messages,
+          stream: false, // We want a complete response, not a stream
+          options: {
+            temperature: request.temperature ?? 0.7,
+            num_predict: request.maxTokens,
+          },
         };
 
-        // Convert properties to the format Ollama expects
-        const properties: Record<
-          string,
-          {
-            type?: string | string[];
-            items?: unknown;
-            description?: string;
-            enum?: unknown[];
-          }
-        > = {};
-        if (inputSchema.properties) {
-          for (const [key, value] of Object.entries(inputSchema.properties)) {
-            if (
-              value &&
-              typeof value === 'object' &&
-              ('type' in value || 'description' in value)
-            ) {
-              properties[key] = value as {
-                type?: string | string[];
-                items?: unknown;
-                description?: string;
-                enum?: unknown[];
-              };
-            } else {
-              // Default structure if not properly formatted
-              const valueStr =
-                typeof value === 'string'
-                  ? value
-                  : value && typeof value === 'object'
-                    ? JSON.stringify(value)
-                    : String(value);
-              properties[key] = {
-                type: 'string',
-                description: valueStr,
-              };
+        // Add tools if available
+        if (tools && tools.length > 0) {
+          chatRequest.tools = tools;
+        }
+
+        const response = await this.client.chat(chatRequest);
+
+        // Response structure according to ollama-js API:
+        // { message: { role: string, content: string, tool_calls?: [...] }, done: boolean, ... }
+        const content = response.message?.content || '';
+
+        // Extract tool calls from response
+        // Ollama returns tool_calls in the message if the model supports it
+        const toolCalls: ToolCall[] = [];
+        if (
+          response.message &&
+          'tool_calls' in response.message &&
+          response.message.tool_calls
+        ) {
+          const toolCallsArray = response.message.tool_calls as Array<{
+            id?: string;
+            type?: string;
+            function?: {
+              name: string;
+              arguments?: string | Record<string, unknown>;
+            };
+          }>;
+
+          for (const toolCall of toolCallsArray) {
+            if (toolCall.function) {
+              try {
+                let args: Record<string, unknown>;
+                if (typeof toolCall.function.arguments === 'string') {
+                  args = JSON.parse(toolCall.function.arguments) as Record<
+                    string,
+                    unknown
+                  >;
+                } else if (
+                  toolCall.function.arguments &&
+                  typeof toolCall.function.arguments === 'object' &&
+                  !Array.isArray(toolCall.function.arguments)
+                ) {
+                  args = toolCall.function.arguments;
+                } else {
+                  args = {};
+                }
+
+                toolCalls.push({
+                  id: toolCall.id || uuidv4(),
+                  name: toolCall.function.name,
+                  arguments: args,
+                });
+              } catch {
+                // If parsing fails, use empty object
+                toolCalls.push({
+                  id: toolCall.id || uuidv4(),
+                  name: toolCall.function.name,
+                  arguments: {},
+                });
+              }
             }
           }
         }
 
-        return {
-          type: 'function' as const,
-          function: {
-            name: tool.name,
-            description: tool.description,
-            parameters: {
-              type: 'object',
-              properties,
-              required: inputSchema.required || [],
-            },
-          },
-        };
-      });
+        const finishReason: 'stop' | 'length' | 'tool_calls' | 'error' =
+          toolCalls.length > 0
+            ? 'tool_calls'
+            : response.done
+              ? 'stop'
+              : 'length';
 
-      // Call Ollama API according to official API: https://github.com/ollama/ollama-js
-      const chatRequest: Parameters<typeof this.client.chat>[0] = {
+        // Extract usage statistics if available
+        const evalCount = response.eval_count;
+        const promptEvalCount = response.prompt_eval_count;
+
+        return {
+          content,
+          finishReason,
+          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+          usage:
+            evalCount !== undefined && promptEvalCount !== undefined
+              ? {
+                  promptTokens: promptEvalCount,
+                  completionTokens: evalCount,
+                  totalTokens: promptEvalCount + evalCount,
+                }
+              : undefined,
+        };
+      },
+      {
+        retryableErrors: [
+          'fetch failed',
+          'ECONNREFUSED',
+          'ENOTFOUND',
+          'ETIMEDOUT',
+          'network',
+        ],
+      }
+    ).catch(error => {
+      if (error instanceof ConfigurationError) {
+        throw error;
+      }
+      if (error instanceof Error) {
+        if (error.message === 'String error') {
+          throw new Error('Unknown error from Ollama API');
+        }
+        throw new Error(`Ollama API error: ${error.message}`);
+      }
+      throw new Error('Unknown error from Ollama API');
+    });
+  }
+
+  async chatStream(
+    request: LLMRequest,
+    onChunk: (chunk: string) => void
+  ): Promise<LLMResponse> {
+    // Ollama supports streaming
+    if (request.tools && request.tools.length > 0) {
+      return this.chat(request);
+    }
+
+    try {
+      const messages = request.messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+      }));
+
+      const response = await this.client.chat({
         model: this.modelName,
         messages,
-        stream: false, // We want a complete response, not a stream
+        stream: true,
         options: {
           temperature: request.temperature ?? 0.7,
           num_predict: request.maxTokens,
         },
-      };
+      });
 
-      // Add tools if available
-      if (tools && tools.length > 0) {
-        chatRequest.tools = tools;
-      }
+      let content = '';
 
-      const response = await this.client.chat(chatRequest);
-
-      // Response structure according to ollama-js API:
-      // { message: { role: string, content: string, tool_calls?: [...] }, done: boolean, ... }
-      const content = response.message?.content || '';
-
-      // Extract tool calls from response
-      // Ollama returns tool_calls in the message if the model supports it
-      const toolCalls: ToolCall[] = [];
-      if (
-        response.message &&
-        'tool_calls' in response.message &&
-        response.message.tool_calls
-      ) {
-        const toolCallsArray = response.message.tool_calls as Array<{
-          id?: string;
-          type?: string;
-          function?: {
-            name: string;
-            arguments?: string | Record<string, unknown>;
-          };
-        }>;
-
-        for (const toolCall of toolCallsArray) {
-          if (toolCall.function) {
-            try {
-              let args: Record<string, unknown>;
-              if (typeof toolCall.function.arguments === 'string') {
-                args = JSON.parse(toolCall.function.arguments) as Record<
-                  string,
-                  unknown
-                >;
-              } else if (
-                toolCall.function.arguments &&
-                typeof toolCall.function.arguments === 'object' &&
-                !Array.isArray(toolCall.function.arguments)
-              ) {
-                args = toolCall.function.arguments;
-              } else {
-                args = {};
-              }
-
-              toolCalls.push({
-                id: toolCall.id || uuidv4(),
-                name: toolCall.function.name,
-                arguments: args,
-              });
-            } catch {
-              // If parsing fails, use empty object
-              toolCalls.push({
-                id: toolCall.id || uuidv4(),
-                name: toolCall.function.name,
-                arguments: {},
-              });
-            }
-          }
+      for await (const chunk of response) {
+        const delta = chunk.message?.content || '';
+        if (delta) {
+          content += delta;
+          onChunk(delta);
         }
       }
-
-      const finishReason: 'stop' | 'length' | 'tool_calls' | 'error' =
-        toolCalls.length > 0 ? 'tool_calls' : response.done ? 'stop' : 'length';
-
-      // Extract usage statistics if available
-      const evalCount = response.eval_count;
-      const promptEvalCount = response.prompt_eval_count;
 
       return {
         content,
-        finishReason,
-        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-        usage:
-          evalCount !== undefined && promptEvalCount !== undefined
-            ? {
-                promptTokens: promptEvalCount,
-                completionTokens: evalCount,
-                totalTokens: promptEvalCount + evalCount,
-              }
-            : undefined,
+        finishReason: 'stop',
       };
-    } catch (err: unknown) {
-      if (err instanceof ConfigurationError) {
-        throw err;
-      }
-      if (err instanceof Error) {
-        // Check if it's a connection error - try to start Ollama automatically
-        if (
-          err.message.includes('fetch failed') ||
-          err.message.includes('ECONNREFUSED') ||
-          err.message.includes('ENOTFOUND')
-        ) {
-          try {
-            // Try to start Ollama automatically
-            await OllamaProcessManager.ensureRunning(this.baseUrl);
-            // Retry the request
-            return this.chat(request);
-          } catch (startError) {
-            if (startError instanceof ConfigurationError) {
-              throw startError;
-            }
-            throw new ConfigurationError(
-              `Cannot connect to Ollama at ${this.baseUrl}. ` +
-                `Failed to start service automatically: ${
-                  startError instanceof Error
-                    ? startError.message
-                    : String(startError)
-                }`
-            );
-          }
-        }
-        throw new Error(`Ollama API error: ${err.message}`);
+    } catch (error) {
+      if (error instanceof Error) {
+        throw new Error(`Ollama API error: ${error.message}`);
       }
       throw new Error('Unknown error from Ollama API');
     }

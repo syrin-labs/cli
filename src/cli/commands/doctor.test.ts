@@ -42,6 +42,9 @@ vi.mock('@/cli/utils', async () => {
 vi.mock('@/presentation/doctor-ui', () => ({
   displayDoctorReport: vi.fn(),
 }));
+vi.mock('@/runtime/mcp/connection', () => ({
+  connectHTTP: vi.fn().mockResolvedValue({ success: true }),
+}));
 vi.mock('@/utils/logger', () => ({
   log: {
     info: vi.fn(),

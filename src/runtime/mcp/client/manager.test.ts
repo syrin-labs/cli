@@ -96,9 +96,27 @@ describe('MCP Client Manager', () => {
       close: vi.fn().mockResolvedValue(undefined),
     } as unknown as StdioClientTransport;
 
+    // Track event handlers for triggering during tests
+    const eventHandlers: Record<string, (() => void)[]> = {};
     mockProcess = {
       on: vi.fn(),
-      kill: vi.fn(),
+      once: vi.fn((event: string, handler: () => void) => {
+        if (!eventHandlers[event]) {
+          eventHandlers[event] = [];
+        }
+        eventHandlers[event].push(handler);
+      }),
+      kill: vi.fn((signal?: string) => {
+        // Trigger exit handlers when killed
+        const handlers = eventHandlers['exit'] || [];
+        handlers.forEach(h => h());
+        // Also trigger exit for SIGTERM
+        if (signal === 'SIGTERM') {
+          const sigHandlers = eventHandlers['SIGTERM'] || [];
+          sigHandlers.forEach(h => h());
+        }
+      }),
+      killed: false,
     } as unknown as childProcess.ChildProcess;
 
     mockClient = {
@@ -537,6 +555,9 @@ describe('MCP Client Manager', () => {
 
     describe('disconnect', () => {
       it('should disconnect successfully', async () => {
+        // Use real timers for disconnect tests due to process kill timeout
+        vi.useRealTimers();
+
         const manager = new StdioMCPClientManager(
           'python server.py',
           mockEventEmitter
@@ -553,9 +574,15 @@ describe('MCP Client Manager', () => {
 
         expect(mockStdioTransport.close).toHaveBeenCalled();
         expect(manager.isConnected()).toBe(false);
+
+        // Restore fake timers for other tests
+        vi.useFakeTimers();
       });
 
       it('should handle disconnect errors gracefully', async () => {
+        // Use real timers for disconnect tests due to process kill timeout
+        vi.useRealTimers();
+
         const manager = new StdioMCPClientManager(
           'python server.py',
           mockEventEmitter

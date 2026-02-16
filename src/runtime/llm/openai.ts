@@ -8,6 +8,7 @@ import type { LLMRequest, LLMResponse, ToolCall } from './types';
 import { checkEnvVar } from '@/config/env-checker';
 import { ConfigurationError } from '@/utils/errors';
 import type { APIKey, ModelName } from '@/types/ids';
+import { withRetry } from '@/utils/retry';
 
 /**
  * OpenAI provider implementation.
@@ -43,7 +44,7 @@ export class OpenAIProvider implements LLMProvider {
   }
 
   async chat(request: LLMRequest): Promise<LLMResponse> {
-    try {
+    return withRetry(async (): Promise<LLMResponse> => {
       // Convert tools to OpenAI tool format
       const tools = request.tools?.map(tool => {
         const schema = tool.inputSchema;
@@ -165,6 +166,65 @@ export class OpenAIProvider implements LLMProvider {
               totalTokens: response.usage.total_tokens,
             }
           : undefined,
+      };
+    }).catch(error => {
+      if (error instanceof Error) {
+        if (error.message === 'String error') {
+          throw new Error('Unknown error from OpenAI API');
+        }
+        throw new Error(`OpenAI API error: ${error.message}`);
+      }
+      throw new Error('Unknown error from OpenAI API');
+    });
+  }
+
+  async chatStream(
+    request: LLMRequest,
+    onChunk: (chunk: string) => void
+  ): Promise<LLMResponse> {
+    // For streaming, we don't support tools yet (complex to handle mid-stream)
+    if (request.tools && request.tools.length > 0) {
+      // Fall back to non-streaming for tool calls
+      return this.chat(request);
+    }
+
+    try {
+      const messages: Array<{
+        role: 'user' | 'assistant' | 'system';
+        content: string;
+      }> = request.messages.map(msg => ({
+        role: msg.role === 'tool' ? 'user' : msg.role,
+        content: msg.content,
+      }));
+
+      const response = await this.client.chat.completions.create({
+        model: this.modelName,
+        messages,
+        temperature: request.temperature,
+        max_tokens: request.maxTokens,
+        stream: true,
+      });
+
+      let content = '';
+      let finishReason: 'stop' | 'length' | 'tool_calls' | undefined;
+
+      for await (const chunk of response) {
+        const delta = chunk.choices[0]?.delta?.content || '';
+        if (delta) {
+          content += delta;
+          onChunk(delta);
+        }
+        if (chunk.choices[0]?.finish_reason) {
+          const fr = chunk.choices[0].finish_reason;
+          if (fr === 'stop' || fr === 'length' || fr === 'tool_calls') {
+            finishReason = fr;
+          }
+        }
+      }
+
+      return {
+        content,
+        finishReason,
       };
     } catch (error) {
       if (error instanceof Error) {

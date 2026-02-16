@@ -85,3 +85,9 @@ export type {
   AdapterErrorPayload,
   ContextMutationAppliedPayload,
 } from './diagnostics';
+
+// K. Analysis (v1.5.0+)
+export type {
+  AnalysisStartedPayload,
+  AnalysisCompletedPayload,
+} from './analysis';

@@ -25,18 +25,24 @@ export type TestExecutionResult = ToolExecutionResult & {
  * @param executor - Sandbox executor
  * @param contract - Tool contract
  * @param toolTimeoutMs - Optional timeout for tool execution in milliseconds
+ * @param options - Additional options for test execution
  * @returns Array of test execution results
  */
 export async function runContractTests(
   executor: SandboxExecutor,
   contract: ToolContract,
-  toolTimeoutMs?: number
+  toolTimeoutMs?: number,
+  options?: {
+    /** Number of times to run each test for determinism checking (v1.5.0) */
+    repetitions?: number;
+  }
 ): Promise<TestExecutionResult[]> {
   if (!contract.tests || contract.tests.length === 0) {
     return [];
   }
 
   const results: TestExecutionResult[] = [];
+  const repetitions = options?.repetitions ?? 1;
 
   for (const test of contract.tests) {
     // Set environment variables if specified
@@ -48,21 +54,26 @@ export async function runContractTests(
     }
 
     try {
-      // Execute tool with test input (run once)
-      const executionResults = await executor.executeTool(
-        contract.tool,
-        [test.input],
-        toolTimeoutMs
-      );
+      // v1.5.0: Run test multiple times for determinism checking
+      for (let rep = 0; rep < repetitions; rep++) {
+        const executionResults = await executor.executeTool(
+          contract.tool,
+          [test.input],
+          toolTimeoutMs
+        );
 
-      // Map to test execution results
-      for (const result of executionResults) {
-        results.push({
-          ...result,
-          testName: test.name,
-          testInput: test.input,
-          expectation: test.expect,
-        });
+        // Map to test execution results
+        for (const result of executionResults) {
+          results.push({
+            ...result,
+            testName:
+              repetitions > 1
+                ? `${test.name} (rep ${rep + 1}/${repetitions})`
+                : test.name,
+            testInput: test.input,
+            expectation: test.expect,
+          });
+        }
       }
     } finally {
       // Restore environment properly (avoid reassigning process.env which breaks Node's proxy)

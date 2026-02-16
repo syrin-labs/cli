@@ -98,7 +98,9 @@ describe('executeAnalyse', () => {
         env: undefined,
         authHeaders: undefined,
       });
-      expect(analyseTools).toHaveBeenCalledWith(mockClient);
+      expect(analyseTools).toHaveBeenCalledWith(mockClient, undefined, {
+        onProgress: expect.any(Function),
+      });
       expect(displayAnalysisResult).toHaveBeenCalledWith(mockResult, {
         ci: undefined,
         json: undefined,

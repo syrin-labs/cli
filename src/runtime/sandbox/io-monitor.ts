@@ -1,9 +1,14 @@
 /**
- * I/O monitor for sandboxed tool execution.
- * Monitors filesystem and network operations (does not block).
+ * I/O monitor for tool execution.
+ * Monitors filesystem and network operations via process output parsing.
+ *
+ * NOTE: This monitors I/O by parsing stdout/stderr output from the tool process.
+ * It does NOT intercept actual system calls (that would require ptrace/dtrace).
  */
 
 import * as path from 'path';
+import type { Readable } from 'stream';
+import { log } from '@/utils/logger';
 
 /**
  * Filesystem operation type.
@@ -36,16 +41,138 @@ export interface NetworkOperationRecord {
 
 /**
  * I/O monitor for tracking operations during tool execution.
+ * v1.5.0: Added process I/O capture for detecting side effects.
  */
 export class IOMonitor {
   private fsOperations: FSOperationRecord[] = [];
   private networkOperations: NetworkOperationRecord[] = [];
   private readonly tempDir: string;
   private readonly projectRoot: string;
+  private capturedOutput: string = '';
+  private captureListeners: Array<(data: string) => void> = [];
 
   constructor(tempDir: string, projectRoot: string) {
     this.tempDir = path.resolve(tempDir);
     this.projectRoot = path.resolve(projectRoot);
+  }
+
+  /**
+   * Capture stdout/stderr from a process stream.
+   * v1.5.0: Hooks into process I/O to detect filesystem and network operations.
+   */
+  captureStream(stream: Readable, streamType: 'stdout' | 'stderr'): void {
+    stream.on('data', (data: Buffer) => {
+      const text = data.toString('utf-8');
+      this.capturedOutput += text;
+
+      // Parse for filesystem operations
+      this.parseFSOperations(text);
+
+      // Parse for network operations
+      this.parseNetworkOperations(text);
+
+      // Notify listeners
+      this.captureListeners.forEach(listener => listener(text));
+    });
+
+    stream.on('error', (error: Error) => {
+      log.debug(`IOMonitor ${streamType} error: ${error.message}`);
+    });
+  }
+
+  /**
+   * Parse text for filesystem operation patterns.
+   * Detects common patterns like "Reading file:", "Writing to:", etc.
+   */
+  private parseFSOperations(text: string): void {
+    // Pattern: Reading file: <path>
+    const readPattern = /reading\s+(?:file[:\s]+)?["']?([^"'\n]+)["']?/gi;
+    let match;
+    while ((match = readPattern.exec(text)) !== null) {
+      const filePath = match[1]?.trim();
+      if (filePath) {
+        this.recordFSOperation('read', filePath);
+      }
+    }
+
+    // Pattern: Writing to: <path> or Saved to: <path>
+    const writePattern =
+      /(?:writing\s+(?:to[:\s]+)?|saved\s+(?:to[:\s]+)?|wrote\s+(?:to[:\s]+)?)["']?([^"'\n]+)["']?/gi;
+    while ((match = writePattern.exec(text)) !== null) {
+      const filePath = match[1]?.trim();
+      if (filePath) {
+        this.recordFSOperation('write', filePath);
+      }
+    }
+
+    // Pattern: Deleting: <path> or Removed: <path>
+    const deletePattern =
+      /(?:deleting[:\s]+|removed?[:\s]+|deleted?[:\s]+)["']?([^"'\n]+)["']?/gi;
+    while ((match = deletePattern.exec(text)) !== null) {
+      const filePath = match[1]?.trim();
+      if (filePath) {
+        this.recordFSOperation('delete', filePath);
+      }
+    }
+
+    // Pattern: Creating directory: <path>
+    const mkdirPattern =
+      /(?:creating\s+dir(?:ectory)?[:\s]+|mkdir[:\s]+)["']?([^"'\n]+)["']?/gi;
+    while ((match = mkdirPattern.exec(text)) !== null) {
+      const filePath = match[1]?.trim();
+      if (filePath) {
+        this.recordFSOperation('mkdir', filePath);
+      }
+    }
+  }
+
+  /**
+   * Parse text for network operation patterns.
+   * Detects HTTP requests, API calls, etc.
+   */
+  private parseNetworkOperations(text: string): void {
+    // Pattern: HTTP methods with URLs
+    const httpPattern =
+      /(GET|POST|PUT|DELETE|PATCH|HEAD|OPTIONS)\s+(https?:\/\/[^\s\n]+)/gi;
+    let match;
+    while ((match = httpPattern.exec(text)) !== null) {
+      const method = match[1];
+      const url = match[2];
+      if (url) {
+        this.recordNetworkOperation(url, method);
+      }
+    }
+
+    // Pattern: Fetching: <url> or Request to: <url>
+    const fetchPattern =
+      /(?:fetching[:\s]+|request\s+(?:to[:\s]+)?|calling[:\s]+)["']?([^"'\n]+)["']?/gi;
+    while ((match = fetchPattern.exec(text)) !== null) {
+      const url = match[1]?.trim();
+      if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+        this.recordNetworkOperation(url);
+      }
+    }
+  }
+
+  /**
+   * Get all captured output.
+   */
+  getCapturedOutput(): string {
+    return this.capturedOutput;
+  }
+
+  /**
+   * Subscribe to capture events.
+   * @returns Unsubscribe function
+   */
+  subscribeToCaptures(listener: (data: string) => void): () => void {
+    this.captureListeners.push(listener);
+    return () => {
+      const index = this.captureListeners.indexOf(listener);
+      if (index !== -1) {
+        this.captureListeners.splice(index, 1);
+      }
+    };
   }
 
   /**

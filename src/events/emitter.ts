@@ -1,5 +1,5 @@
 import type { EventEnvelope } from '@/events/types';
-import type { EventType } from '@/events/event-type';
+import type { EventType, EventTypePayloadMap } from '@/events/event-type';
 import type { EventStore } from '@/events/store';
 import { makeEventID, makeTimestamp } from '@/types/factories';
 import type { SessionID, WorkflowID, PromptID } from '@/types/ids';
@@ -15,17 +15,25 @@ export type EventSubscriber = (event: EventEnvelope) => void | Promise<void>;
 /**
  * Event emitter interface.
  * Supports both sync and async event stores.
+ * Provides type-safe emit methods using discriminated unions.
  */
 export interface EventEmitter {
   /**
    * Emit an event and append it to the event store.
    * Returns the event envelope.
    * For async stores, the promise resolves after the event is persisted.
+   *
+   * Type-safe overload: ensures payload type matches event type.
+   * Example:
+   *   emitter.emit(SessionLifecycleEventType.SESSION_STARTED, { project_name: "my-project", ... })
+   *   // TypeScript error if payload doesn't match SESSION_STARTED's payload type
    */
-  emit<TPayload>(
-    eventType: EventType,
-    payload: TPayload
-  ): EventEnvelope<TPayload> | Promise<EventEnvelope<TPayload>>;
+  emit<TEventType extends EventType>(
+    eventType: TEventType,
+    payload: EventTypePayloadMap[TEventType]
+  ):
+    | EventEnvelope<EventTypePayloadMap[TEventType]>
+    | Promise<EventEnvelope<EventTypePayloadMap[TEventType]>>;
 
   /**
    * Subscribe to events.
@@ -39,6 +47,7 @@ export interface EventEmitter {
  * Runtime event emitter implementation.
  * Handles event creation, sequencing, and persistence.
  * Supports event subscribers for real-time event notifications.
+ * Uses discriminated union types for type-safe emit() calls.
  */
 export class RuntimeEventEmitter implements EventEmitter {
   private sequence: number = 0;
@@ -51,11 +60,13 @@ export class RuntimeEventEmitter implements EventEmitter {
     private readonly promptId: PromptID | null
   ) {}
 
-  emit<TPayload>(
-    eventType: EventType,
-    payload: TPayload
-  ): EventEnvelope<TPayload> | Promise<EventEnvelope<TPayload>> {
-    const event: EventEnvelope<TPayload> = {
+  emit<TEventType extends EventType>(
+    eventType: TEventType,
+    payload: EventTypePayloadMap[TEventType]
+  ):
+    | EventEnvelope<EventTypePayloadMap[TEventType]>
+    | Promise<EventEnvelope<EventTypePayloadMap[TEventType]>> {
+    const event: EventEnvelope<EventTypePayloadMap[TEventType]> = {
       event_id: makeEventID(this.generateEventID()),
       event_type: eventType,
       session_id: this.sessionId,

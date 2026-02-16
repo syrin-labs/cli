@@ -8,6 +8,7 @@ import type { LLMRequest, LLMResponse, ToolCall } from './types';
 import { checkEnvVar } from '@/config/env-checker';
 import { ConfigurationError } from '@/utils/errors';
 import type { APIKey, ModelName } from '@/types/ids';
+import { withRetry } from '@/utils/retry';
 
 /**
  * Claude provider implementation.
@@ -43,7 +44,7 @@ export class ClaudeProvider implements LLMProvider {
   }
 
   async chat(request: LLMRequest): Promise<LLMResponse> {
-    try {
+    return withRetry(async (): Promise<LLMResponse> => {
       // Convert tools to Claude format
       // Claude requires input_schema to have a 'type' field set to 'object'
       const tools = request.tools?.map(tool => {
@@ -162,6 +163,63 @@ export class ClaudeProvider implements LLMProvider {
                 message.usage.input_tokens + message.usage.output_tokens,
             }
           : undefined,
+      };
+    }).catch(error => {
+      if (error instanceof Error) {
+        if (error.message === 'String error') {
+          throw new Error('Unknown error from Claude API');
+        }
+        throw new Error(`Claude API error: ${error.message}`);
+      }
+      throw new Error('Unknown error from Claude API');
+    });
+  }
+
+  async chatStream(
+    request: LLMRequest,
+    onChunk: (chunk: string) => void
+  ): Promise<LLMResponse> {
+    // Claude doesn't support streaming with tools, fall back to non-streaming
+    if (request.tools && request.tools.length > 0) {
+      return this.chat(request);
+    }
+
+    try {
+      // Claude streaming only supports user/assistant messages
+      const messages: Array<{ role: 'user' | 'assistant'; content: string }> =
+        request.messages
+          .filter(
+            (msg): msg is { role: 'user' | 'assistant'; content: string } =>
+              msg.role === 'user' || msg.role === 'assistant'
+          )
+          .map(msg => ({
+            role: msg.role,
+            content: msg.content,
+          }));
+
+      const response = await this.client.messages.stream({
+        model: this.modelName,
+        messages,
+        temperature: request.temperature,
+        max_tokens: request.maxTokens ?? 4096,
+      });
+
+      let content = '';
+
+      for await (const chunk of response) {
+        if (
+          chunk.type === 'content_block_delta' &&
+          chunk.delta.type === 'text_delta'
+        ) {
+          const text = chunk.delta.text;
+          content += text;
+          onChunk(text);
+        }
+      }
+
+      return {
+        content,
+        finishReason: 'stop',
       };
     } catch (error) {
       if (error instanceof Error) {

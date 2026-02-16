@@ -8,15 +8,34 @@ import { listTools } from '@/runtime/mcp/list';
 import type { RawTool } from './types';
 
 /**
+ * Progress callback for tool loading.
+ */
+export type LoadProgressCallback = (
+  stage: 'connecting' | 'listing' | 'validating',
+  progress: number
+) => void;
+
+/**
  * Load raw tools from MCP server.
  * This is the entry point that fetches tool metadata without execution.
  *
  * @param client - Connected MCP client
+ * @param onProgress - Optional progress callback
  * @returns Array of raw tool definitions
  */
-export async function loadMCPTools(client: Client): Promise<RawTool[]> {
+export async function loadMCPTools(
+  client: Client,
+  onProgress?: LoadProgressCallback
+): Promise<RawTool[]> {
+  if (onProgress) {
+    onProgress('connecting', 0);
+  }
+
   let result;
   try {
+    if (onProgress) {
+      onProgress('listing', 30);
+    }
     result = await listTools(client);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -26,6 +45,10 @@ export async function loadMCPTools(client: Client): Promise<RawTool[]> {
   }
 
   const tools = result.tools || [];
+
+  if (onProgress) {
+    onProgress('validating', 60);
+  }
 
   // Validate each tool before mapping
   for (let i = 0; i < tools.length; i++) {
@@ -41,6 +64,16 @@ export async function loadMCPTools(client: Client): Promise<RawTool[]> {
       });
       throw new Error(`Missing tool.name at index ${i}: ${toolSummary}`);
     }
+
+    // Report progress during validation for large tool lists
+    if (onProgress && tools.length > 10) {
+      const progress = 60 + Math.floor((i / tools.length) * 30);
+      onProgress('validating', progress);
+    }
+  }
+
+  if (onProgress) {
+    onProgress('validating', 100);
   }
 
   return tools.map(tool => ({

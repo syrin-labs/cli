@@ -1,12 +1,26 @@
 /**
- * Sandbox executor for isolated tool execution.
- * Provides isolated execution environment with process reuse for performance.
- * This module is reusable for any sandboxed execution needs, not just testing.
+ * Tool executor with process isolation.
+ * Provides process-based isolation (not true sandbox/chroot/containers).
+ * This module is reusable for any tool execution needs, not just testing.
+ *
+ * IMPORTANT: This is NOT a secure sandbox. It provides:
+ * - Process isolation (each tool runs in separate process)
+ * - Memory limits (via ulimit or --max-old-space-size)
+ * - Timeout enforcement
+ * - I/O monitoring
+ *
+ * It does NOT provide:
+ * - Filesystem isolation (chroot)
+ * - Network isolation
+ * - Container/namespace isolation
+ *
+ * For production use with untrusted tools, consider using containers/VMs.
  */
 
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { ChildProcess } from 'child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { parseCommand } from '@/runtime/mcp/client/process';
@@ -16,12 +30,15 @@ import { formatTimeString } from './time-parser';
 import type { ToolExecutionError, ToolExecutionResult } from './types';
 import { ToolExecutionErrorType } from './types';
 import { log } from '@/utils/logger';
+import type { IOMonitor } from './io-monitor';
 
 // Re-export types for convenience
 export * from './types';
+export { IOMonitor } from './io-monitor';
 
 /**
- * Options for sandbox execution.
+ * Options for tool execution.
+ * Note: Provides process isolation only, not true sandboxing.
  */
 export interface SandboxOptions {
   /** Timeout for tool execution in milliseconds */
@@ -42,11 +59,15 @@ export interface SandboxOptions {
   projectRoot: string;
   /** Suppress stderr output (redirect to /dev/null) */
   suppressStderr?: boolean;
+  /** Optional I/O monitor for capturing process output (v1.5.0) */
+  ioMonitor?: IOMonitor;
 }
 
 /**
- * Sandbox executor with process reuse.
- * Starts MCP server once, executes multiple tools, then closes.
+ * Tool executor with process reuse.
+ * Provides process-based isolation for tool execution.
+ *
+ * WARNING: This is NOT a secure sandbox. See module docs for limitations.
  */
 export class SandboxExecutor {
   // Note: serverProcess is managed by StdioClientTransport internally
@@ -54,7 +75,10 @@ export class SandboxExecutor {
   private transport: StdioClientTransport | null = null;
   private tempDir: string | null = null;
   private initialized: boolean = false;
+  private serverProcess: ChildProcess | null = null;
   private readonly options: SandboxOptions;
+  // v1.5.0: Track if any timeouts occurred to force process restart
+  private hasTimeoutOccurred: boolean = false;
 
   constructor(options: SandboxOptions) {
     this.options = options;
@@ -67,6 +91,12 @@ export class SandboxExecutor {
   async initialize(): Promise<void> {
     if (this.initialized) {
       return;
+    }
+
+    // v1.5.0: Log if re-initializing after a timeout
+    if (this.hasTimeoutOccurred) {
+      log.info('Re-initializing sandbox after previous timeout');
+      this.hasTimeoutOccurred = false;
     }
 
     try {
@@ -176,6 +206,30 @@ export class SandboxExecutor {
         env: env as Record<string, string>,
         cwd: this.options.projectRoot,
       });
+
+      // v1.5.0: Access the spawned process for memory monitoring
+      // StdioClientTransport stores the process in _process private property
+      // We need to access it via type assertion since it's not in the public API
+      const transportWithProcess = this.transport as unknown as {
+        _process?: ChildProcess;
+      };
+      this.serverProcess = transportWithProcess._process ?? null;
+
+      // v1.5.0: Hook up I/O monitor to capture process output
+      if (this.options.ioMonitor && this.serverProcess) {
+        if (this.serverProcess.stdout) {
+          this.options.ioMonitor.captureStream(
+            this.serverProcess.stdout,
+            'stdout'
+          );
+        }
+        if (this.serverProcess.stderr) {
+          this.options.ioMonitor.captureStream(
+            this.serverProcess.stderr,
+            'stderr'
+          );
+        }
+      }
 
       // Set up error handlers
       this.client.onerror = (event: unknown): void => {
@@ -560,6 +614,18 @@ export class SandboxExecutor {
 
         try {
           rawResult = await Promise.race([executionPromise, timeoutPromise]);
+        } catch (err) {
+          // v1.5.0: If timeout occurred, kill the process to stop the hanging tool
+          if (timedOut && this.serverProcess) {
+            log.warn(
+              `Tool execution timed out, killing process to prevent background execution`
+            );
+            this.hasTimeoutOccurred = true;
+            this.serverProcess.kill('SIGTERM');
+            // Force re-initialization on next execution
+            this.initialized = false;
+          }
+          throw err;
         } finally {
           // Clear the timeout timer if execution completed before timeout
           if (timeoutId !== undefined) {
@@ -620,16 +686,41 @@ export class SandboxExecutor {
 
   /**
    * Get current process memory usage (if available).
+   * v1.5.0: Now correctly reports child process memory, not parent process.
    * @returns Memory usage in MB, or undefined if not available
    */
   private getProcessMemoryUsage(): number | undefined {
-    // Memory usage tracking is platform-specific
-    // For now, we'll return undefined and can enhance later
-    // On Linux, we could read from /proc/{pid}/status
-    // On macOS, we could use ps command
-    // On Windows, we could use tasklist or WMI
-    // Note: The process is managed by StdioClientTransport internally
-    // We would need to access it from the transport to get the PID
+    // v1.5.0: Track child process memory, not parent process
+    if (!this.serverProcess?.pid) {
+      return undefined;
+    }
+
+    const pid = this.serverProcess.pid;
+
+    try {
+      if (process.platform === 'linux') {
+        // Linux: Read from /proc/{pid}/status
+        const status = fs.readFileSync(`/proc/${pid}/status`, 'utf-8');
+        const match = status.match(/VmRSS:\s*(\d+)\s*kB/);
+        if (match) {
+          // Convert KB to MB
+          return Math.round(parseInt(match[1]!, 10) / 1024);
+        }
+      } else if (process.platform === 'darwin') {
+        // macOS: Use ps command
+        const { execSync } = require('child_process');
+        const output = execSync(`ps -o rss= -p ${pid}`, { encoding: 'utf-8' });
+        const rssKB = parseInt(output.trim(), 10);
+        if (!isNaN(rssKB)) {
+          // Convert KB to MB
+          return Math.round(rssKB / 1024);
+        }
+      }
+      // Windows: Could use wmic or tasklist, but for now return undefined
+      // as it requires async operations
+    } catch {
+      // If we can't read memory usage, return undefined
+    }
 
     return undefined;
   }

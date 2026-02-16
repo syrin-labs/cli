@@ -201,4 +201,86 @@ export class BehaviorObserver {
       errors,
     };
   }
+
+  /**
+   * Detect non-deterministic behavior by comparing multiple executions.
+   * v1.5.0: Runs the same input multiple times and compares outputs.
+   */
+  detectNonDeterminism(
+    results: ToolExecutionResult[],
+    _contract: ToolContract
+  ): {
+    /** Whether non-deterministic behavior was detected */
+    detected: boolean;
+    /** Number of executions that produced different outputs */
+    variationCount: number;
+    /** Total number of executions compared */
+    totalExecutions: number;
+    /** Details about variations (if any) */
+    variations?: Array<{
+      executionIndex: number;
+      output: unknown;
+      diff: string;
+    }>;
+  } {
+    // Filter successful results only (can't compare failed executions)
+    const successfulResults = results.filter(
+      (r): r is Extract<ToolExecutionResult, { success: true }> => r.success
+    );
+
+    // Need at least 2 successful executions to detect non-determinism
+    if (successfulResults.length < 2) {
+      return {
+        detected: false,
+        variationCount: 0,
+        totalExecutions: successfulResults.length,
+      };
+    }
+
+    // Get the first successful result as baseline
+    const baseline = successfulResults[0]!;
+    const baselineOutput = JSON.stringify(baseline.output);
+
+    // Compare all other results to baseline
+    const variations: Array<{
+      executionIndex: number;
+      output: unknown;
+      diff: string;
+    }> = [];
+
+    for (let i = 1; i < successfulResults.length; i++) {
+      const result = successfulResults[i]!;
+      const resultOutput = JSON.stringify(result.output);
+
+      if (resultOutput !== baselineOutput) {
+        // Calculate a simple diff (first difference location)
+        let diffLocation = 0;
+        for (
+          let j = 0;
+          j < Math.min(baselineOutput.length, resultOutput.length);
+          j++
+        ) {
+          if (baselineOutput[j] !== resultOutput[j]) {
+            diffLocation = j;
+            break;
+          }
+        }
+
+        variations.push({
+          executionIndex: i,
+          output: result.output,
+          diff: `Output differs at position ${diffLocation}`,
+        });
+      }
+    }
+
+    const detected = variations.length > 0;
+
+    return {
+      detected,
+      variationCount: variations.length,
+      totalExecutions: successfulResults.length,
+      ...(detected ? { variations } : {}),
+    };
+  }
 }

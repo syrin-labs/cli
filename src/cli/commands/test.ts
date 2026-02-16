@@ -124,6 +124,14 @@ async function executeToolValidation(
     formatCLIResults(result);
   }
 
-  // Return exit code (0 for pass, 1 for fail)
-  return result.verdict === 'pass' ? 0 : 1;
+  // Return exit code
+  // In strict mode, pass-with-warnings is treated as a failure
+  // In normal mode, only 'fail' is treated as a failure
+  if (result.verdict === 'fail') {
+    return 1;
+  }
+  if (result.verdict === 'pass-with-warnings' && options.strict) {
+    return 1;
+  }
+  return 0;
 }

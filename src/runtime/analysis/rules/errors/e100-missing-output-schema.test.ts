@@ -164,4 +164,41 @@ describe('E100: Missing Output Schema', () => {
     const e100Errors = result.errors.filter(e => e.code === 'E100');
     expect(e100Errors).toHaveLength(0);
   });
+
+  it('should not flag tools without outputs that do not suggest data return (v1.5.0 threshold tuning)', async () => {
+    const { loadMCPTools } = await import('../../loader');
+    const { normalizeTools } = await import('../../normalizer');
+    const { buildIndexes } = await import('../../indexer');
+    const { inferDependencies } = await import('../../dependencies');
+
+    vi.mocked(loadMCPTools).mockResolvedValue([
+      {
+        name: 'clear_cache',
+        description: 'Clear internal cache',
+        // No inputs, no outputs, no return keywords
+      },
+    ]);
+
+    const normalizedTools = [
+      {
+        name: 'clear_cache',
+        description: 'Clear internal cache',
+        inputs: [], // No inputs
+        outputs: [], // No outputs
+        descriptionTokens: new Set(['clear', 'internal', 'cache']),
+      },
+    ];
+
+    vi.mocked(normalizeTools).mockResolvedValue(normalizedTools);
+    vi.mocked(buildIndexes).mockReturnValue(
+      buildIndexesFromTools(normalizedTools)
+    );
+    vi.mocked(inferDependencies).mockReturnValue([]);
+
+    const result = await analyseTools(mockClient);
+
+    // Should not flag as E100 since tool has no inputs and no return keywords
+    const e100Errors = result.errors.filter(e => e.code === 'E100');
+    expect(e100Errors).toHaveLength(0);
+  });
 });

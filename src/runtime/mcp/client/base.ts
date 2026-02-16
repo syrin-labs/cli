@@ -8,16 +8,7 @@ import {
   TransportEventType,
   ToolExecutionEventType,
 } from '@/events/event-type';
-import type {
-  TransportMessageSentPayload,
-  TransportMessageReceivedPayload,
-  TransportErrorPayload,
-} from '@/events/payloads/transport';
-import type {
-  ToolExecutionStartedPayload,
-  ToolExecutionCompletedPayload,
-  ToolExecutionFailedPayload,
-} from '@/events/payloads/tool';
+
 import { ConfigurationError } from '@/utils/errors';
 import type { TransportType } from '@/config/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -82,7 +73,7 @@ export abstract class BaseMCPClientManager {
     const startTime = Date.now();
 
     // Emit tool execution started event
-    await this.eventEmitter.emit<ToolExecutionStartedPayload>(
+    await this.eventEmitter.emit(
       ToolExecutionEventType.TOOL_EXECUTION_STARTED,
       {
         tool_name: toolName,
@@ -103,22 +94,19 @@ export abstract class BaseMCPClientManager {
 
     // Derive tool_name and tool_arguments from the same source variables
     // used to construct request_body to guarantee consistency
-    await this.eventEmitter.emit<TransportMessageSentPayload>(
-      TransportEventType.TRANSPORT_MESSAGE_SENT,
-      {
-        transport_type: this.getTransportType(),
-        message_type: 'tools/call',
-        size_bytes: Buffer.byteLength(requestMessage, 'utf8'),
-        tool_name: toolName,
-        tool_arguments: toolArguments,
-        request_body: requestMessage,
-      }
-    );
+    await this.eventEmitter.emit(TransportEventType.TRANSPORT_MESSAGE_SENT, {
+      transport_type: this.getTransportType(),
+      message_type: 'tools/call',
+      size_bytes: Buffer.byteLength(requestMessage, 'utf8'),
+      tool_name: toolName,
+      tool_arguments: toolArguments,
+      request_body: requestMessage,
+    });
 
     if (!executionMode) {
       // Preview mode - don't actually execute
       const duration = Date.now() - startTime;
-      await this.eventEmitter.emit<ToolExecutionCompletedPayload>(
+      await this.eventEmitter.emit(
         ToolExecutionEventType.TOOL_EXECUTION_COMPLETED,
         {
           tool_name: toolName,
@@ -145,7 +133,7 @@ export abstract class BaseMCPClientManager {
 
       // Emit transport message received event
       const responseMessage = JSON.stringify(result);
-      await this.eventEmitter.emit<TransportMessageReceivedPayload>(
+      await this.eventEmitter.emit(
         TransportEventType.TRANSPORT_MESSAGE_RECEIVED,
         {
           transport_type: this.getTransportType(),
@@ -165,7 +153,7 @@ export abstract class BaseMCPClientManager {
       const toolResult = textContent || result;
 
       // Emit tool execution completed event
-      await this.eventEmitter.emit<ToolExecutionCompletedPayload>(
+      await this.eventEmitter.emit(
         ToolExecutionEventType.TOOL_EXECUTION_COMPLETED,
         {
           tool_name: toolName,
@@ -184,7 +172,7 @@ export abstract class BaseMCPClientManager {
       const errorStack = error instanceof Error ? error.stack : undefined;
 
       // Emit tool execution failed event
-      await this.eventEmitter.emit<ToolExecutionFailedPayload>(
+      await this.eventEmitter.emit(
         ToolExecutionEventType.TOOL_EXECUTION_FAILED,
         {
           tool_name: toolName,
@@ -226,14 +214,11 @@ export abstract class BaseMCPClientManager {
     errorCode: string,
     recoverable: boolean
   ): Promise<void> {
-    await this.eventEmitter.emit<TransportErrorPayload>(
-      TransportEventType.TRANSPORT_ERROR,
-      {
-        transport_type: this.getTransportType(),
-        error_message: errorMessage,
-        error_code: errorCode,
-        recoverable,
-      }
-    );
+    await this.eventEmitter.emit(TransportEventType.TRANSPORT_ERROR, {
+      transport_type: this.getTransportType(),
+      error_message: errorMessage,
+      error_code: errorCode,
+      recoverable,
+    });
   }
 }

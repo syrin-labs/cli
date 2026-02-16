@@ -364,12 +364,10 @@ export async function executeDev(
         },
       },
       onMessage: async (input: string): Promise<void> => {
-        // Add user input to session conversation history (even for special commands)
-        // This ensures all commands are saved in chat history
-        addToHistory(input);
-
-        // Handle special commands
+        // Handle special commands (these need explicit history tracking)
         if (input === '/tools') {
+          // Add to history for special commands that don't call processUserInput
+          addToHistory(input);
           const tools = session.getAvailableTools();
           const toolsList = formatToolsList(tools);
           chatUI.addMessage('system', toolsList);
@@ -377,122 +375,24 @@ export async function executeDev(
         }
 
         if (input.startsWith('/save-json')) {
-          // Save tool result JSON to file
-          // Usage: /save-json [tool-name-or-index]
-          // If no argument, saves the last tool result
-          const parts = input.split(/\s+/);
-          const toolIdentifier = parts[1]; // Optional: tool name or index
+          // Add to history for special commands
+          addToHistory(input);
 
-          try {
-            const sessionState = session.getState();
-            const toolCalls = sessionState.toolCalls;
+          const { handleSaveJSONCommand } =
+            await import('@/utils/save-json-handler');
+          const result = await handleSaveJSONCommand(
+            input,
+            session,
+            projectRoot
+          );
+          chatUI.addMessage('system', result.message);
 
-            if (toolCalls.length === 0) {
-              chatUI.addMessage(
-                'system',
-                'No tool calls found. Run a tool first to save its result.'
-              );
-              return;
-            }
-
-            // Find the tool call to save
-            let toolCallToSave: (typeof toolCalls)[number] | undefined;
-
-            if (toolIdentifier) {
-              // Try to find by index first
-              const index = parseInt(toolIdentifier, 10);
-              if (!isNaN(index) && index > 0 && index <= toolCalls.length) {
-                // 1-indexed for user convenience
-                toolCallToSave = toolCalls[index - 1];
-              } else {
-                // Try to find by name (case-insensitive, partial match)
-                const matchingCalls = toolCalls.filter(tc =>
-                  tc.name.toLowerCase().includes(toolIdentifier.toLowerCase())
-                );
-                if (matchingCalls.length === 0) {
-                  chatUI.addMessage(
-                    'system',
-                    `No tool found matching "${toolIdentifier}". Use /save-json without arguments to save the last result, or use a tool index (1-${toolCalls.length}).`
-                  );
-                  return;
-                } else if (matchingCalls.length > 1) {
-                  // Multiple matches - show list
-                  const toolList = matchingCalls
-                    .map(
-                      tc =>
-                        `  ${toolCalls.indexOf(tc) + 1}. ${tc.name} (${tc.timestamp.toLocaleTimeString()})`
-                    )
-                    .join('\n');
-                  chatUI.addMessage(
-                    'system',
-                    `Multiple tools found matching "${toolIdentifier}":\n${toolList}\n\nUse /save-json <index> to save a specific one.`
-                  );
-                  return;
-                } else {
-                  toolCallToSave = matchingCalls[0];
-                }
-              }
-            } else {
-              // No identifier - use last tool call
-              toolCallToSave = toolCalls[toolCalls.length - 1];
-            }
-
-            if (!toolCallToSave) {
-              chatUI.addMessage('system', 'No tool result available to save.');
-              return;
-            }
-
-            // Check if result is available (either direct or via reference)
-            if (!toolCallToSave.result && !toolCallToSave.resultReference) {
-              chatUI.addMessage('system', 'No tool result available to save.');
-              return;
-            }
-
-            try {
-              // Get the result (load from file if externalized)
-              const result = session.getToolResult(toolCallToSave);
-
-              const { saveJSONToFile, getFileSize } =
-                await import('@/utils/json-file-saver');
-              // Save to .syrin/data directory
-              const dataDir = path.join(projectRoot, '.syrin', 'data');
-              const filePath = saveJSONToFile(
-                result,
-                toolCallToSave.name,
-                dataDir
-              );
-              const fileSize = getFileSize(filePath);
-
-              chatUI.addMessage(
-                'system',
-                `✅ JSON saved to file:\n   ${filePath}\n   Size: ${fileSize}\n   Tool: ${toolCallToSave.name}\n\n💡 You can open this file with: cat "${filePath}" | jq .`
-              );
-            } catch (error) {
-              const errorMessage =
-                error instanceof Error ? error.message : String(error);
-              chatUI.addMessage(
-                'system',
-                `❌ Error loading tool result: ${errorMessage}`
-              );
-              const err =
-                error instanceof Error ? error : new Error(String(error));
-              log.error(`Error: ${err.message}`);
-            }
-          } catch (error) {
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
-            chatUI.addMessage(
-              'system',
-              `❌ Error saving JSON: ${errorMessage}`
-            );
-            const err =
-              error instanceof Error ? error : new Error(String(error));
-            log.error(`Error: ${err.message}`);
-          }
           return;
         }
 
         if (input === '/history') {
+          // Add to history for special commands
+          addToHistory(input);
           // Read history from .syrin/.dev-history file
           try {
             if (fs.existsSync(historyFile)) {

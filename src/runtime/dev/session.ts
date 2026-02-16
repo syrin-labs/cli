@@ -11,22 +11,7 @@ import {
   LLMProposalEventType,
   ValidationEventType,
 } from '@/events/event-type';
-import type {
-  SessionStartedPayload,
-  SessionCompletedPayload,
-  SessionHaltedPayload,
-} from '@/events/payloads/session';
-import type {
-  LLMContextBuiltPayload,
-  PostToolLLMPromptBuiltPayload,
-  LLMProposedToolCallPayload,
-  LLMFinalResponseGeneratedPayload,
-} from '@/events/payloads/llm';
-import type {
-  ToolCallValidationStartedPayload,
-  ToolCallValidationPassedPayload,
-  ToolCallValidationFailedPayload,
-} from '@/events/payloads/validation';
+
 import { makePromptID } from '@/types/factories';
 import { v4 as uuidv4 } from 'uuid';
 import { log } from '@/utils/logger';
@@ -60,7 +45,7 @@ export class DevSession {
    */
   async initialize(): Promise<void> {
     // Emit session started event
-    await this.config.eventEmitter.emit<SessionStartedPayload>(
+    await this.config.eventEmitter.emit(
       SessionLifecycleEventType.SESSION_STARTED,
       {
         project_name: this.config.config.project_name,
@@ -129,7 +114,7 @@ export class DevSession {
       const llmRequest = this.buildLLMContext();
 
       // Emit LLM context built event
-      await this.config.eventEmitter.emit<LLMContextBuiltPayload>(
+      await this.config.eventEmitter.emit(
         LLMContextEventType.LLM_CONTEXT_BUILT,
         {
           prompt_id: promptId,
@@ -170,14 +155,8 @@ export class DevSession {
         // Process tool calls
         const toolResults = await this.processToolCalls(llmResponse.toolCalls);
 
-        // Build post-tool prompt with tool results
-        const postToolPrompt = this.buildPostToolPrompt(
-          llmResponse.toolCalls,
-          toolResults
-        );
-
         // Emit post-tool LLM prompt built event
-        await this.config.eventEmitter.emit<PostToolLLMPromptBuiltPayload>(
+        await this.config.eventEmitter.emit(
           LLMContextEventType.POST_TOOL_LLM_PROMPT_BUILT,
           {
             prompt_id: promptId,
@@ -188,7 +167,7 @@ export class DevSession {
               duration_ms: 0,
             },
             context: {
-              messages: postToolPrompt.messages.map(msg => ({
+              messages: this.state.conversationHistory.map(msg => ({
                 role: msg.role,
                 content: msg.content,
                 timestamp: new Date().toISOString(),
@@ -202,7 +181,7 @@ export class DevSession {
       }
 
       // No tool calls - emit final response and return
-      await this.config.eventEmitter.emit<LLMFinalResponseGeneratedPayload>(
+      await this.config.eventEmitter.emit(
         LLMProposalEventType.LLM_FINAL_RESPONSE_GENERATED,
         {
           response_text: llmResponse.content || '',
@@ -332,7 +311,7 @@ you can request the full data if needed.`;
     // Process only unique tool calls
     for (const toolCall of uniqueToolCalls) {
       // Emit LLM proposed tool call event
-      await this.config.eventEmitter.emit<LLMProposedToolCallPayload>(
+      await this.config.eventEmitter.emit(
         LLMProposalEventType.LLM_PROPOSED_TOOL_CALL,
         {
           tool_name: toolCall.name,
@@ -450,7 +429,7 @@ you can request the full data if needed.`;
     error?: string;
   }> {
     // Emit validation started event
-    await this.config.eventEmitter.emit<ToolCallValidationStartedPayload>(
+    await this.config.eventEmitter.emit(
       ValidationEventType.TOOL_CALL_VALIDATION_STARTED,
       {
         tool_name: toolCall.name,
@@ -466,7 +445,7 @@ you can request the full data if needed.`;
 
     if (!toolDef) {
       const error = `Tool "${toolCall.name}" not found`;
-      await this.config.eventEmitter.emit<ToolCallValidationFailedPayload>(
+      await this.config.eventEmitter.emit(
         ValidationEventType.TOOL_CALL_VALIDATION_FAILED,
         {
           tool_name: toolCall.name,
@@ -526,7 +505,7 @@ you can request the full data if needed.`;
           if (fieldDef?.format) {
             error += `\n  Format: ${fieldDef.format}`;
           }
-          await this.config.eventEmitter.emit<ToolCallValidationFailedPayload>(
+          await this.config.eventEmitter.emit(
             ValidationEventType.TOOL_CALL_VALIDATION_FAILED,
             {
               tool_name: toolCall.name,
@@ -547,7 +526,7 @@ you can request the full data if needed.`;
     }
 
     // Validation passed
-    await this.config.eventEmitter.emit<ToolCallValidationPassedPayload>(
+    await this.config.eventEmitter.emit(
       ValidationEventType.TOOL_CALL_VALIDATION_PASSED,
       {
         tool_name: toolCall.name,
@@ -599,25 +578,6 @@ you can request the full data if needed.`;
   }
 
   /**
-   * Build prompt after tool execution.
-   */
-  private buildPostToolPrompt(
-    _toolCalls: ToolCall[],
-    _toolResults: Array<{
-      tool_name: string;
-      arguments: Record<string, unknown>;
-      result: unknown;
-      duration_ms: number;
-    }>
-  ): { messages: LLMMessage[] } {
-    // The conversation history already includes tool results
-    // Just return the current state
-    return {
-      messages: [...this.state.conversationHistory],
-    };
-  }
-
-  /**
    * Get session state.
    */
   getState(): DevSessionState {
@@ -637,7 +597,7 @@ you can request the full data if needed.`;
   async complete(): Promise<void> {
     const duration = Date.now() - this.state.startTime.getTime();
 
-    await this.config.eventEmitter.emit<SessionCompletedPayload>(
+    await this.config.eventEmitter.emit(
       SessionLifecycleEventType.SESSION_COMPLETED,
       {
         status: 'success',
@@ -652,7 +612,7 @@ you can request the full data if needed.`;
    * Halt the session due to error.
    */
   async halt(reason: string, errorCode?: string): Promise<void> {
-    await this.config.eventEmitter.emit<SessionHaltedPayload>(
+    await this.config.eventEmitter.emit(
       SessionLifecycleEventType.SESSION_HALTED,
       {
         reason,

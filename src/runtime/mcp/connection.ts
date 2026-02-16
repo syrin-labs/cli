@@ -16,6 +16,7 @@ import type {
 } from './types';
 import { ConfigurationError } from '@/utils/errors';
 import { getCurrentVersion } from '@/utils/version-checker';
+import { log } from '@/utils/logger';
 
 /**
  * Get a connected MCP client that stays open for operations.
@@ -61,9 +62,9 @@ export async function getConnectedClient(
     requestInit,
   });
 
-  // Set up error handler
-  client.onerror = (): void => {
-    // Error handler - errors are logged but we'll catch them in try-catch
+  // Set up error handler - log errors instead of swallowing them
+  client.onerror = (error: Error): void => {
+    log.error('MCP HTTP connection error', error);
   };
 
   // Try to connect with timeout
@@ -130,9 +131,9 @@ export async function connectHTTP(
       requestInit,
     });
 
-    // Set up error handler
-    client.onerror = (): void => {
-      // Error handler - errors are logged but we'll catch them in try-catch
+    // Set up error handler - log errors instead of swallowing them
+    client.onerror = (error: Error): void => {
+      log.error('MCP HTTP connection error', error);
     };
 
     // Try to connect with timeout
@@ -349,9 +350,9 @@ export async function getConnectedStdioClient(
     env: mergedEnv,
   });
 
-  // Set up error handler
-  client.onerror = (): void => {
-    // Error handler - errors are logged but we'll catch them in try-catch
+  // Set up error handler - log errors instead of swallowing them
+  client.onerror = (error: Error): void => {
+    log.error('MCP stdio connection error', error);
   };
 
   // Try to connect with timeout
@@ -429,9 +430,9 @@ export async function connectStdio(
       env: mergedEnv,
     });
 
-    // Set up error handler
-    client.onerror = (): void => {
-      // Error handler - errors are logged but we'll catch them in try-catch
+    // Set up error handler - log errors instead of swallowing them
+    client.onerror = (error: Error): void => {
+      log.error('MCP stdio connection error', error);
     };
 
     // Try to connect with timeout

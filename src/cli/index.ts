@@ -399,7 +399,21 @@ export function setupCLI(): void {
     .description('Perform static analysis on MCP tool contracts')
     .option('--ci', 'CI mode: minimal output, exit code 1 on errors')
     .option('--json', 'Output results as JSON')
+    .option(
+      '--sarif',
+      'Output results as SARIF format for GitHub Advanced Security'
+    )
     .option('--graph', 'Include dependency graph in output')
+    .option(
+      '--rule <ruleId>',
+      'Run specific rule only (e.g., E100, W101). Prefix with - to exclude (e.g., -E100)'
+    )
+    .option('--strict', 'Exit with code 1 if any warnings are found')
+    .option(
+      '--timeout <ms>',
+      'Timeout for analysis in milliseconds (default: 60000)',
+      parseInt
+    )
     .option(
       '--transport <type>',
       'Transport type (http or stdio). If not provided, uses transport from config.yaml'
@@ -436,7 +450,11 @@ export function setupCLI(): void {
       async (options: {
         ci?: boolean;
         json?: boolean;
+        sarif?: boolean;
         graph?: boolean;
+        rule?: string;
+        strict?: boolean;
+        timeout?: string;
         transport?: string;
         url?: string;
         script?: string;
@@ -451,7 +469,13 @@ export function setupCLI(): void {
           await executeAnalyse({
             ci: options.ci,
             json: options.json,
+            sarif: options.sarif,
             graph: options.graph,
+            rule: options.rule,
+            strict: options.strict,
+            timeout: options.timeout
+              ? parseInt(options.timeout, 10)
+              : undefined,
             transport: options.transport as 'http' | 'stdio' | undefined,
             url: options.url,
             script: options.script,

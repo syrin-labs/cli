@@ -361,11 +361,13 @@ export class TestOrchestrator {
       }
     }
 
-    // Run contract-defined tests
+    // v1.5.0: Run contract-defined tests with determinism checking
+    const determinismRuns = this.options.determinismRuns ?? 1;
     const contractTestResults = await runContractTests(
       sandboxExecutor,
       contract,
-      toolTimeoutMs
+      toolTimeoutMs,
+      { repetitions: determinismRuns }
     );
 
     // All results are from contract tests
@@ -385,6 +387,12 @@ export class TestOrchestrator {
       behaviorObserver.detectUnboundedExecution(allResults);
     const executionErrorResult =
       behaviorObserver.detectExecutionErrors(allResults);
+
+    // v1.5.0: Check for non-deterministic behavior
+    const determinismResult =
+      determinismRuns > 1
+        ? behaviorObserver.detectNonDeterminism(allResults, contract)
+        : null;
 
     // Run behavioral rules
     const diagnostics: Diagnostic[] = [];
@@ -705,6 +713,18 @@ export class TestOrchestrator {
           })),
         })
       );
+    }
+
+    // v1.5.0: Non-determinism detection
+    if (determinismResult?.detected) {
+      diagnostics.push({
+        code: 'W301',
+        severity: 'warning',
+        message: `Tool "${toolName}" exhibits non-deterministic behavior: ${determinismResult.variationCount} of ${determinismResult.totalExecutions} executions produced different outputs`,
+        tool: toolName,
+        suggestion:
+          'Ensure tool produces consistent outputs for the same inputs. Check for use of random values, timestamps, or external data sources.',
+      });
     }
 
     // Validate output structure (if schema available and test expects success)

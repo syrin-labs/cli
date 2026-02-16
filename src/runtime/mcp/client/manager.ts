@@ -9,10 +9,6 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import * as childProcess from 'child_process';
 import type { EventEmitter } from '@/events/emitter';
 import { TransportEventType } from '@/events/event-type';
-import type {
-  TransportInitializedPayload,
-  TransportErrorPayload,
-} from '@/events/payloads/transport';
 import { getConnectedClient } from '../connection';
 import { ConfigurationError } from '@/utils/errors';
 import { log } from '@/utils/logger';
@@ -108,16 +104,13 @@ export class HTTPMCPClientManager
       }
 
       // Emit transport initialization event
-      await this.eventEmitter.emit<TransportInitializedPayload>(
-        TransportEventType.TRANSPORT_INITIALIZED,
-        {
-          transport_type: 'http',
-          endpoint: this.mcpUrl,
-          ...(this.shouldSpawn && this.serverCommand
-            ? { command: this.serverCommand }
-            : {}),
-        }
-      );
+      await this.eventEmitter.emit(TransportEventType.TRANSPORT_INITIALIZED, {
+        transport_type: 'http',
+        endpoint: this.mcpUrl,
+        ...(this.shouldSpawn && this.serverCommand
+          ? { command: this.serverCommand }
+          : {}),
+      });
 
       const connection = await getConnectedClient(
         this.mcpUrl,
@@ -138,15 +131,12 @@ export class HTTPMCPClientManager
       }
 
       // Emit transport error event
-      await this.eventEmitter.emit<TransportErrorPayload>(
-        TransportEventType.TRANSPORT_ERROR,
-        {
-          transport_type: 'http',
-          error_message: errorMessage,
-          error_code: 'CONNECTION_FAILED',
-          recoverable: true,
-        }
-      );
+      await this.eventEmitter.emit(TransportEventType.TRANSPORT_ERROR, {
+        transport_type: 'http',
+        error_message: errorMessage,
+        error_code: 'CONNECTION_FAILED',
+        recoverable: true,
+      });
 
       throw new ConfigurationError(
         `Failed to connect to MCP server at ${this.mcpUrl}: ${errorMessage}`
@@ -198,6 +188,26 @@ export class HTTPMCPClientManager
     }
 
     try {
+      // v1.5.0: Kill the spawned server process to prevent leaks
+      if (this.process) {
+        this.process.kill('SIGTERM');
+        // Give process time to terminate gracefully, then force kill if needed
+        await new Promise<void>(resolve => {
+          const timeout = setTimeout(() => {
+            if (this.process && !this.process.killed) {
+              this.process.kill('SIGKILL');
+            }
+            resolve();
+          }, 1000);
+
+          this.process?.once('exit', () => {
+            clearTimeout(timeout);
+            resolve();
+          });
+        });
+        this.process = null;
+      }
+
       if (this.transport) {
         await this.transport.close();
       }
@@ -210,15 +220,12 @@ export class HTTPMCPClientManager
       const err = error instanceof Error ? error : new Error(String(error));
       log.error(`Error: ${err.message}`, err);
 
-      await this.eventEmitter.emit<TransportErrorPayload>(
-        TransportEventType.TRANSPORT_ERROR,
-        {
-          transport_type: 'http',
-          error_message: err.message,
-          error_code: 'DISCONNECT_ERROR',
-          recoverable: false,
-        }
-      );
+      await this.eventEmitter.emit(TransportEventType.TRANSPORT_ERROR, {
+        transport_type: 'http',
+        error_message: err.message,
+        error_code: 'DISCONNECT_ERROR',
+        recoverable: false,
+      });
     }
   }
 
@@ -258,13 +265,10 @@ export class StdioMCPClientManager
       const { executable, args } = parseCommand(command);
 
       // Emit transport initialization event
-      await this.eventEmitter.emit<TransportInitializedPayload>(
-        TransportEventType.TRANSPORT_INITIALIZED,
-        {
-          transport_type: 'stdio',
-          command: this.command,
-        }
-      );
+      await this.eventEmitter.emit(TransportEventType.TRANSPORT_INITIALIZED, {
+        transport_type: 'stdio',
+        command: this.command,
+      });
 
       // Create MCP client
       this.client = new Client(
@@ -288,9 +292,17 @@ export class StdioMCPClientManager
         env: process.env as Record<string, string>,
       });
 
-      // Set up error handler
-      this.client.onerror = (): void => {
-        // Error handler - errors are logged but we'll catch them in try-catch
+      // Set up error handler - log and emit errors instead of swallowing them
+      this.client.onerror = (error: Error): void => {
+        log.error('MCP protocol error', error);
+        if (this.eventEmitter) {
+          this.eventEmitter.emit(TransportEventType.TRANSPORT_ERROR, {
+            transport_type: 'stdio',
+            error_message: error.message,
+            error_code: 'MCP_PROTOCOL_ERROR',
+            recoverable: false,
+          });
+        }
       };
 
       // Set up process error handler
@@ -322,15 +334,12 @@ export class StdioMCPClientManager
       }
 
       // Emit transport error event
-      await this.eventEmitter.emit<TransportErrorPayload>(
-        TransportEventType.TRANSPORT_ERROR,
-        {
-          transport_type: 'stdio',
-          error_message: errorMessage,
-          error_code: 'CONNECTION_FAILED',
-          recoverable: true,
-        }
-      );
+      await this.eventEmitter.emit(TransportEventType.TRANSPORT_ERROR, {
+        transport_type: 'stdio',
+        error_message: errorMessage,
+        error_code: 'CONNECTION_FAILED',
+        recoverable: true,
+      });
 
       throw new ConfigurationError(
         `Failed to connect to MCP server via stdio: ${errorMessage}`
@@ -344,6 +353,27 @@ export class StdioMCPClientManager
     }
 
     try {
+      // v1.5.0: Kill the child process to prevent leaks
+      // Must kill process BEFORE closing transport to ensure cleanup
+      if (this.process) {
+        this.process.kill('SIGTERM');
+        // Give process time to terminate gracefully, then force kill if needed
+        await new Promise<void>(resolve => {
+          const timeout = setTimeout(() => {
+            if (this.process && !this.process.killed) {
+              this.process.kill('SIGKILL');
+            }
+            resolve();
+          }, 1000);
+
+          this.process?.once('exit', () => {
+            clearTimeout(timeout);
+            resolve();
+          });
+        });
+        this.process = null;
+      }
+
       if (this.transport) {
         await this.transport.close();
       }
