@@ -52,7 +52,9 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui"
+    "test:ui": "vitest --ui",
+    "npm:dry-run": "npm publish --dry-run",
+    "npm:publish": "npm publish --access public"
   },
   "repository": {
     "type": "git",
