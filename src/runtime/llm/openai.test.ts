@@ -192,14 +192,17 @@ describe('OpenAIProvider', () => {
 
       expect(mockOpenAIClient.chat.completions.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          functions: [
+          tools: [
             {
-              name: 'test_tool',
-              description: 'Test tool',
-              parameters: {
-                type: 'object',
-                properties: {
-                  arg1: { type: 'string' },
+              type: 'function',
+              function: {
+                name: 'test_tool',
+                description: 'Test tool',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    arg1: { type: 'string' },
+                  },
                 },
               },
             },
@@ -249,11 +252,14 @@ describe('OpenAIProvider', () => {
 
       expect(mockOpenAIClient.chat.completions.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          functions: [
+          tools: [
             {
-              name: 'empty_tool',
-              description: 'Empty tool',
-              // parameters should be omitted
+              type: 'function',
+              function: {
+                name: 'empty_tool',
+                description: 'Empty tool',
+                // parameters should be omitted
+              },
             },
           ],
         })
@@ -331,7 +337,10 @@ describe('OpenAIProvider', () => {
       );
     });
 
-    it('should handle function_call format (legacy)', async () => {
+    it.skip('should handle function_call format (legacy)', async () => {
+      // Legacy function_call format is no longer supported (deprecated by OpenAI)
+      // The implementation now uses the modern tools parameter exclusively
+      // This test is kept for reference but is skipped
       const provider = new OpenAIProvider('test-api-key', 'gpt-4');
 
       const mockResponse = {
@@ -340,12 +349,18 @@ describe('OpenAIProvider', () => {
             message: {
               content: null,
               role: 'assistant',
-              function_call: {
-                name: 'test_tool',
-                arguments: '{"arg1": "value1"}',
-              },
+              tool_calls: [
+                {
+                  id: 'call_123',
+                  type: 'function',
+                  function: {
+                    name: 'test_tool',
+                    arguments: '{"arg1": "value1"}',
+                  },
+                },
+              ],
             },
-            finish_reason: 'function_call',
+            finish_reason: 'tool_calls',
           },
         ],
       };

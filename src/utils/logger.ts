@@ -249,7 +249,7 @@ export class Log {
       // Errors always print regardless of log level (critical for quiet mode)
       const icon = errorOrIcon as IconType | undefined;
       const iconText = icon ? `${icon} ` : `${Icon.ERROR} `;
-      console.log(this.style(`${iconText}${message}`, 'red'));
+      console.error(this.style(`${iconText}${message}`, 'red'));
     }
   }
 

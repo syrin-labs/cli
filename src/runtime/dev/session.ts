@@ -392,7 +392,7 @@ you can request the full data if needed.`;
         // Add truncated message to conversation history
         const sizeDisplay = DataManager.formatSize(resultSize);
         this.state.conversationHistory.push({
-          role: 'assistant',
+          role: 'tool',
           content: `Tool ${toolCall.name} executed. Large result (${sizeDisplay}) stored externally. Reference: ${dataId}`,
         });
 
@@ -429,7 +429,7 @@ you can request the full data if needed.`;
             : resultText;
 
         this.state.conversationHistory.push({
-          role: 'assistant',
+          role: 'tool',
           content: `Tool ${toolCall.name} executed${toolError ? ` with error: ${toolError}` : ''}. Result: ${truncatedResult}`,
         });
       }

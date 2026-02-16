@@ -21,7 +21,7 @@ export interface LLMContext {
 }
 
 export interface Message {
-  role: 'user' | 'assistant' | 'system';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
   timestamp?: string;
 }

@@ -16,3 +16,4 @@ bun.lock
 .cursor/rules/openmemory.mdc
 .syrin/data
 CLAUDE.md
+plan/

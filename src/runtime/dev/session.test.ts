@@ -551,7 +551,7 @@ describe('DevSession', () => {
       const hasFailedEvent = failedCalls.length > 0;
       const hasErrorInConversation = state.conversationHistory.some(
         msg =>
-          msg.role === 'assistant' &&
+          (msg.role === 'assistant' || msg.role === 'tool') &&
           msg.content?.includes('Tool execution failed')
       );
       expect(hasFailedEvent || hasErrorInConversation).toBe(true);

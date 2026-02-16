@@ -6,7 +6,7 @@
 /**
  * Message role in a conversation.
  */
-export type MessageRole = 'user' | 'assistant' | 'system';
+export type MessageRole = 'user' | 'assistant' | 'system' | 'tool';
 
 /**
  * A message in the conversation.

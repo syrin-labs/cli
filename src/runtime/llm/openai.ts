@@ -44,8 +44,8 @@ export class OpenAIProvider implements LLMProvider {
 
   async chat(request: LLMRequest): Promise<LLMResponse> {
     try {
-      // Convert tools to OpenAI function format
-      const functions = request.tools?.map(tool => {
+      // Convert tools to OpenAI tool format
+      const tools = request.tools?.map(tool => {
         const schema = tool.inputSchema;
         // Check if schema is empty (no properties or empty properties object)
         let isEmpty = true;
@@ -62,26 +62,44 @@ export class OpenAIProvider implements LLMProvider {
         }
 
         // For OpenAI, omit parameters if schema is empty to avoid validation errors
-        const functionDef: {
-          name: string;
-          description: string;
-          parameters?: Record<string, unknown>;
+        const toolDef: {
+          type: 'function';
+          function: {
+            name: string;
+            description: string;
+            parameters?: Record<string, unknown>;
+          };
         } = {
-          name: tool.name,
-          description: tool.description,
+          type: 'function',
+          function: {
+            name: tool.name,
+            description: tool.description,
+          },
         };
 
         if (!isEmpty && schemaObj) {
-          functionDef.parameters = schemaObj;
+          toolDef.function.parameters = schemaObj;
         }
 
-        return functionDef;
+        return toolDef;
       });
 
-      const messages = request.messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant' | 'system',
-        content: msg.content,
-      }));
+      // Map messages to OpenAI format
+      // Note: Tool messages in our format don't have tool_call_id, so we convert them to assistant messages
+      // This is a limitation of our simplified message format
+      const messages = request.messages.map(msg => {
+        if (msg.role === 'tool') {
+          // Convert tool messages to assistant messages since we don't track tool_call_id
+          return {
+            role: 'assistant' as const,
+            content: msg.content,
+          };
+        }
+        return {
+          role: msg.role as 'user' | 'assistant' | 'system',
+          content: msg.content,
+        };
+      });
 
       // Add system prompt if provided
       if (request.systemPrompt) {
@@ -94,7 +112,7 @@ export class OpenAIProvider implements LLMProvider {
       const response = await this.client.chat.completions.create({
         model: this.modelName,
         messages,
-        functions,
+        tools,
         temperature: request.temperature ?? 0.7,
         max_tokens: request.maxTokens,
       });
@@ -113,28 +131,6 @@ export class OpenAIProvider implements LLMProvider {
 
       // Extract tool calls if present
       const toolCalls: ToolCall[] = [];
-      if (choice.message.function_call) {
-        const funcCall = choice.message.function_call;
-        try {
-          toolCalls.push({
-            id: funcCall.name || '',
-            name: funcCall.name || '',
-            arguments: JSON.parse(funcCall.arguments || '{}') as Record<
-              string,
-              unknown
-            >,
-          });
-        } catch {
-          // If parsing fails, use empty object
-          toolCalls.push({
-            id: funcCall.name || '',
-            name: funcCall.name || '',
-            arguments: {},
-          });
-        }
-      }
-
-      // Handle multiple function calls (newer API)
       if (choice.message.tool_calls) {
         for (const toolCall of choice.message.tool_calls) {
           if (toolCall.type === 'function') {
