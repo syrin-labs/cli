@@ -15,9 +15,13 @@ interface JSONSchemaField {
   required?: string[];
   properties?: Record<string, JSONSchemaField>;
   items?: JSONSchemaField | JSONSchemaField[];
+  oneOf?: JSONSchemaField[];
+  anyOf?: JSONSchemaField[];
+  allOf?: JSONSchemaField[];
   $ref?: string;
   enum?: unknown[];
   pattern?: string;
+  format?: string;
   example?: unknown;
   examples?: unknown[];
   nullable?: boolean;
@@ -101,6 +105,50 @@ async function extractFieldsFromSchema(
     return fields;
   }
 
+  // Handle oneOf / anyOf / allOf schemas
+  // These represent unions of schemas - merge fields from all variants
+  if (Array.isArray(resolvedSchema.oneOf) && resolvedSchema.oneOf.length > 0) {
+    for (const schema of resolvedSchema.oneOf) {
+      if (schema && typeof schema === 'object') {
+        const subFields = await extractFieldsFromSchema(
+          schema,
+          toolName,
+          isInput
+        );
+        fields.push(...subFields);
+      }
+    }
+    return fields;
+  }
+
+  if (Array.isArray(resolvedSchema.anyOf) && resolvedSchema.anyOf.length > 0) {
+    for (const schema of resolvedSchema.anyOf) {
+      if (schema && typeof schema === 'object') {
+        const subFields = await extractFieldsFromSchema(
+          schema,
+          toolName,
+          isInput
+        );
+        fields.push(...subFields);
+      }
+    }
+    return fields;
+  }
+
+  if (Array.isArray(resolvedSchema.allOf) && resolvedSchema.allOf.length > 0) {
+    for (const schema of resolvedSchema.allOf) {
+      if (schema && typeof schema === 'object') {
+        const subFields = await extractFieldsFromSchema(
+          schema,
+          toolName,
+          isInput
+        );
+        fields.push(...subFields);
+      }
+    }
+    return fields;
+  }
+
   // Handle object type with properties
   if (
     resolvedSchema.type === 'object' &&
@@ -158,6 +206,11 @@ async function extractFieldsFromSchema(
         fieldSpec.pattern = String(field.pattern);
       }
 
+      // Extract format (email, uri, date-time, etc.)
+      if (field.format) {
+        fieldSpec.format = String(field.format);
+      }
+
       // Extract example
       if (Array.isArray(field.examples) && field.examples.length > 0) {
         fieldSpec.example = field.examples[0];
@@ -176,6 +229,33 @@ async function extractFieldsFromSchema(
           toolName,
           isInput
         );
+      }
+
+      // Handle array items schema
+      // Check if type is 'array' (either directly or in an array)
+      const isArrayType =
+        (Array.isArray(field.type) && field.type.includes('array')) ||
+        field.type === 'array';
+      if (isArrayType && field.items) {
+        // Items can be a single schema or array of schemas
+        const itemSchemas = Array.isArray(field.items)
+          ? field.items
+          : [field.items];
+        // Merge properties from all item schemas
+        const mergedProperties: FieldSpec[] = [];
+        for (const itemSchema of itemSchemas) {
+          if (itemSchema && typeof itemSchema === 'object') {
+            const itemFields = await extractFieldsFromSchema(
+              itemSchema,
+              toolName,
+              isInput
+            );
+            mergedProperties.push(...itemFields);
+          }
+        }
+        if (mergedProperties.length > 0) {
+          fieldSpec.properties = mergedProperties;
+        }
       }
 
       fields.push(fieldSpec);
@@ -200,6 +280,10 @@ async function extractFieldsFromSchema(
 
     if (resolvedSchema.pattern) {
       fieldSpec.pattern = String(resolvedSchema.pattern);
+    }
+
+    if (resolvedSchema.format) {
+      fieldSpec.format = String(resolvedSchema.format);
     }
 
     if (

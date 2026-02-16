@@ -31,6 +31,8 @@ export interface FieldSpec {
   enum?: string[];
   /** Regex pattern if applicable */
   pattern?: string;
+  /** Format specifier if applicable (email, uri, date-time, etc.) */
+  format?: string;
   /** Example value if provided */
   example?: unknown;
   /** Whether field is nullable */
