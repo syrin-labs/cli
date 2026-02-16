@@ -56,9 +56,10 @@ class E103TypeMismatchRule extends BaseRule {
   check(ctx: AnalysisContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
-    // Only check high-confidence dependencies (>= 0.8)
+    // Only check high-confidence dependencies (>= 0.65)
+    // Real-world scoring maxes out ~0.73, so lowered from 0.8 to enable rule
     const highConfidenceDeps = ctx.dependencies.filter(
-      d => d.confidence >= 0.8
+      d => d.confidence >= 0.65
     );
 
     for (const dep of highConfidenceDeps) {

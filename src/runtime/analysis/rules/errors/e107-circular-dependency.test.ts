@@ -268,31 +268,31 @@ describe('E107: Circular Dependency', () => {
     expect(e107Errors).toHaveLength(0);
   });
 
-  it('should detect cycle with confidence exactly 0.8 but ignore 0.7', async () => {
+  it('should detect cycle with confidence exactly 0.8 but ignore 0.6', async () => {
     const { inferDependencies } = await import('../../dependencies');
 
     await setupMockTools();
-    // Create A↔B pair with confidences 0.8 and 0.7
+    // Create A↔B pair with confidences 0.8 and 0.6
     vi.mocked(inferDependencies).mockReturnValue([
       {
         fromTool: 'tool_a',
         fromField: 'output',
         toTool: 'tool_b',
         toField: 'input',
-        confidence: 0.8, // Exactly 0.8 - should be detected
+        confidence: 0.8, // Above 0.65 - should be detected
       },
       {
         fromTool: 'tool_b',
         fromField: 'output',
         toTool: 'tool_a',
         toField: 'input',
-        confidence: 0.7, // Below 0.8 - should be ignored
+        confidence: 0.6, // Below 0.65 - should be ignored
       },
     ]);
 
     const result = await analyseTools(mockClient);
 
-    // Should detect 0 cycles (0.7 edge is ignored, so no cycle forms)
+    // Should detect 0 cycles (0.6 edge is ignored, so no cycle forms)
     const e107Errors = result.errors.filter(e => e.code === 'E107');
     expect(e107Errors).toHaveLength(0);
   });

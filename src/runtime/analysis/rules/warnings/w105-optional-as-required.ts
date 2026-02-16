@@ -22,9 +22,10 @@ class W105OptionalAsRequiredRule extends BaseRule {
   check(ctx: AnalysisContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
-    // Check high-confidence dependencies (>= 0.8)
+    // Check high-confidence dependencies (>= 0.65)
+    // Real-world scoring maxes out ~0.73, so lowered from 0.8 to enable rule
     const highConfidenceDeps = ctx.dependencies.filter(
-      d => d.confidence >= 0.8
+      d => d.confidence >= 0.65
     );
 
     for (const dep of highConfidenceDeps) {

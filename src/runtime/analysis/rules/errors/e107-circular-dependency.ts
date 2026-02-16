@@ -72,9 +72,10 @@ class E107CircularDependencyRule extends BaseRule {
   check(ctx: AnalysisContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
-    // Only check high-confidence dependencies (>= 0.8) for cycles
+    // Only check high-confidence dependencies (>= 0.65) for cycles
+    // Real-world scoring maxes out ~0.73, so lowered from 0.8 to enable rule
     const highConfidenceDeps = ctx.dependencies.filter(
-      d => d.confidence >= 0.8
+      d => d.confidence >= 0.65
     );
 
     if (highConfidenceDeps.length === 0) {
