@@ -2,7 +2,7 @@
 
 ## v1.4.3
 
-### 🔥 Critical Bug Fixes
+### Critical Bug Fixes
 
 This hotfix release addresses 4 critical production bugs that were blocking public launch.
 
@@ -11,14 +11,12 @@ This hotfix release addresses 4 critical production bugs that were blocking publ
 - **Issue**: `src/utils/package-manager.ts` used `__dirname`, which doesn't exist in ESM modules
 - **Impact**: `syrin update` and `syrin rollback` commands were completely broken
 - **Fix**: Replaced with ESM-compatible approach using `import.meta.url` and `fileURLToPath`
-- **Files**: `src/utils/package-manager.ts`
 
 #### 2. **Logger Output Stream**
 
 - **Issue**: `log.error()` used `console.log` instead of `console.error`
 - **Impact**: Error output couldn't be separated from normal output (Unix convention violation)
 - **Fix**: Changed to properly output errors to stderr
-- **Files**: `src/utils/logger.ts`
 
 #### 3. **Tool Result Conversation Role**
 
@@ -27,10 +25,6 @@ This hotfix release addresses 4 critical production bugs that were blocking publ
 - **Fix**:
   - Updated `MessageRole` type to include `'tool'`
   - Changed all tool result messages to use correct `'tool'` role
-- **Files**:
-  - `src/runtime/dev/session.ts`
-  - `src/runtime/llm/types.ts`
-  - `src/events/payloads/llm.ts`
 
 #### 4. **OpenAI Deprecated API**
 
@@ -40,15 +34,6 @@ This hotfix release addresses 4 critical production bugs that were blocking publ
   - Migrated from `functions` to `tools` parameter
   - Updated tool schema format to `{ type: 'function', function: {...} }`
   - Removed legacy `function_call` handling
-- **Files**:
-  - `src/runtime/llm/openai.ts`
-  - `src/runtime/llm/openai.test.ts`
-
-### Testing
-
-- ✅ All 674 tests passing (4 skipped)
-- ✅ Build succeeds with no errors
-- ✅ All linting and formatting checks pass
 
 ## v1.4.2
 
