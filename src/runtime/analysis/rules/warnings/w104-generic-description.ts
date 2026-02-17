@@ -12,19 +12,11 @@
  * - LLM cannot discriminate tools
  */
 
-import { BaseRule } from '../base';
-import type { AnalysisContext, Diagnostic } from '../../types';
+import { BaseRule } from '@/runtime/analysis/rules/base';
+import type { AnalysisContext, Diagnostic } from '@/runtime/analysis/types';
 
 /**
- * Default list of concrete nouns that make a description specific.
- * This list can be extended or overridden when creating a custom rule instance.
- *
- * @example
- * ```ts
- * import { createW104Rule, DEFAULT_CONCRETE_NOUNS } from './w104-generic-description';
- * const customNouns = [...DEFAULT_CONCRETE_NOUNS, 'invoice', 'report'];
- * const customRule = createW104Rule(customNouns);
- * ```
+ * Extended list of concrete nouns that make a description specific.
  */
 export const DEFAULT_CONCRETE_NOUNS = [
   'weather',
@@ -42,13 +34,17 @@ export const DEFAULT_CONCRETE_NOUNS = [
   'transaction',
   'request',
   'response',
+  'inventory',
+  'schedule',
+  'event',
+  'task',
+  'document',
+  'report',
+  'invoice',
 ] as const;
 
 /**
  * Check if description is too generic.
- *
- * @param description - Tool description to check
- * @param concreteNouns - Optional list of concrete nouns (defaults to DEFAULT_CONCRETE_NOUNS)
  */
 function isGenericDescription(
   description: string,
@@ -56,29 +52,20 @@ function isGenericDescription(
 ): boolean {
   const descLower = description.toLowerCase();
 
-  // Vague verbs
   const vagueVerbs = ['get', 'handle', 'process', 'do', 'make', 'use', 'call'];
-
-  // Check for vague verbs without concrete nouns
-  let hasVagueVerb = false;
-  for (const verb of vagueVerbs) {
+  const hasVagueVerb = vagueVerbs.some(verb => {
     const regex = new RegExp(`\\b${verb}\\b`, 'i');
-    if (regex.test(descLower)) {
-      hasVagueVerb = true;
-      break;
-    }
-  }
+    return regex.test(descLower);
+  });
 
   if (!hasVagueVerb) {
     return false;
   }
 
-  // Check if description has concrete nouns (case-insensitive)
   const hasConcreteNoun = concreteNouns.some(noun =>
     descLower.includes(noun.toLowerCase())
   );
 
-  // If has vague verb but no concrete noun, it's generic
   return !hasConcreteNoun;
 }
 

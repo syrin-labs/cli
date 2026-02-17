@@ -92,27 +92,6 @@ function typeCompatible(fromType: string, toType: string): number {
 }
 
 /**
- * Calculate description token overlap.
- */
-function descriptionOverlap(
-  tokens1: Set<string>,
-  tokens2: Set<string>
-): number {
-  if (tokens1.size === 0 || tokens2.size === 0) {
-    return 0.0;
-  }
-
-  const intersection = new Set([...tokens1].filter(t => tokens2.has(t)));
-  const union = new Set([...tokens1, ...tokens2]);
-
-  if (union.size === 0) {
-    return 0.0;
-  }
-
-  return (intersection.size / union.size) * 0.3;
-}
-
-/**
  * Infer dependencies between tools.
  */
 export function inferDependencies(tools: ToolSpec[]): Dependency[] {
@@ -140,10 +119,20 @@ export function inferDependencies(tools: ToolSpec[]): Dependency[] {
           confidence += weightedType;
 
           // Description token overlap (weight: 0.3)
-          const descOverlap = descriptionOverlap(
-            fromTool.descriptionTokens,
-            toTool.descriptionTokens
+          // Use basic Jaccard similarity on tokens - embeddings handle semantic matching
+          const descIntersection = new Set(
+            [...fromTool.descriptionTokens].filter(t =>
+              toTool.descriptionTokens.has(t)
+            )
           );
+          const descUnion = new Set([
+            ...fromTool.descriptionTokens,
+            ...toTool.descriptionTokens,
+          ]);
+          const descOverlap =
+            descUnion.size > 0
+              ? (descIntersection.size / descUnion.size) * 0.3
+              : 0;
           confidence += descOverlap;
 
           // Bonus for exact field name match + compatible types

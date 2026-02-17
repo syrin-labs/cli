@@ -12,21 +12,17 @@
  * - Agent behavior changes across runs/models
  */
 
-import { BaseRule } from '../base';
-import { ERROR_CODES } from '../error-codes';
-import type { AnalysisContext, Diagnostic } from '../../types';
+import { BaseRule } from '@/runtime/analysis/rules/base';
+import { ERROR_CODES } from '@/runtime/analysis/rules/error-codes';
+import type { AnalysisContext, Diagnostic } from '@/runtime/analysis/types';
 
 /**
- * Calculate similarity between two sets of tokens.
+ * Calculate Jaccard similarity between two token sets.
  */
 function tokenSimilarity(tokens1: Set<string>, tokens2: Set<string>): number {
-  if (tokens1.size === 0 || tokens2.size === 0) {
-    return 0.0;
-  }
-
+  if (tokens1.size === 0 || tokens2.size === 0) return 0.0;
   const intersection = new Set([...tokens1].filter(t => tokens2.has(t)));
   const union = new Set([...tokens1, ...tokens2]);
-
   return intersection.size / union.size;
 }
 
@@ -39,16 +35,12 @@ function schemaOverlap(
 ): number {
   const names1 = new Set(inputs1.map(i => i.name.toLowerCase()));
   const names2 = new Set(inputs2.map(i => i.name.toLowerCase()));
-
   const nameOverlapSet = new Set([...names1].filter(n => names2.has(n)));
-  const nameOverlap = nameOverlapSet.size;
   const totalNames = new Set([...names1, ...names2]).size;
-
-  if (totalNames === 0) {
-    return 0.0;
-  }
-
-  return nameOverlap / totalNames;
+  const overlapCount = nameOverlapSet.size;
+  const total = totalNames;
+  if (total === 0) return 0;
+  return overlapCount / total;
 }
 
 class E110ToolAmbiguityRule extends BaseRule {
@@ -69,11 +61,20 @@ class E110ToolAmbiguityRule extends BaseRule {
         const tool2 = ctx.tools[j];
         if (!tool2) continue;
 
-        // Calculate description similarity
-        const descSimilarity = tokenSimilarity(
-          tool1.descriptionTokens,
-          tool2.descriptionTokens
+        // Calculate description similarity using token Jaccard
+        const tokens1 = new Set(
+          (tool1.description || '')
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(t => t.length > 2)
         );
+        const tokens2 = new Set(
+          (tool2.description || '')
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(t => t.length > 2)
+        );
+        const descSimilarity = tokenSimilarity(tokens1, tokens2);
 
         // Calculate schema overlap
         const inputOverlap = schemaOverlap(tool1.inputs, tool2.inputs);
@@ -81,8 +82,7 @@ class E110ToolAmbiguityRule extends BaseRule {
         const schemaOverlapScore = (inputOverlap + outputOverlap) / 2;
 
         // If both description and schema are very similar, it's ambiguous
-        // Threshold: >0.7 description similarity AND >0.5 schema overlap
-        if (descSimilarity > 0.7 && schemaOverlapScore > 0.5) {
+        if (descSimilarity > 0.6 && schemaOverlapScore > 0.5) {
           diagnostics.push(
             this.createDiagnostic(
               `Multiple tools match the same intent: "${tool1.name}", "${tool2.name}". LLM tool selection is ambiguous.`,

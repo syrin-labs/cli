@@ -12,6 +12,11 @@ vi.mock('../../loader', () => ({ loadMCPTools: vi.fn() }));
 vi.mock('../../normalizer', () => ({ normalizeTools: vi.fn() }));
 vi.mock('../../indexer', () => ({ buildIndexes: vi.fn() }));
 vi.mock('../../dependencies', () => ({ inferDependencies: vi.fn() }));
+vi.mock('../../semantic-embedding', () => ({
+  initializeConceptEmbeddings: vi.fn().mockResolvedValue(undefined),
+  isConceptMatch: vi.fn(),
+  findBestMatchingField: vi.fn(),
+}));
 vi.mock('@/utils/logger', () => ({
   log: {
     info: vi.fn(),
@@ -49,6 +54,7 @@ describe('E108: Implicit User Input', () => {
     const { normalizeTools } = await import('../../normalizer');
     const { buildIndexes } = await import('../../indexer');
     const { inferDependencies } = await import('../../dependencies');
+    const { isConceptMatch } = await import('../../semantic-embedding');
 
     vi.mocked(loadMCPTools).mockResolvedValue([
       {
@@ -59,7 +65,7 @@ describe('E108: Implicit User Input', () => {
           properties: {
             userQuery: { type: 'string' },
           },
-          required: ['userQuery'], // Required but no tool provides it
+          required: ['userQuery'],
         },
         outputSchema: {
           type: 'object',
@@ -70,6 +76,12 @@ describe('E108: Implicit User Input', () => {
       },
     ]);
 
+    vi.mocked(isConceptMatch).mockImplementation(
+      (embedding, _category, _threshold) => {
+        return embedding !== undefined && embedding.length > 0;
+      }
+    );
+
     const normalizedTools = [
       {
         name: 'process_user_query',
@@ -79,7 +91,7 @@ describe('E108: Implicit User Input', () => {
             tool: 'process_user_query',
             name: 'userQuery',
             type: 'string',
-            required: true, // Required but no explicit source
+            required: true,
           },
         ],
         outputs: [
@@ -91,6 +103,7 @@ describe('E108: Implicit User Input', () => {
           },
         ],
         descriptionTokens: new Set(['process', 'user', 'query']),
+        inputEmbeddings: new Map([['userQuery', [0.1, 0.2, 0.3]]]),
       },
     ];
 
@@ -98,7 +111,7 @@ describe('E108: Implicit User Input', () => {
     vi.mocked(buildIndexes).mockReturnValue(
       buildIndexesFromTools(normalizedTools)
     );
-    vi.mocked(inferDependencies).mockReturnValue([]); // No dependencies
+    vi.mocked(inferDependencies).mockReturnValue([]);
 
     const result = await analyseTools(mockClient);
 
@@ -113,6 +126,7 @@ describe('E108: Implicit User Input', () => {
     const { normalizeTools } = await import('../../normalizer');
     const { buildIndexes } = await import('../../indexer');
     const { inferDependencies } = await import('../../dependencies');
+    const { isConceptMatch } = await import('../../semantic-embedding');
 
     vi.mocked(loadMCPTools).mockResolvedValue([
       {
@@ -145,6 +159,8 @@ describe('E108: Implicit User Input', () => {
       },
     ]);
 
+    vi.mocked(isConceptMatch).mockReturnValue(false);
+
     const normalizedTools = [
       {
         name: 'get_query',
@@ -159,6 +175,7 @@ describe('E108: Implicit User Input', () => {
           },
         ],
         descriptionTokens: new Set(['get', 'query']),
+        outputEmbeddings: new Map([['query', [0.1, 0.2, 0.3]]]),
       },
       {
         name: 'process_query',
@@ -180,6 +197,7 @@ describe('E108: Implicit User Input', () => {
           },
         ],
         descriptionTokens: new Set(['process', 'query']),
+        inputEmbeddings: new Map([['query', [0.1, 0.2, 0.3]]]),
       },
     ];
 
@@ -187,7 +205,6 @@ describe('E108: Implicit User Input', () => {
     vi.mocked(buildIndexes).mockReturnValue(
       buildIndexesFromTools(normalizedTools)
     );
-    // Has explicit source
     vi.mocked(inferDependencies).mockReturnValue([
       {
         fromTool: 'get_query',

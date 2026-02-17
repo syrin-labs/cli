@@ -2,76 +2,24 @@
 
 ## v1.5.0
 
+### New Features
+
+- **W116**: Schema-Description Drift rule - detects params not mentioned in tool description
+- **W117**: Idempotency Signal rule - detects mutation tools lacking idempotency signal
+
 ### Analysis Engine Improvements
 
-**Focus:** Enable more analysis rules and improve schema handling
+- Fixed dependency confidence threshold (enabled E103, E105, E106, E107, W105)
+- Enhanced normalizer: support for `oneOf`/`anyOf`/`allOf`, `format` field, and array `items` schemas
 
-#### 1. **Fixed Dependency Confidence Ceiling (A1)**
+### Embedding-Based Semantic Analysis
 
-- **Issue**: Dependency inference maxed out at ~0.73 confidence, but 5+ analysis rules required ≥0.8 to fire
-- **Impact**: E103 (Type Mismatch), E105 (Free Text Propagation), E106 (Output Not Guaranteed), E107 (Circular Dependency), W105 (Optional as Required) were effectively disabled
-- **Fix**: Lowered rule thresholds from 0.8 to 0.65 to match real-world confidence scores
-- **Files**: E103, E105, E106, E107, W105 rule files
+- New `semantic-embedding.ts` module using `@xenova/transformers`
+- Concept embeddings: USER_DATA, SENSITIVE, RETURNS_DATA, IDEMPOTENT, MUTATION
+- Updated rules (E108, E112, E100, W117) to use embeddings instead of hardcoded keywords
+- Removed dead code: SYNONYM_GROUPS, ABBREVIATIONS, DEFAULT_CONCRETE_NOUNS, semantic.ts
 
-#### 2. **Enhanced Normalizer: oneOf/anyOf/allOf Support (A2-A3)**
-
-- **Issue**: Normalizer ignored `oneOf`, `anyOf`, `allOf` - fundamental JSON Schema constructs
-- **Impact**: Union types were silently dropped, losing critical schema information
-- **Fix**: Extract and merge properties from all schema variants
-- **Benefit**: Rules now understand complex schemas used by modern MCP servers
-
-#### 3. **Enhanced Normalizer: Format Field Support (A4)**
-
-- **Issue**: Normalizer ignored `format` field (`email`, `uri`, `date-time`, etc.)
-- **Impact**: Constrained strings reported as unconstrained; rules produced false positives
-- **Fix**: Extract and expose `format` field in FieldSpec
-- **Benefit**: More accurate constraint detection for string fields
-
-#### 4. **Enhanced Normalizer: Array Items Schema Support (A5)**
-
-- **Issue**: Normalizer didn't handle array `items` schemas
-- **Impact**: Array contents invisible to analysis rules
-- **Fix**: Extract nested field specs from array item schemas
-- **Benefit**: Rules can now understand complex array structures
-
-#### 5. **Output Explosion Detection (T3)**
-
-- **Status**: Already implemented and working in E301 rule
-- **Verification**: Confirmed via test suite; BehaviorObserver correctly detects output size violations
-- **Testing**: 674 tests pass including all behavioral detection tests
-
-### Technical Details
-
-**Files Modified:**
-
-- `src/runtime/analysis/dependencies.ts` - Lowered threshold constant
-- `src/runtime/analysis/types.ts` - Added `format` field to FieldSpec
-- `src/runtime/analysis/normalizer.ts` - Enhanced with union type and format handling
-- `src/runtime/analysis/rules/errors/e103-type-mismatch.ts` - Threshold update
-- `src/runtime/analysis/rules/errors/e105-free-text-propagation.ts` - Threshold update
-- `src/runtime/analysis/rules/errors/e106-output-not-guaranteed.ts` - Threshold update
-- `src/runtime/analysis/rules/errors/e107-circular-dependency.ts` - Threshold update + test fix
-- `src/runtime/analysis/rules/warnings/w105-optional-as-required.ts` - Threshold update
-
-**Test Results:**
-
-- All 674 tests pass (66 test files)
-- Build: ✓ Passes
-- Linting: ✓ Passes
-- Formatting: ✓ Passes
-
-### Known Limitations
-
-**T1 (Side Effect Detection):**
-
-- Cannot be implemented with current architecture (tools run in separate processes)
-- `IOMonitor` is available but has no way to observe separate process side effects
-- Workaround: Contract-based testing can validate side-effect guarantees through behavioral expectations
-
-**T2 (Non-Determinism Detection):**
-
-- Would require running each tool test multiple times and comparing outputs
-- Deferred to future release; current architecture prioritizes single-pass testing
+---
 
 ## v1.4.3
 

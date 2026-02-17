@@ -12,6 +12,9 @@ vi.mock('../../loader', () => ({ loadMCPTools: vi.fn() }));
 vi.mock('../../normalizer', () => ({ normalizeTools: vi.fn() }));
 vi.mock('../../indexer', () => ({ buildIndexes: vi.fn() }));
 vi.mock('../../dependencies', () => ({ inferDependencies: vi.fn() }));
+vi.mock('../../semantic-embedding', () => ({
+  initializeConceptEmbeddings: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock('@/utils/logger', () => ({
   log: {
     info: vi.fn(),

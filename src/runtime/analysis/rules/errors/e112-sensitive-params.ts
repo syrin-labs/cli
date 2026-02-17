@@ -11,22 +11,7 @@
 
 import { BaseRule } from '../base';
 import type { AnalysisContext, Diagnostic } from '../../types';
-
-const SENSITIVE_KEYWORDS = [
-  'password',
-  'secret',
-  'token',
-  'api_key',
-  'apikey',
-  'access_key',
-  'accesskey',
-  'private_key',
-  'privatekey',
-  'auth',
-  'credential',
-  'pwd',
-  'passwd',
-];
+import { isConceptMatch } from '@/runtime/analysis/semantic-embedding';
 
 class E112SensitiveParamsRule extends BaseRule {
   readonly id = 'E112';
@@ -39,22 +24,18 @@ class E112SensitiveParamsRule extends BaseRule {
     const diagnostics: Diagnostic[] = [];
 
     for (const tool of ctx.tools) {
-      // Check input parameters
       for (const field of tool.inputs) {
-        const fieldNameLower = field.name.toLowerCase();
+        const fieldEmbedding = tool.inputEmbeddings?.get(field.name);
 
-        for (const keyword of SENSITIVE_KEYWORDS) {
-          if (fieldNameLower.includes(keyword)) {
-            diagnostics.push(
-              this.createDiagnostic(
-                `Security risk: Parameter "${field.name}" in "${tool.name}" may expose sensitive data.`,
-                tool.name,
-                field.name,
-                `Use a secure credential reference (e.g., "credential_id" pointing to a secrets manager) instead of direct values.`
-              )
-            );
-            break;
-          }
+        if (isConceptMatch(fieldEmbedding, 'SENSITIVE', 0.45)) {
+          diagnostics.push(
+            this.createDiagnostic(
+              `Security risk: Parameter "${field.name}" in "${tool.name}" may expose sensitive data.`,
+              tool.name,
+              field.name,
+              `Use a secure credential reference (e.g., "credential_id" pointing to a secrets manager) instead of direct values.`
+            )
+          );
         }
       }
     }

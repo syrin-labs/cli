@@ -9,33 +9,27 @@
  * - LLM does not know parameter exists or matters
  */
 
-import { BaseRule } from '../base';
-import { ERROR_CODES } from '../error-codes';
-import type { AnalysisContext, Diagnostic } from '../../types';
+import { BaseRule } from '@/runtime/analysis/rules/base';
+import { ERROR_CODES } from '@/runtime/analysis/rules/error-codes';
+import type { AnalysisContext, Diagnostic } from '@/runtime/analysis/types';
+import { isFieldMentionedWithEmbedding } from '@/runtime/analysis/semantic-embedding';
 
 /**
- * Check if a parameter name appears in the description (case-insensitive).
+ * Basic token-based check if param is mentioned in description.
  */
-function isParameterMentioned(description: string, paramName: string): boolean {
+function isParamTokenMentioned(
+  description: string,
+  paramName: string
+): boolean {
   const descLower = description.toLowerCase();
   const paramLower = paramName.toLowerCase();
 
-  // Exact match
-  if (descLower.includes(paramLower)) {
-    return true;
-  }
+  if (descLower.includes(paramLower)) return true;
 
-  // Check if words from param name appear in description
-  const paramWords = paramLower.split(/\W+/).filter(w => w.length > 2);
-  const descWords = descLower.split(/\W+/);
+  const paramWords = paramLower.split(/[\s_]+/).filter(w => w.length > 1);
+  const descWords = descLower.split(/[\s_]+/);
 
-  for (const word of paramWords) {
-    if (descWords.includes(word)) {
-      return true;
-    }
-  }
-
-  return false;
+  return paramWords.some(word => descWords.includes(word));
 }
 
 class E104ParamNotInDescriptionRule extends BaseRule {
@@ -50,15 +44,30 @@ class E104ParamNotInDescriptionRule extends BaseRule {
 
     for (const tool of ctx.tools) {
       const description = tool.description || '';
+      const descEmbedding = tool.descriptionEmbedding;
+      const inputEmbeddings = tool.inputEmbeddings;
 
       for (const input of tool.inputs) {
-        // Only check required inputs
         if (!input.required) {
           continue;
         }
 
-        // Check if parameter is mentioned in description
-        if (!isParameterMentioned(description, input.name)) {
+        // First try basic token match (works without embeddings)
+        const isTokenMentioned = isParamTokenMentioned(description, input.name);
+
+        if (isTokenMentioned) {
+          continue;
+        }
+
+        // Then try embedding-based semantic match (if available)
+        const fieldEmbedding = inputEmbeddings?.get(input.name);
+        const isSemanticMentioned = isFieldMentionedWithEmbedding(
+          descEmbedding,
+          fieldEmbedding,
+          0.5
+        );
+
+        if (!isSemanticMentioned) {
           diagnostics.push(
             this.createDiagnostic(
               `Required parameter "${input.name}" is not referenced in "${tool.name}" description.`,

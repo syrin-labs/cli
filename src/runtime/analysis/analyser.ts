@@ -125,6 +125,10 @@ export async function analyseTools(
     timeoutPromise,
   ]);
 
+  // Initialize concept embeddings for semantic rule checking
+  const { initializeConceptEmbeddings } = await import('./semantic-embedding');
+  await initializeConceptEmbeddings();
+
   // Emit ANALYSIS_STARTED event
   if (eventEmitter) {
     await eventEmitter.emit(AnalysisEventType.ANALYSIS_STARTED, {

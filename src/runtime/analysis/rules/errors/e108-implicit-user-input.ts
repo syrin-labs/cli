@@ -10,22 +10,13 @@
  * - Relies on hallucinated context
  */
 
-import { BaseRule } from '../base';
-import { ERROR_CODES } from '../error-codes';
-import type { AnalysisContext, Diagnostic } from '../../types';
-
-/**
- * Keywords that suggest user-provided input.
- */
-const USER_DATA_INDICATORS = [
-  'user',
-  'person',
-  'name',
-  'email',
-  'location',
-  'address',
-  'preference',
-] as const;
+import { BaseRule } from '@/runtime/analysis/rules/base';
+import { ERROR_CODES } from '@/runtime/analysis/rules/error-codes';
+import type { AnalysisContext, Diagnostic } from '@/runtime/analysis/types';
+import {
+  findBestMatchingField,
+  isConceptMatch,
+} from '@/runtime/analysis/semantic-embedding';
 
 class E108ImplicitUserInputRule extends BaseRule {
   readonly id = ERROR_CODES.E108;
@@ -33,6 +24,13 @@ class E108ImplicitUserInputRule extends BaseRule {
   readonly ruleName = 'Tool Depends on User Input Indirectly';
   readonly description =
     'Tool depends on implicit user context with no explicit source.';
+
+  /**
+   * Check if field name suggests user data using embeddings.
+   */
+  private looksLikeUserData(inputEmbedding: number[] | undefined): boolean {
+    return isConceptMatch(inputEmbedding, 'USER_DATA', 0.35);
+  }
 
   check(ctx: AnalysisContext): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
@@ -43,48 +41,44 @@ class E108ImplicitUserInputRule extends BaseRule {
           continue;
         }
 
-        // Check if there's any tool that provides this input
-        // Look for output fields with similar names
-        const fieldName = input.name.toLowerCase();
         let hasExplicitSource = false;
 
-        // Token-based matching: split on non-alphanumeric and camelCase boundaries
-        // Compute fieldTokens once per field since it only depends on fieldName
-        const fieldTokens = new Set(
-          fieldName
-            .split(/[^\w]+|(?<=[a-z])(?=[A-Z])/)
-            .filter(t => t.length > 0)
-        );
+        // Check using pre-computed embeddings for output fields
+        const inputEmbedding = tool.inputEmbeddings?.get(input.name);
 
         for (const otherTool of ctx.tools) {
           if (otherTool.name === tool.name) {
             continue;
           }
 
-          for (const output of otherTool.outputs) {
-            const outputName = output.name.toLowerCase();
+          // Try embedding-based matching first
+          const match = findBestMatchingField(
+            inputEmbedding,
+            otherTool.outputEmbeddings,
+            0.6
+          );
 
-            // Check for exact match or token-based match
-            if (outputName === fieldName) {
+          if (match) {
+            hasExplicitSource = true;
+            break;
+          }
+
+          // Fallback to token matching
+          for (const output of otherTool.outputs) {
+            const fieldLower = input.name.toLowerCase();
+            const outputLower = output.name.toLowerCase();
+
+            if (fieldLower === outputLower) {
               hasExplicitSource = true;
               break;
             }
 
-            // Token-based matching: compute outputTokens per output
-            const outputTokens = new Set(
-              outputName
-                .split(/[^\w]+|(?<=[a-z])(?=[A-Z])/)
-                .filter(t => t.length > 0)
+            // Token intersection
+            const fieldTokens = new Set(fieldLower.split(/[\s_]+/));
+            const outputTokens = new Set(outputLower.split(/[\s_]+/));
+            const hasTokenMatch = [...fieldTokens].some(
+              t => t.length >= 3 && outputTokens.has(t)
             );
-
-            // Check for token intersection
-            const hasTokenMatch =
-              Array.from(fieldTokens).some(
-                token => outputTokens.has(token) && token.length >= 3
-              ) ||
-              Array.from(outputTokens).some(
-                token => fieldTokens.has(token) && token.length >= 3
-              );
 
             if (hasTokenMatch) {
               hasExplicitSource = true;
@@ -97,7 +91,7 @@ class E108ImplicitUserInputRule extends BaseRule {
           }
         }
 
-        // Also check dependencies
+        // Check dependencies
         if (!hasExplicitSource) {
           const hasDependency = ctx.dependencies.some(
             d =>
@@ -105,18 +99,12 @@ class E108ImplicitUserInputRule extends BaseRule {
               d.toField === input.name &&
               d.confidence >= 0.6
           );
-
           if (hasDependency) {
             hasExplicitSource = true;
           }
         }
 
-        // If no explicit source found and input name suggests user data
-        const looksLikeUserData = USER_DATA_INDICATORS.some(indicator =>
-          fieldName.includes(indicator)
-        );
-
-        if (!hasExplicitSource && looksLikeUserData) {
+        if (!hasExplicitSource && this.looksLikeUserData(inputEmbedding)) {
           diagnostics.push(
             this.createDiagnostic(
               `Tool "${tool.name}" depends on implicit user context (parameter: "${input.name}") with no explicit source.`,

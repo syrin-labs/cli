@@ -55,6 +55,12 @@ export interface ToolSpec {
   outputs: FieldSpec[];
   /** Extracted tokens from description (for similarity matching) */
   descriptionTokens: Set<string>;
+  /** Pre-computed semantic embedding for description (384-dim vector) */
+  descriptionEmbedding?: number[];
+  /** Pre-computed embeddings for input fields */
+  inputEmbeddings?: Map<string, number[]>;
+  /** Pre-computed embeddings for output fields */
+  outputEmbeddings?: Map<string, number[]>;
 }
 
 /**

@@ -314,12 +314,33 @@ export async function normalizeTool(rawTool: RawTool): Promise<ToolSpec> {
     ? await extractFieldsFromSchema(rawTool.outputSchema, rawTool.name, false)
     : [];
 
+  // Pre-compute embeddings for semantic similarity
+  const { getEmbedding } = await import('./semantic-embedding');
+
+  const inputEmbeddings = new Map<string, number[]>();
+  const outputEmbeddings = new Map<string, number[]>();
+
+  // Compute embeddings for input fields
+  for (const input of inputs) {
+    const fieldText = `${input.name} ${input.type} ${input.description || ''}`;
+    inputEmbeddings.set(input.name, await getEmbedding(fieldText));
+  }
+
+  // Compute embeddings for output fields
+  for (const output of outputs) {
+    const fieldText = `${output.name} ${output.type} ${output.description || ''}`;
+    outputEmbeddings.set(output.name, await getEmbedding(fieldText));
+  }
+
   return {
     name: rawTool.name,
     description,
     inputs,
     outputs,
     descriptionTokens: extractTokens(rawTool.name + ' ' + description),
+    descriptionEmbedding: await getEmbedding(rawTool.name + ' ' + description),
+    inputEmbeddings,
+    outputEmbeddings,
   };
 }
 

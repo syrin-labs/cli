@@ -78,6 +78,8 @@ import { W112ToolCountWarning } from './warnings/w112-tool-count-warning';
 import { W113OptionalDefaults } from './warnings/w113-optional-defaults';
 import { W114SchemaDepth } from './warnings/w114-schema-depth';
 import { W115TokenCost } from './warnings/w115-token-cost';
+import { W116SchemaDescriptionDrift } from './warnings/w116-schema-description-drift';
+import { W117IdempotencySignal } from './warnings/w117-idempotency-signal';
 import { W300HighEntropyOutput } from './warnings/w300-high-entropy-output';
 import { W301UnstableDefaults } from './warnings/w301-unstable-defaults';
 import { E112SensitiveParams } from './errors/e112-sensitive-params';
@@ -129,6 +131,8 @@ export const ALL_RULES: Rule[] = [
   W113OptionalDefaults,
   W114SchemaDepth,
   W115TokenCost,
+  W116SchemaDescriptionDrift,
+  W117IdempotencySignal,
   // Behavioral warning rules (v1.3.0)
   W110WeakSchema,
   W300HighEntropyOutput,
